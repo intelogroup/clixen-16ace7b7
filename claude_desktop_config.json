@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-github-token-here"
+      }
+    },
+    "docker-hub": {
+      "command": "node",
+      "args": ["/root/repo/docker-hub-mcp/dist/index.js", "--transport=stdio"],
+      "env": {
+        "DOCKER_HUB_TOKEN": "your-docker-hub-token-here"
+      }
+    },
+    "clixen-n8n": {
+      "command": "node",
+      "args": ["/root/repo/clixen/packages/mcp-server/dist/index.js"],
+      "env": {
+        "N8N_API_URL": "https://n8n.clixen.com/api/v1",
+        "N8N_API_KEY": "your-n8n-api-key-here"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/root/repo"
+      ]
+    }
+  }
+}

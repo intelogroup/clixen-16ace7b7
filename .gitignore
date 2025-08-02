@@ -1,0 +1,12 @@
+# API Keys and Secrets
+OPENAI_KEY.txt
+*.key
+*.secret
+
+# Environment files with real keys
+.env.local
+.env.production
+
+# MCP Server git repositories (use as external dependencies)
+docker-hub-mcp/
+mcp-servers/
