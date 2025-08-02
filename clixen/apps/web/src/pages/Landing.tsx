@@ -1,6 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRightIcon, SparklesIcon, CogIcon, ZapIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, SparklesIcon, CogIcon, BoltIcon } from '@heroicons/react/24/outline';
 
 export default function Landing() {
   return (
@@ -73,7 +72,7 @@ export default function Landing() {
             </p>
           </div>
           <div className="text-center">
-            <ZapIcon className="w-12 h-12 mx-auto mb-4 text-white" />
+            <BoltIcon className="w-12 h-12 mx-auto mb-4 text-white" />
             <h3 className="text-xl font-semibold mb-2">Real-time Testing</h3>
             <p className="text-zinc-400">
               Test your workflows instantly with built-in validation

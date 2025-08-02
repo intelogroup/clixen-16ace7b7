@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Zap, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Send, Loader2, Zap, CheckCircle, XCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 
