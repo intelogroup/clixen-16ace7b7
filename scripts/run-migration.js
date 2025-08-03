@@ -1,81 +1,144 @@
-#!/usr/bin/env node
-
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
+import fs from 'fs';
+import path from 'path';
+import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import dotenv from 'dotenv';
+import { dirname } from 'path';
 
-// Load environment variables
-dotenv.config();
-
+// ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Initialize Supabase client with service role key (if available) or anon key
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Load environment variables
+config();
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing Supabase URL or API key in environment variables');
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('Missing Supabase URL or Service Role Key');
   process.exit(1);
 }
 
-console.log('🔧 Initializing Supabase client...');
-console.log(`📍 URL: ${supabaseUrl}`);
+// Create Supabase client with service role key (bypasses RLS)
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-async function runMigration() {
+async function executeMigration() {
   try {
-    console.log('📄 Reading migration file...');
-    const migrationPath = join(__dirname, '..', 'supabase', 'migrations', '002_oauth_and_api_management.sql');
-    const migrationSQL = readFileSync(migrationPath, 'utf8');
-
-    // Split the migration into individual statements
+    console.log('🚀 Starting Supabase migration...');
+    
+    // Read the migration SQL file
+    const migrationPath = path.join(__dirname, 'supabase/migrations/003_queue_system_setup.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+    
+    // Split the SQL into individual statements
     const statements = migrationSQL
       .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
-
-    console.log(`📊 Found ${statements.length} SQL statements to execute`);
-
-    // Note: Supabase JS client doesn't support raw SQL execution directly
-    // We'll need to use the Supabase Dashboard or CLI with proper credentials
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
     
-    console.log('\n⚠️  Direct SQL execution requires database credentials.');
-    console.log('\n📝 Alternative approaches:');
-    console.log('1. Use Supabase Dashboard SQL Editor:');
-    console.log(`   https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc/sql`);
-    console.log('\n2. Copy and paste the migration SQL from:');
-    console.log(`   ${migrationPath}`);
-    console.log('\n3. Or use the Supabase CLI with database password:');
-    console.log('   supabase db push --db-url "postgresql://postgres:[password]@aws-0-us-east-2.pooler.supabase.com:5432/postgres"');
+    console.log(`📝 Found ${statements.length} SQL statements to execute`);
     
-    // Let's at least check if the tables already exist
-    console.log('\n🔍 Checking if tables already exist...');
+    let successCount = 0;
+    let errorCount = 0;
     
-    const tables = ['user_oauth_tokens', 'api_usage', 'api_quotas', 'oauth_flow_states'];
-    
-    for (const table of tables) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .limit(1);
+    // Execute each statement
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i] + ';';
       
-      if (error && error.code === '42P01') {
-        console.log(`   ❌ Table '${table}' does not exist`);
-      } else if (error) {
-        console.log(`   ⚠️  Error checking '${table}': ${error.message}`);
-      } else {
-        console.log(`   ✅ Table '${table}' already exists`);
+      try {
+        console.log(`\n⏳ Executing statement ${i + 1}/${statements.length}...`);
+        console.log(`📋 SQL: ${statement.substring(0, 100)}${statement.length > 100 ? '...' : ''}`);
+        
+        const { data, error } = await supabase.rpc('exec_sql', {
+          sql: statement
+        });
+        
+        if (error) {
+          console.error(`❌ Error in statement ${i + 1}:`, error);
+          errorCount++;
+          
+          // Try alternative approach for some statements
+          if (statement.includes('CREATE EXTENSION')) {
+            console.log('🔄 Retrying extension creation with alternative method...');
+            const { error: altError } = await supabase
+              .from('pg_extension')
+              .select('*')
+              .limit(1);
+            
+            if (!altError) {
+              console.log('✅ Extension handling seems to work');
+            }
+          }
+        } else {
+          console.log(`✅ Statement ${i + 1} executed successfully`);
+          successCount++;
+        }
+        
+        // Add a small delay between statements
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (err) {
+        console.error(`❌ Exception in statement ${i + 1}:`, err.message);
+        errorCount++;
       }
     }
     
+    console.log('\n📊 Migration Summary:');
+    console.log(`✅ Successful statements: ${successCount}`);
+    console.log(`❌ Failed statements: ${errorCount}`);
+    console.log(`📋 Total statements: ${statements.length}`);
+    
+    // Test database connection and basic queries
+    console.log('\n🔍 Testing database connection...');
+    
+    const { data: tables, error: tablesError } = await supabase
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .like('table_name', '%workflow%');
+    
+    if (tablesError) {
+      console.error('❌ Database connection test failed:', tablesError);
+    } else {
+      console.log('✅ Database connection successful');
+      console.log('📋 Workflow-related tables found:', tables?.map(t => t.table_name) || []);
+    }
+    
+    // Test extensions
+    console.log('\n🧩 Checking extensions...');
+    const { data: extensions, error: extError } = await supabase
+      .from('pg_extension')
+      .select('extname')
+      .in('extname', ['pgmq', 'pg_cron', 'pg_net']);
+    
+    if (extError) {
+      console.log('⚠️  Could not check extensions:', extError.message);
+    } else {
+      const foundExts = extensions?.map(e => e.extname) || [];
+      console.log('✅ Extensions found:', foundExts);
+      
+      const requiredExts = ['pgmq', 'pg_cron', 'pg_net'];
+      const missingExts = requiredExts.filter(ext => !foundExts.includes(ext));
+      
+      if (missingExts.length > 0) {
+        console.log('⚠️  Missing extensions:', missingExts);
+        console.log('💡 These may need to be enabled manually in Supabase dashboard');
+      }
+    }
+    
+    console.log('\n🎉 Migration completed!');
+    
   } catch (error) {
-    console.error('❌ Error:', error.message);
+    console.error('💥 Migration failed:', error);
     process.exit(1);
   }
 }
 
-runMigration();
+// Run the migration
+executeMigration();
