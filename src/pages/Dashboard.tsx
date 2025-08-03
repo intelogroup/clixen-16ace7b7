@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { n8nApi } from '../lib/n8n';
-import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { workflowGenerator } from '../lib/workflowGenerator';
+import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface Workflow {
@@ -26,6 +27,7 @@ export default function Dashboard() {
     message: string;
     version?: string;
   } | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -46,6 +48,50 @@ export default function Dashboard() {
         connected: false,
         message: error instanceof Error ? error.message : 'Connection test failed',
       });
+    }
+  };
+
+  const handleGenerateTestWorkflow = async (type: 'webhook' | 'scheduled') => {
+    setIsGenerating(true);
+    
+    try {
+      toast.success(`Generating ${type} workflow...`);
+      
+      // Generate the workflow
+      const workflow = await workflowGenerator.generateSimpleWorkflow(type);
+      
+      // Deploy to n8n
+      const result = await workflowGenerator.deployWorkflow(workflow);
+      
+      if (result.success) {
+        toast.success(`${workflow.name} deployed successfully!`);
+        
+        // Test the workflow
+        const testResult = await workflowGenerator.testWorkflow(
+          result.workflowId!,
+          result.webhookUrl
+        );
+        
+        if (testResult.success) {
+          toast.success(`Workflow test passed! ${testResult.message}`);
+          if (result.webhookUrl) {
+            navigator.clipboard.writeText(result.webhookUrl);
+            toast.success('Webhook URL copied to clipboard!');
+          }
+        } else {
+          toast.error(`Workflow test failed: ${testResult.message}`);
+        }
+        
+        // Reload workflows to show the new one
+        loadWorkflows();
+      } else {
+        toast.error(`Deployment failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Workflow generation error:', error);
+      toast.error('Failed to generate workflow');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -270,7 +316,7 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/chat"
             className="flex items-center p-4 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
@@ -281,6 +327,31 @@ export default function Dashboard() {
               <p className="text-sm text-zinc-400">Use AI to generate a new n8n workflow</p>
             </div>
           </Link>
+          
+          <button 
+            onClick={() => handleGenerateTestWorkflow('webhook')}
+            disabled={isGenerating || !n8nStatus?.connected}
+            className="flex items-center p-4 border border-white/10 rounded-lg hover:bg-white/5 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <BeakerIcon className="w-6 h-6 mr-3" />
+            <div>
+              <h3 className="font-medium">Test Webhook</h3>
+              <p className="text-sm text-zinc-400">Generate & deploy a simple webhook workflow</p>
+            </div>
+          </button>
+          
+          <button 
+            onClick={() => handleGenerateTestWorkflow('scheduled')}
+            disabled={isGenerating || !n8nStatus?.connected}
+            className="flex items-center p-4 border border-white/10 rounded-lg hover:bg-white/5 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ClockIcon className="w-6 h-6 mr-3" />
+            <div>
+              <h3 className="font-medium">Test Scheduler</h3>
+              <p className="text-sm text-zinc-400">Generate & deploy a simple scheduled workflow</p>
+            </div>
+          </button>
+          
           <button className="flex items-center p-4 border border-white/10 rounded-lg hover:bg-white/5 transition-colors text-left">
             <PlayIcon className="w-6 h-6 mr-3" />
             <div>

@@ -8,7 +8,38 @@ export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPassword(value);
+    if (value && !validatePassword(value)) {
+      setPasswordError('Password must be at least 6 characters');
+    } else {
+      setPasswordError('');
+    }
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -23,6 +54,17 @@ export default function Auth() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    if (!validatePassword(password)) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -111,10 +153,15 @@ export default function Auth() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-white/20 rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 focus:ring-white focus:border-white sm:text-sm"
-                  placeholder="Enter your email"
+                  onChange={handleEmailChange}
+                  className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 sm:text-sm ${
+                    emailError ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : 'border-white/20 focus:ring-white focus:border-white'
+                  }`}
+                  placeholder="you@example.com"
                 />
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-400">{emailError}</p>
+                )}
               </div>
             </div>
 
@@ -130,10 +177,15 @@ export default function Auth() {
                   autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-white/20 rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 focus:ring-white focus:border-white sm:text-sm"
+                  onChange={handlePasswordChange}
+                  className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 sm:text-sm ${
+                    passwordError ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : 'border-white/20 focus:ring-white focus:border-white'
+                  }`}
                   placeholder="Enter your password"
                 />
+                {passwordError && (
+                  <p className="mt-1 text-sm text-red-400">{passwordError}</p>
+                )}
               </div>
             </div>
 
