@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { n8nApi } from '../lib/n8n';
-import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PlayIcon, PauseIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface Workflow {
@@ -21,33 +20,11 @@ export default function Dashboard() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [n8nStatus, setN8nStatus] = useState<{
-    connected: boolean;
-    message: string;
-    version?: string;
-  } | null>(null);
 
   useEffect(() => {
     loadUserData();
     loadWorkflows();
-    checkN8nConnection();
   }, []);
-
-  const checkN8nConnection = async () => {
-    try {
-      const result = await n8nApi.testConnection();
-      setN8nStatus({
-        connected: result.success,
-        message: result.message,
-        version: result.version,
-      });
-    } catch (error) {
-      setN8nStatus({
-        connected: false,
-        message: error instanceof Error ? error.message : 'Connection test failed',
-      });
-    }
-  };
 
   const loadUserData = async () => {
     try {
@@ -131,41 +108,6 @@ export default function Dashboard() {
           <PlusIcon className="w-4 h-4" />
           <span>Create Workflow</span>
         </Link>
-      </div>
-
-      {/* n8n Status Card */}
-      <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">n8n Server Status</h2>
-            {n8nStatus ? (
-              <div className="flex items-center space-x-2">
-                {n8nStatus.connected ? (
-                  <CheckCircleIcon className="w-5 h-5 text-green-400" />
-                ) : (
-                  <XCircleIcon className="w-5 h-5 text-red-400" />
-                )}
-                <span className={n8nStatus.connected ? 'text-green-400' : 'text-red-400'}>
-                  {n8nStatus.message}
-                </span>
-                {n8nStatus.version && (
-                  <span className="text-zinc-500">({n8nStatus.version})</span>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <ClockIcon className="w-5 h-5 text-yellow-400 animate-spin" />
-                <span className="text-yellow-400">Testing connection...</span>
-              </div>
-            )}
-          </div>
-          <button
-            onClick={checkN8nConnection}
-            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm transition-colors"
-          >
-            Refresh
-          </button>
-        </div>
       </div>
 
       {/* Stats Cards */}

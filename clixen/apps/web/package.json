@@ -1,28 +1,27 @@
 {
-  "name": "clixen",
+  "name": "@clixen/web",
   "version": "0.1.0",
-  "description": "AI-powered n8n workflow automation platform",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
-    "@heroicons/react": "^2.0.18",
-    "@modelcontextprotocol/sdk": "^1.17.1",
+    "@clixen/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.39.0",
     "@supabase/auth-ui-react": "^0.4.6",
     "@supabase/auth-ui-shared": "^0.1.8",
-    "@supabase/supabase-js": "^2.53.0",
-    "clsx": "^2.0.0",
-    "framer-motion": "^10.16.0",
-    "lucide-react": "^0.292.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
     "react-hot-toast": "^2.4.1",
     "react-markdown": "^9.0.0",
-    "react-router-dom": "^6.20.0"
+    "framer-motion": "^10.16.0",
+    "lucide-react": "^0.292.0",
+    "clsx": "^2.0.0",
+    "@heroicons/react": "^2.0.18"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
