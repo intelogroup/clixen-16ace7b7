@@ -85,6 +85,40 @@ export class AgentCoordinator {
     };
   }
 
+  async handleNaturalConversation(message: string, conversationHistory: any[]): Promise<{
+    response: string;
+    questions: string[];
+    mode: 'greeting' | 'scoping' | 'validating' | 'creating';
+    needsMoreInfo: boolean;
+    canProceed: boolean;
+    scopeStatus?: any;
+  }> {
+    // Create a temporary context for natural conversation
+    const tempContext: AgentContext = {
+      conversationId: `temp-${Date.now()}`,
+      userId: 'temp-user',
+      userRequirements: [],
+      agentStates: {},
+      executionHistory: [],
+      validationResults: [],
+      sharedMemory: {}
+    };
+
+    // Get or create orchestrator agent
+    const orchestrator = new OrchestratorAgent(tempContext);
+    
+    // Handle the natural conversation
+    const result = await orchestrator.processTask({
+      action: 'handle_conversation',
+      input: {
+        message,
+        conversationHistory
+      }
+    });
+
+    return result;
+  }
+
   async continueConversation(conversationId: string, message: string): Promise<{
     response: string;
     phase: WorkflowPhase;

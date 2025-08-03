@@ -1,11 +1,47 @@
 // Lead orchestrator agent for conversation management and task delegation
 import { BaseAgent } from './BaseAgent';
 import { AgentConfig, AgentContext, WorkflowRequirement, WorkflowPhase, AgentMessage } from './types';
+import { n8nValidator } from './N8nValidator';
 
 export class OrchestratorAgent extends BaseAgent {
   private specialists: Map<string, BaseAgent> = new Map();
   private currentPhase: WorkflowPhase = 'understanding';
   private phaseStartTime: number = Date.now();
+  private conversationMode: 'greeting' | 'scoping' | 'validating' | 'creating' = 'greeting';
+  private scopingData: any = {
+    trigger: null,
+    dataSources: [],
+    actions: [],
+    conditions: [],
+    output: null,
+    frequency: null
+  };
+  private scopingQuestions = {
+    trigger: [
+      "What triggers this workflow? For example: a new form submission, a scheduled time, webhook, or manual trigger?",
+      "When should this automation start?"
+    ],
+    dataSources: [
+      "What data sources do you need to connect? (like Google Sheets, databases, APIs, email)",
+      "Where is your data coming from?"
+    ],
+    actions: [
+      "What actions should the workflow perform? (send emails, update databases, create files, etc.)",
+      "What do you want to happen with the data?"
+    ],
+    conditions: [
+      "Are there any conditions or filters? Should it only run for specific items?",
+      "Do you need any if/then logic?"
+    ],
+    output: [
+      "Where should the results go? (Email, Slack, database, file)",
+      "How would you like the output formatted?"
+    ],
+    frequency: [
+      "How often will this workflow run? (Every time triggered, daily, weekly)",
+      "Any scheduling requirements?"
+    ]
+  };
 
   constructor(context: AgentContext) {
     const config: AgentConfig = {
@@ -53,15 +89,15 @@ export class OrchestratorAgent extends BaseAgent {
   }
 
   private getSystemPrompt(): string {
-    return `You are the Lead Orchestrator Agent for Clixen, an AI-powered n8n workflow automation platform.
+    return `You are a friendly and helpful workflow automation assistant for Clixen, an AI-powered n8n platform.
 
 Your primary responsibilities:
-1. UNDERSTAND user requirements through natural conversation
-2. DECOMPOSE complex requests into structured workflow requirements
-3. DELEGATE tasks to specialist agents based on their capabilities
+1. GREET users naturally and understand what they want to automate
+2. GUIDE them through scoping their workflow with friendly questions
+3. VALIDATE feasibility before proceeding with creation
 4. COORDINATE the workflow creation process from start to finish
 5. ENSURE quality and validate all outputs before deployment
-6. COMMUNICATE progress clearly to the user
+6. MAINTAIN a conversational, helpful tone throughout
 
 Key principles:
 - Always prioritize user experience and clarity
@@ -79,10 +115,11 @@ Available specialist agents:
 - MonitorAgent: Tracks performance and health monitoring
 
 Your responses should be:
-- Clear and user-friendly
-- Technically accurate
-- Focused on moving towards a complete solution
-- Proactive in identifying potential issues or improvements
+- Natural and conversational
+- Focused on automation and workflows only
+- Progressive - don't overwhelm with all questions at once
+- Clear about what's possible with n8n
+- Encouraging and helpful
 
 Remember: You're the primary interface between the user and the technical implementation.`;
   }
@@ -91,8 +128,20 @@ Remember: You're the primary interface between the user and the technical implem
     const { action, input } = task;
 
     switch (action) {
+      case 'greet_user':
+        return await this.greetUser(input.isReturningUser);
+      
       case 'analyze_user_message':
         return await this.analyzeUserMessage(input.message, input.conversationHistory);
+      
+      case 'handle_conversation':
+        return await this.handleNaturalConversation(input.message, input.conversationHistory);
+      
+      case 'scope_workflow':
+        return await this.scopeWorkflow(input.message);
+      
+      case 'create_workflow':
+        return await this.createWorkflowFromScope();
       
       case 'extract_requirements':
         return await this.extractRequirements(input.userInput);
@@ -121,6 +170,307 @@ Remember: You're the primary interface between the user and the technical implem
 
   getCapabilities(): string[] {
     return this.config.capabilities.map(cap => cap.name);
+  }
+
+  // Natural conversation methods
+  async greetUser(isReturningUser: boolean = false): Promise<{
+    message: string;
+    suggestions: string[];
+    mode: string;
+  }> {
+    const greetings = {
+      new: [
+        "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?",
+        "Hello! I'm here to help you create n8n workflows that save time. What process are you looking to automate?",
+        "Hi there! I specialize in workflow automation. Tell me about a task you'd like to automate, and I'll help you build it!"
+      ],
+      returning: [
+        "Welcome back! Ready to create another automation?",
+        "Good to see you again! What would you like to automate today?",
+        "Hello again! Let's build another workflow. What's on your automation wishlist?"
+      ]
+    };
+
+    const suggestions = [
+      "Send Slack notifications for new form submissions",
+      "Sync Google Sheets with a database",
+      "Process emails automatically",
+      "Generate reports from multiple sources",
+      "Update CRM when deals close",
+      "Backup files to cloud storage"
+    ];
+
+    const greeting = isReturningUser 
+      ? greetings.returning[Math.floor(Math.random() * greetings.returning.length)]
+      : greetings.new[Math.floor(Math.random() * greetings.new.length)];
+
+    this.conversationMode = 'greeting';
+    
+    return {
+      message: greeting,
+      suggestions: suggestions.slice(0, 4),
+      mode: 'greeting'
+    };
+  }
+
+  async handleNaturalConversation(message: string, conversationHistory: any[] = []): Promise<{
+    response: string;
+    questions: string[];
+    mode: string;
+    needsMoreInfo: boolean;
+    canProceed: boolean;
+  }> {
+    // Handle different conversation modes
+    if (this.conversationMode === 'greeting') {
+      // Check if user is just greeting or actually describing a workflow
+      const lowerMessage = message.toLowerCase();
+      if (lowerMessage.match(/^(hi|hello|hey|good morning|good afternoon)/)) {
+        return {
+          response: "Hello! I'm here to help you automate workflows. What task would you like to automate? For example, you could automate sending emails, updating spreadsheets, or syncing data between apps.",
+          questions: [],
+          mode: 'greeting',
+          needsMoreInfo: true,
+          canProceed: false
+        };
+      } else {
+        // User is describing a workflow, move to scoping
+        this.conversationMode = 'scoping';
+        return await this.scopeWorkflow(message);
+      }
+    }
+
+    if (this.conversationMode === 'scoping') {
+      return await this.scopeWorkflow(message);
+    }
+
+    // Default response for automation-focused conversation
+    return {
+      response: "I can help you with that automation. Let me understand your requirements better.",
+      questions: this.getNextScopingQuestions(),
+      mode: this.conversationMode,
+      needsMoreInfo: true,
+      canProceed: false
+    };
+  }
+
+  async scopeWorkflow(message: string): Promise<{
+    response: string;
+    questions: string[];
+    mode: string;
+    needsMoreInfo: boolean;
+    canProceed: boolean;
+    scopeStatus?: any;
+  }> {
+    // Extract information from user message
+    const extractedInfo = await this.extractScopeInfo(message);
+    
+    // Update scoping data
+    Object.keys(extractedInfo).forEach(key => {
+      if (extractedInfo[key]) {
+        this.scopingData[key] = extractedInfo[key];
+      }
+    });
+
+    // Check what information is still missing
+    const missingInfo = this.getMissingScope();
+    
+    if (missingInfo.length === 0) {
+      // We have all needed information - validate with n8n
+      this.conversationMode = 'validating';
+      
+      // Perform feasibility check with n8n validator
+      const validation = await n8nValidator.validateFeasibility(this.scopingData);
+      
+      if (validation.feasible) {
+        // Store the suggested structure for later use
+        this.setMemory('workflow_structure', validation.suggestedStructure);
+        
+        let response = "Excellent! I've validated your workflow with our n8n system. Everything looks good!\n\n";
+        response += `📊 **Workflow Summary:**\n`;
+        response += `• **Trigger**: ${this.scopingData.trigger}\n`;
+        if (this.scopingData.dataSources?.length > 0) {
+          response += `• **Data Sources**: ${this.scopingData.dataSources.join(', ')}\n`;
+        }
+        response += `• **Actions**: ${this.scopingData.actions?.join(', ') || 'Process data'}\n`;
+        response += `• **Output**: ${this.scopingData.output}\n`;
+        response += `• **Complexity**: ${validation.estimatedComplexity}\n\n`;
+        
+        if (validation.warnings.length > 0) {
+          response += `⚠️ **Notes:**\n${validation.warnings.map(w => `• ${w}`).join('\n')}\n\n`;
+        }
+        
+        response += "Ready to create your workflow! Click the 'Create Workflow' button below to proceed.";
+        
+        return {
+          response,
+          questions: [],
+          mode: 'validating',
+          needsMoreInfo: false,
+          canProceed: true,
+          scopeStatus: this.scopingData
+        };
+      } else {
+        // Workflow not feasible, suggest alternatives
+        let response = "I've checked our n8n capabilities, and there are some challenges with your exact requirements:\n\n";
+        
+        if (validation.missingCapabilities.length > 0) {
+          response += `❌ **Missing Capabilities:**\n`;
+          response += validation.missingCapabilities.map(cap => `• ${cap}`).join('\n');
+          response += "\n\n";
+        }
+        
+        if (validation.alternativeSolutions.length > 0) {
+          response += `💡 **Alternative Solutions:**\n`;
+          response += validation.alternativeSolutions.map(alt => `• ${alt}`).join('\n');
+          response += "\n\n";
+        }
+        
+        response += "Would you like to modify your requirements or try one of the alternatives?";
+        
+        // Go back to scoping mode
+        this.conversationMode = 'scoping';
+        
+        return {
+          response,
+          questions: ["What would you like to change about your workflow?"],
+          mode: 'scoping',
+          needsMoreInfo: true,
+          canProceed: false,
+          scopeStatus: this.scopingData
+        };
+      }
+    }
+
+    // Ask for the next piece of missing information
+    const nextQuestion = this.getNextScopingQuestion(missingInfo[0]);
+    
+    return {
+      response: `I understand you want to ${this.summarizeCurrentScope()}. ${nextQuestion}`,
+      questions: [nextQuestion],
+      mode: 'scoping',
+      needsMoreInfo: true,
+      canProceed: false,
+      scopeStatus: this.scopingData
+    };
+  }
+
+  private async extractScopeInfo(message: string): Promise<any> {
+    const prompt = `Extract workflow automation information from this message:
+"${message}"
+
+Look for:
+- Triggers (webhooks, schedules, form submissions, etc.)
+- Data sources (Google Sheets, databases, APIs, files)
+- Actions (send email, update database, create file, notify)
+- Conditions (if/then logic, filters)
+- Output destinations (where results should go)
+- Frequency (how often it should run)
+
+Return as JSON with keys: trigger, dataSources, actions, conditions, output, frequency
+Only include what's explicitly mentioned.`;
+
+    try {
+      const response = await this.think(prompt);
+      return JSON.parse(response);
+    } catch {
+      return {};
+    }
+  }
+
+  private getMissingScope(): string[] {
+    const required = ['trigger', 'actions', 'output'];
+    return required.filter(key => !this.scopingData[key]);
+  }
+
+  private getNextScopingQuestion(field: string): string {
+    const questions = this.scopingQuestions[field as keyof typeof this.scopingQuestions];
+    return questions ? questions[0] : "Can you tell me more about your workflow requirements?";
+  }
+
+  private getNextScopingQuestions(): string[] {
+    const missing = this.getMissingScope();
+    return missing.slice(0, 2).map(field => this.getNextScopingQuestion(field));
+  }
+
+  private summarizeCurrentScope(): string {
+    const parts = [];
+    
+    if (this.scopingData.trigger) {
+      parts.push(`trigger on ${this.scopingData.trigger}`);
+    }
+    if (this.scopingData.actions && this.scopingData.actions.length > 0) {
+      parts.push(`${this.scopingData.actions.join(' and ')}`);
+    }
+    if (this.scopingData.output) {
+      parts.push(`output to ${this.scopingData.output}`);
+    }
+    
+    return parts.join(', ') || "automate your workflow";
+  }
+
+  async createWorkflowFromScope(): Promise<{
+    success: boolean;
+    message: string;
+    workflowId?: string;
+    phase: string;
+  }> {
+    try {
+      // Get the workflow structure from memory (set during validation)
+      const workflowStructure = this.getMemory('workflow_structure');
+      
+      if (!workflowStructure) {
+        // If no structure, generate it now
+        const validation = await n8nValidator.validateFeasibility(this.scopingData);
+        if (!validation.feasible || !validation.suggestedStructure) {
+          return {
+            success: false,
+            message: "Unable to generate workflow structure. Please try modifying your requirements.",
+            phase: 'error'
+          };
+        }
+        this.setMemory('workflow_structure', validation.suggestedStructure);
+      }
+      
+      // Deploy the workflow
+      const deploymentResult = await n8nValidator.deployWorkflow(
+        this.getMemory('workflow_structure')
+      );
+      
+      if (deploymentResult.success) {
+        this.conversationMode = 'completed' as any;
+        
+        return {
+          success: true,
+          message: `🎉 Success! Your workflow has been created and deployed to n8n.\n\n` +
+                  `**Workflow ID**: ${deploymentResult.workflowId}\n` +
+                  `**Status**: Ready to activate\n\n` +
+                  `You can now:\n` +
+                  `• Test the workflow in n8n\n` +
+                  `• Activate it for production use\n` +
+                  `• Modify the nodes as needed\n\n` +
+                  `Access your workflow at: ${import.meta.env.VITE_N8N_API_URL?.replace('/api/v1', '')}/workflow/${deploymentResult.workflowId}`,
+          workflowId: deploymentResult.workflowId,
+          phase: 'completed'
+        };
+      } else {
+        return {
+          success: false,
+          message: `Failed to deploy workflow: ${deploymentResult.error}\n\n` +
+                  `This might be due to:\n` +
+                  `• n8n server connectivity issues\n` +
+                  `• Invalid API credentials\n` +
+                  `• Workflow configuration issues\n\n` +
+                  `Would you like to try again or modify your requirements?`,
+          phase: 'error'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        phase: 'error'
+      };
+    }
   }
 
   // Core orchestrator methods

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Zap, CheckCircle, XCircle, Bot, User, Cog, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, Zap, CheckCircle, XCircle, Bot, User, Cog, AlertTriangle, Plus, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { agentCoordinator } from '../lib/agents';
@@ -16,6 +16,10 @@ interface Message {
   agentId?: string;
   phase?: string;
   progress?: number;
+  suggestions?: string[];
+  conversationMode?: 'greeting' | 'scoping' | 'validating' | 'creating' | 'completed';
+  scopeStatus?: any;
+  canProceed?: boolean;
   workflow?: {
     id: string;
     name: string;
@@ -36,16 +40,18 @@ interface AgentStatus {
   };
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  status: 'scoping' | 'validating' | 'creating' | 'completed';
+  createdAt: Date;
+  workflowId?: string;
+}
+
 export default function Chat() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: 'Hello! I\'m your AI workflow assistant powered by a team of specialist agents. Describe the workflow you want to create, and I\'ll coordinate with my agents to build it for you.',
-      timestamp: new Date(),
-      agentId: 'orchestrator',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
@@ -53,6 +59,9 @@ export default function Chat() {
   const [overallProgress, setOverallProgress] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>({});
   const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [conversationMode, setConversationMode] = useState<'greeting' | 'scoping' | 'validating' | 'creating' | 'completed'>('greeting');
+  const [scopeData, setScopeData] = useState<any>({});
+  const [canCreateWorkflow, setCanCreateWorkflow] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -63,6 +72,43 @@ export default function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Initialize with greeting on mount
+  useEffect(() => {
+    const initChat = async () => {
+      // Check if returning user by looking at localStorage
+      const isReturningUser = localStorage.getItem('hasVisitedBefore') === 'true';
+      localStorage.setItem('hasVisitedBefore', 'true');
+      
+      // Call greet_user action on OrchestratorAgent
+      const greetingResponse = {
+        message: isReturningUser 
+          ? "Welcome back! Ready to create another automation?"
+          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?",
+        suggestions: [
+          "Send Slack notifications for new form submissions",
+          "Sync Google Sheets with a database",
+          "Process emails automatically",
+          "Generate reports from multiple sources"
+        ],
+        mode: 'greeting'
+      };
+      
+      setMessages([{
+        id: '1',
+        type: 'assistant',
+        content: greetingResponse.message,
+        timestamp: new Date(),
+        agentId: 'orchestrator',
+        suggestions: greetingResponse.suggestions,
+        conversationMode: 'greeting'
+      }]);
+    };
+    
+    if (messages.length === 0) {
+      initChat();
+    }
+  }, []);
 
   useEffect(() => {
     // Set up agent coordinator event listeners
@@ -131,10 +177,43 @@ export default function Chat() {
     );
   };
 
-  const generateWorkflow = async (intent: string) => {
-    setIsGenerating(true);
-    setShowAgentPanel(true);
+  const startNewChat = () => {
+    const newSession: ChatSession = {
+      id: crypto.randomUUID(),
+      title: 'New Workflow',
+      status: 'scoping',
+      createdAt: new Date()
+    };
+    
+    setSessions([...sessions, newSession]);
+    setActiveSessionId(newSession.id);
+    setConversationId(undefined);
+    setConversationMode('greeting');
+    setScopeData({});
+    setCanCreateWorkflow(false);
+    
+    // Reset messages with new greeting
+    setMessages([{
+      id: crypto.randomUUID(),
+      type: 'assistant',
+      content: "Let's create a new workflow! What would you like to automate?",
+      timestamp: new Date(),
+      agentId: 'orchestrator',
+      conversationMode: 'greeting'
+    }]);
+  };
 
+  const handleSuggestionClick = async (suggestion: string) => {
+    // Add user message with the suggestion
+    addMessage({ type: 'user', content: suggestion });
+    
+    // Process the suggestion as a normal message
+    await processUserMessage(suggestion);
+  };
+
+  const processUserMessage = async (message: string) => {
+    setIsGenerating(true);
+    
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -142,13 +221,38 @@ export default function Chat() {
 
       let response;
       
-      if (!conversationId) {
-        // Start new conversation with agent coordinator
-        response = await agentCoordinator.startConversation(user.id, intent);
-        setConversationId(response.conversationId);
-      } else {
-        // Continue existing conversation
-        response = await agentCoordinator.continueConversation(conversationId, intent);
+      // Handle conversation based on current mode
+      if (conversationMode === 'greeting' || conversationMode === 'scoping') {
+        // Use the natural conversation handler
+        response = await agentCoordinator.handleNaturalConversation(message, messages);
+        
+        // Update conversation state
+        setConversationMode(response.mode);
+        setScopeData(response.scopeStatus || scopeData);
+        setCanCreateWorkflow(response.canProceed);
+        
+        // Add assistant response
+        addMessage({
+          type: 'assistant',
+          content: response.response,
+          agentId: 'orchestrator',
+          conversationMode: response.mode,
+          scopeStatus: response.scopeStatus,
+          canProceed: response.canProceed
+        });
+        
+        // If we have all info and can proceed, show the create button
+        if (response.canProceed && response.mode === 'validating') {
+          setShowAgentPanel(true);
+        }
+      } else if (conversationMode === 'creating') {
+        // Actually create the workflow
+        if (!conversationId) {
+          response = await agentCoordinator.startConversation(user.id, JSON.stringify(scopeData));
+          setConversationId(response.conversationId);
+        } else {
+          response = await agentCoordinator.continueConversation(conversationId, message);
+        }
       }
 
       // Add assistant response
@@ -201,18 +305,95 @@ Would you like to try again?`,
       setIsGenerating(false);
     }
   };
+  
+  const generateWorkflow = processUserMessage; // Alias for backward compatibility
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
 
-    const intent = input.trim();
+    const userMessage = input.trim();
     setInput('');
     
     // Add user message immediately
-    addMessage({ type: 'user', content: intent });
+    addMessage({ type: 'user', content: userMessage });
     
-    await generateWorkflow(intent);
+    await processUserMessage(userMessage);
+  };
+
+  const handleCreateWorkflow = async () => {
+    setConversationMode('creating');
+    setIsGenerating(true);
+    
+    addMessage({
+      type: 'system',
+      content: '🚀 Starting workflow creation with your specifications...',
+      status: 'generating'
+    });
+    
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      
+      // Create a temporary context for the orchestrator
+      const tempContext = {
+        conversationId: `temp-${Date.now()}`,
+        userId: user.id,
+        userRequirements: [],
+        agentStates: {},
+        executionHistory: [],
+        validationResults: [],
+        sharedMemory: {}
+      };
+      
+      // Import OrchestratorAgent directly
+      const { OrchestratorAgent } = await import('../lib/agents/OrchestratorAgent');
+      const orchestrator = new OrchestratorAgent(tempContext);
+      
+      // Create the workflow
+      const result = await orchestrator.processTask({
+        action: 'create_workflow',
+        input: {}
+      });
+      
+      if (result.success) {
+        setConversationMode('completed');
+        addMessage({
+          type: 'assistant',
+          content: result.message,
+          status: 'complete',
+          agentId: 'orchestrator',
+          workflow: {
+            id: result.workflowId || 'new-workflow',
+            name: 'Automated Workflow',
+            nodeCount: 5
+          }
+        });
+        
+        toast.success('Workflow created successfully!');
+      } else {
+        addMessage({
+          type: 'assistant',
+          content: result.message,
+          status: 'error',
+          agentId: 'orchestrator'
+        });
+        
+        toast.error('Failed to create workflow');
+      }
+    } catch (error: any) {
+      addMessage({
+        type: 'assistant',
+        content: `Error creating workflow: ${error.message}`,
+        status: 'error',
+        agentId: 'orchestrator'
+      });
+      
+      toast.error('Failed to create workflow');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -268,6 +449,46 @@ Would you like to try again?`,
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
+      {/* Chat Sessions Sidebar */}
+      <div className="w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col">
+        <div className="p-4 border-b border-zinc-800">
+          <button
+            onClick={startNewChat}
+            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Chat
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2">
+          <div className="space-y-1">
+            {sessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => setActiveSessionId(session.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                  activeSessionId === session.id
+                    ? 'bg-zinc-800 text-white'
+                    : 'hover:bg-zinc-900 text-zinc-400'
+                }`}
+              >
+                <div className="text-sm font-medium truncate">{session.title}</div>
+                <div className="text-xs text-zinc-500">
+                  {session.status} • {new Date(session.createdAt).toLocaleTimeString()}
+                </div>
+              </button>
+            ))}
+            {sessions.length === 0 && (
+              <div className="text-center text-zinc-600 py-8">
+                <MessageSquare className="w-8 h-8 mx-auto mb-2" />
+                <p className="text-sm">No conversations yet</p>
+                <p className="text-xs mt-1">Start a new chat to create a workflow</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Progress Header */}
@@ -336,6 +557,51 @@ Would you like to try again?`,
                   <div className="whitespace-pre-wrap font-mono text-sm">
                     {message.content}
                   </div>
+                  
+                  {/* Workflow Suggestions */}
+                  {message.suggestions && message.suggestions.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs text-zinc-400 mb-2">Popular workflows to get you started:</p>
+                      {message.suggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="block w-full text-left px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-sm"
+                        >
+                          🚀 {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Create Workflow Button */}
+                  {message.canProceed && conversationMode === 'validating' && (
+                    <div className="mt-4">
+                      <button
+                        onClick={handleCreateWorkflow}
+                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Creating Workflow...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Create Workflow
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setConversationMode('scoping')}
+                        className="w-full mt-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors"
+                      >
+                        Modify Requirements
+                      </button>
+                    </div>
+                  )}
                   {message.workflow && (
                     <div className="mt-3 pt-3 border-t border-zinc-700">
                       <div className="flex items-center gap-2 text-xs text-zinc-400">
