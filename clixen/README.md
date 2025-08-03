@@ -1,10 +1,17 @@
-# Clixen - AI-Powered Workflow Automation
+# 🏛️ Clixen Legacy Structure (Reference Only)
 
-Transform natural language into powerful n8n workflows instantly.
+**⚠️ DEPRECATED: This directory contains the legacy monorepo structure.**
 
-## 🚀 What is Clixen?
+**🚀 Current Development**: All active development is now in the root directory (`/root/repo/`) with the revolutionary **Multi-Agent System**.
 
-Clixen is a SaaS platform that uses AI to generate, deploy, and manage n8n workflow automations from simple text descriptions. Just describe what you want to automate, and Clixen builds it for you.
+## 📍 Where to Go
+
+- **👉 Main README**: [`../README.md`](../README.md) - Current multi-agent system
+- **👉 Architecture**: [`../CLAUDE.md`](../CLAUDE.md) - Technical documentation  
+- **👉 Project Context**: [`../devhandoff.md`](../devhandoff.md) - Complete project overview
+- **👉 Active Source**: [`../src/`](../src/) - Multi-agent implementation
+
+## 🏛️ Legacy Reference Information
 
 ## ✨ Features
 

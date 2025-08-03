@@ -9,6 +9,7 @@ import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Chat from './pages/Chat';
+import OAuthCallback from './pages/OAuthCallback';
 
 // Components
 import Layout from './components/Layout';
@@ -101,6 +102,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
         
         <Route element={<ProtectedRoute session={session} />}>
           <Route element={<Layout />}>
