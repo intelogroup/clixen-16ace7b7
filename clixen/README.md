@@ -49,7 +49,7 @@ User → React Chat UI → Supabase Edge Functions → GPT-4
 - **Automation**: n8n (self-hosted)
 - **Validation**: MCP Server (Node.js)
 - **Database**: PostgreSQL (Supabase)
-- **Infrastructure**: AWS EC2, NGINX, Certbot
+- **Deployment**: Netlify (Static hosting + Serverless functions)
 
 ## 📦 Project Structure
 
@@ -61,17 +61,18 @@ clixen/
 ├── packages/
 │   ├── shared/           # Shared types
 │   └── mcp-server/       # n8n validation
-└── infra/                # Deployment scripts
+├── netlify.toml         # Netlify configuration
+└── .env.example         # Environment template
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- Docker
+- Node.js 20+
+- pnpm (recommended)
 - Supabase account
 - OpenAI API key
-- EC2 instance
+- Netlify account
 
 ### Installation
 
@@ -81,27 +82,31 @@ git clone https://github.com/yourusername/clixen.git
 cd clixen
 
 # Install dependencies
-npm install
+pnpm install
 
 # Configure environment
-cp .env.example .env
-# Edit .env with your keys
+cp .env.example .env.local
+# Edit .env.local with your keys
 
 # Start development
-npm run dev
+pnpm dev
 ```
 
-### Deployment
+### Deployment to Netlify
 
 ```bash
-# Deploy to EC2
-bash infra/scripts/setup-ec2.sh
+# Install Netlify CLI
+npm install -g netlify-cli
 
-# Deploy Supabase functions
-npx supabase functions deploy
+# Login and deploy
+netlify login
+netlify init
 
-# Build and deploy frontend
-npm run build
+# Deploy preview
+pnpm deploy:preview
+
+# Deploy to production
+pnpm deploy
 ```
 
 ## 📝 Usage Example

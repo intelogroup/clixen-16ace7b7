@@ -13,8 +13,9 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "deploy": "turbo run deploy",
-    "setup:ec2": "bash infra/scripts/setup-ec2.sh",
+    "deploy": "netlify deploy --prod",
+    "deploy:preview": "netlify deploy",
+    "netlify:build": "pnpm install && turbo run build",
     "mcp:start": "cd packages/mcp-server && npm start"
   },
   "devDependencies": {
