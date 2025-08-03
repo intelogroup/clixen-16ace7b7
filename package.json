@@ -1,5 +1,24 @@
 {
   "dependencies": {
-    "pg": "^8.16.3"
-  }
+    "pg": "^8.16.3",
+    "playwright": "^1.54.2"
+  },
+  "name": "repo",
+  "version": "1.0.0",
+  "description": "This repository was initialized by Terragon.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/intelogroup/clixen.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/intelogroup/clixen/issues"
+  },
+  "homepage": "https://github.com/intelogroup/clixen#readme"
 }

@@ -1,0 +1,98 @@
+[
+  {
+    "type": "request",
+    "url": "http://18.221.12.50/",
+    "method": "GET",
+    "headers": {
+      "upgrade-insecure-requests": "1",
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36"
+    },
+    "postData": null,
+    "timestamp": "2025-08-03T00:30:38.156Z"
+  },
+  {
+    "type": "response",
+    "url": "http://18.221.12.50/",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+      "accept-ranges": "bytes",
+      "connection": "keep-alive",
+      "content-length": "479",
+      "content-type": "text/html",
+      "date": "Sun, 03 Aug 2025 00:30:38 GMT",
+      "etag": "\"688e8894-1df\"",
+      "last-modified": "Sat, 02 Aug 2025 21:52:20 GMT",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "server": "nginx/1.24.0 (Ubuntu)",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "1; mode=block"
+    },
+    "timestamp": "2025-08-03T00:30:38.278Z"
+  },
+  {
+    "type": "request",
+    "url": "http://18.221.12.50/assets/index-CtQN6ggb.js",
+    "method": "GET",
+    "headers": {
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+      "origin": "http://18.221.12.50",
+      "referer": "http://18.221.12.50/"
+    },
+    "postData": null,
+    "timestamp": "2025-08-03T00:30:38.288Z"
+  },
+  {
+    "type": "request",
+    "url": "http://18.221.12.50/assets/index-l9HGytVG.css",
+    "method": "GET",
+    "headers": {
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+      "origin": "http://18.221.12.50",
+      "referer": "http://18.221.12.50/"
+    },
+    "postData": null,
+    "timestamp": "2025-08-03T00:30:38.289Z"
+  },
+  {
+    "type": "response",
+    "url": "http://18.221.12.50/assets/index-l9HGytVG.css",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+      "transfer-encoding": "chunked",
+      "cache-control": "max-age=31536000, public, no-transform",
+      "content-encoding": "gzip",
+      "etag": "W/\"688e8894-42ae\"",
+      "connection": "keep-alive",
+      "expires": "Mon, 03 Aug 2026 00:30:38 GMT",
+      "date": "Sun, 03 Aug 2025 00:30:38 GMT",
+      "content-type": "text/css",
+      "last-modified": "Sat, 02 Aug 2025 21:52:20 GMT",
+      "server": "nginx/1.24.0 (Ubuntu)",
+      "vary": "Accept-Encoding"
+    },
+    "timestamp": "2025-08-03T00:30:38.398Z"
+  },
+  {
+    "type": "response",
+    "url": "http://18.221.12.50/assets/index-CtQN6ggb.js",
+    "status": 200,
+    "statusText": "OK",
+    "headers": {
+      "transfer-encoding": "chunked",
+      "cache-control": "max-age=31536000, public, no-transform",
+      "content-encoding": "gzip",
+      "etag": "W/\"688e8894-67ea1\"",
+      "connection": "keep-alive",
+      "expires": "Mon, 03 Aug 2026 00:30:38 GMT",
+      "date": "Sun, 03 Aug 2025 00:30:38 GMT",
+      "content-type": "application/javascript",
+      "last-modified": "Sat, 02 Aug 2025 21:52:20 GMT",
+      "server": "nginx/1.24.0 (Ubuntu)",
+      "vary": "Accept-Encoding"
+    },
+    "timestamp": "2025-08-03T00:30:38.529Z"
+  }
+]

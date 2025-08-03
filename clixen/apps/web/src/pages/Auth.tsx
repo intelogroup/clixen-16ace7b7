@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('jayveedz19@gmail.com');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 

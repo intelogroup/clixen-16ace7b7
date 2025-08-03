@@ -1,0 +1,30 @@
+[
+  {
+    "type": "request",
+    "url": "https://your-project.supabase.co/auth/v1/token?grant_type=password",
+    "method": "POST",
+    "headers": {
+      "sec-ch-ua-platform": "\"Linux\"",
+      "authorization": "Bearer your-anon-key",
+      "x-supabase-api-version": "2024-01-01",
+      "referer": "http://18.221.12.50/",
+      "sec-ch-ua": "\"Not;A=Brand\";v=\"99\", \"HeadlessChrome\";v=\"139\", \"Chromium\";v=\"139\"",
+      "sec-ch-ua-mobile": "?0",
+      "x-client-info": "supabase-js-web/2.53.0",
+      "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36",
+      "content-type": "application/json;charset=UTF-8",
+      "apikey": "your-anon-key"
+    },
+    "postData": "{\"email\":\"jayveedz19@gmail.com\",\"password\":\"Jimkali90#\",\"gotrue_meta_security\":{}}",
+    "timestamp": "2025-08-03T00:35:40.757Z"
+  },
+  {
+    "type": "failed",
+    "url": "https://your-project.supabase.co/auth/v1/token?grant_type=password",
+    "method": "POST",
+    "failure": {
+      "errorText": "net::ERR_NAME_NOT_RESOLVED"
+    },
+    "timestamp": "2025-08-03T00:35:40.771Z"
+  }
+]
