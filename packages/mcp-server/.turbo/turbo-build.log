@@ -1,0 +1,14 @@
+
+> @clixen/mcp-server@0.1.0 build /root/repo/clixen/packages/mcp-server
+> tsc
+
+src/index.ts(246,34): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(270,40): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(292,26): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(293,33): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(294,40): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(339,28): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(340,28): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(363,30): error TS18048: 'args' is possibly 'undefined'.
+src/index.ts(364,28): error TS18048: 'args' is possibly 'undefined'.
+ ELIFECYCLE  Command failed with exit code 2.
