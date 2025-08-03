@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-08-03T21:52:04.439Z",
+  "success": false,
+  "steps": [
+    {
+      "name": "pre-validation",
+      "success": false,
+      "duration": 473.66706700000003,
+      "details": "Pre-migration validation",
+      "error": "Supabase validation failed: Supabase connection failed: relation \"public.workflow_executions\" does not exist"
+    }
+  ],
+  "performance": {
+    "totalTime": 474.19959000000006,
+    "dataTransferred": 0,
+    "recordsMigrated": 0
+  },
+  "errors": [
+    "Migration failed: Supabase validation failed: Supabase connection failed: relation \"public.workflow_executions\" does not exist"
+  ],
+  "warnings": [
+    "Redis connection failed - will skip data migration"
+  ]
+}
