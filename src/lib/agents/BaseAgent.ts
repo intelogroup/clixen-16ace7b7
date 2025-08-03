@@ -2,7 +2,8 @@
 import OpenAI from 'openai';
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || 'demo-key';
+const IS_DEMO_MODE = !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'your-openai-api-key-here';
 
 export abstract class BaseAgent {
   protected openai: OpenAI;
@@ -13,10 +14,15 @@ export abstract class BaseAgent {
   protected subscribers: Set<(message: AgentMessage) => void> = new Set();
 
   constructor(config: AgentConfig, context: AgentContext) {
-    this.openai = new OpenAI({
-      apiKey: OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true
-    });
+    if (!IS_DEMO_MODE) {
+      this.openai = new OpenAI({
+        apiKey: OPENAI_API_KEY,
+        dangerouslyAllowBrowser: true
+      });
+    } else {
+      // Create a mock OpenAI client for demo mode
+      this.openai = null as any;
+    }
     this.config = config;
     this.context = context;
     this.state = {
@@ -39,6 +45,14 @@ export abstract class BaseAgent {
     this.updateState({ status: 'thinking' });
 
     try {
+      if (IS_DEMO_MODE) {
+        // Demo mode: return a simulated response
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
+        const demoResponse = this.generateDemoResponse(prompt, context);
+        this.updateState({ status: 'idle' });
+        return demoResponse;
+      }
+
       const systemPrompt = this.buildSystemPrompt(context);
       const response = await this.openai.chat.completions.create({
         model: this.config.model,
@@ -282,6 +296,22 @@ export abstract class BaseAgent {
 
   protected isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Demo mode response generator
+  protected generateDemoResponse(prompt: string, context?: any): string {
+    // Generate contextual demo responses based on agent type
+    const agentName = this.config.name.toLowerCase();
+    
+    if (agentName.includes('orchestrator')) {
+      return `I understand you want to: ${prompt}\n\nLet me coordinate with the other agents to help you build this workflow. I'll break this down into manageable tasks and delegate them to the appropriate specialists.`;
+    } else if (agentName.includes('workflow')) {
+      return `I'll design an n8n workflow for: ${prompt}\n\nThe workflow will include appropriate nodes and connections to handle your requirements efficiently.`;
+    } else if (agentName.includes('deployment')) {
+      return `I'll handle the deployment of your workflow. Once validated, I'll ensure it's properly deployed to your n8n instance.`;
+    } else {
+      return `Processing your request: ${prompt}\n\nNote: This is a demo response. Configure your OpenAI API key for full functionality.`;
+    }
   }
 
   // Cleanup
