@@ -1,6 +1,6 @@
 [build]
-  # Build command - simplified for flattened structure
-  command = "corepack enable && pnpm install --frozen-lockfile && cd apps/web && pnpm run build"
+  # Build command - using pnpm workspace with proper turbo setup
+  command = "npm run netlify:build"
   
   # Publish directory (Vite builds to dist by default)
   publish = "apps/web/dist"
