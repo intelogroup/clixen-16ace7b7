@@ -1,0 +1,4 @@
+
+> @clixen/web@0.1.0 build /root/repo/clixen/apps/web
+> tsc && vite build
+

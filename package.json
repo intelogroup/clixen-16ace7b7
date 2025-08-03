@@ -1,24 +1,31 @@
 {
-  "dependencies": {
-    "pg": "^8.16.3",
-    "playwright": "^1.54.2"
-  },
-  "name": "repo",
-  "version": "1.0.0",
-  "description": "This repository was initialized by Terragon.",
-  "main": "index.js",
+  "name": "clixen",
+  "version": "0.1.0",
+  "description": "AI-powered n8n workflow automation platform",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "deploy": "netlify deploy --prod",
+    "deploy:preview": "netlify deploy",
+    "netlify:build": "corepack enable && pnpm install && turbo run build",
+    "mcp:start": "cd packages/mcp-server && npm start"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/intelogroup/clixen.git"
+  "devDependencies": {
+    "turbo": "^1.10.16",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/intelogroup/clixen/issues"
-  },
-  "homepage": "https://github.com/intelogroup/clixen#readme"
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
 }
