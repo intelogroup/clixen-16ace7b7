@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "AI-powered n8n workflow automation platform",
   "private": true,
+  "packageManager": "pnpm@9.0.0",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -15,7 +16,7 @@
     "test": "turbo run test",
     "deploy": "netlify deploy --prod",
     "deploy:preview": "netlify deploy",
-    "netlify:build": "pnpm install && turbo run build",
+    "netlify:build": "corepack enable && pnpm install && turbo run build",
     "mcp:start": "cd packages/mcp-server && npm start"
   },
   "devDependencies": {

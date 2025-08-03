@@ -1,6 +1,6 @@
 [build]
-  # Build command - install dependencies and build the web app from nested clixen directory
-  command = "cd clixen && npm install -g pnpm && pnpm install && cd apps/web && pnpm run build"
+  # Build command - only build web app, skip MCP server
+  command = "cd clixen && corepack enable && pnpm install --frozen-lockfile && cd apps/web && pnpm run build"
   
   # Publish directory (Vite builds to dist by default) - from repo root
   publish = "clixen/apps/web/dist"
@@ -11,6 +11,8 @@
 [build.environment]
   # Node.js version
   NODE_VERSION = "20"
+  # Enable corepack for pnpm
+  COREPACK_ENABLE_STRICT = "0"
 
 # SPA routing - redirect all routes to index.html
 [[redirects]]
