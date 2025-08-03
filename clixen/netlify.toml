@@ -1,6 +1,6 @@
 [build]
-  # Build command - only build the web app for Netlify
-  command = "cd apps/web && npm run build"
+  # Build command - install dependencies and build the web app
+  command = "npm install -g pnpm && pnpm install && cd apps/web && pnpm run build"
   
   # Publish directory (Vite builds to dist by default)
   publish = "apps/web/dist"
@@ -11,9 +11,6 @@
 [build.environment]
   # Node.js version
   NODE_VERSION = "20"
-  
-  # Use pnpm for package management
-  NPM_FLAGS = "--version"
 
 # SPA routing - redirect all routes to index.html
 [[redirects]]
