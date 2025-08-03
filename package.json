@@ -16,6 +16,7 @@
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.53.0",
     "clsx": "^2.0.0",
+    "dotenv": "^17.2.1",
     "framer-motion": "^10.16.0",
     "lucide-react": "^0.292.0",
     "openai": "^5.11.0",
