@@ -7,6 +7,17 @@ OPENAI_KEY.txt
 .env.local
 .env.production
 
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+**/dist/
+.turbo/
+**/.turbo/
+
 # MCP Server git repositories (use as external dependencies)
 docker-hub-mcp/
 mcp-servers/
