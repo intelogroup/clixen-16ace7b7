@@ -1,6 +1,8 @@
 // Base agent class with OpenAI integration
 import OpenAI from 'openai';
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
+import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
+import { performanceOptimizer } from './PerformanceOptimizer';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || 'demo-key';
 const IS_DEMO_MODE = !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'your-openai-api-key-here';
@@ -40,37 +42,66 @@ export abstract class BaseAgent {
   abstract validateInput(input: any): boolean;
   abstract getCapabilities(): string[];
 
-  // Core agent functionality
+  // Core agent functionality with performance optimization
   async think(prompt: string, context?: any): Promise<string> {
-    this.updateState({ status: 'thinking' });
+    // Create cache key from prompt and context
+    const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
+    
+    // Use memoization for repeated queries
+    return performanceOptimizer.memoize(cacheKey, async () => {
+      this.updateState({ status: 'thinking' });
 
-    try {
-      if (IS_DEMO_MODE) {
-        // Demo mode: return a simulated response
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
-        const demoResponse = this.generateDemoResponse(prompt, context);
+      try {
+        if (IS_DEMO_MODE) {
+          // Demo mode: return a simulated response
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
+          const demoResponse = this.generateDemoResponse(prompt, context);
+          this.updateState({ status: 'idle' });
+          return demoResponse;
+        }
+
+        const systemPrompt = this.buildSystemPrompt(context);
+        const response = await this.openai.chat.completions.create({
+          model: this.config.model,
+          temperature: this.config.temperature,
+          max_tokens: this.config.maxTokens,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ]
+        });
+
+        const result = response.choices[0]?.message?.content || '';
         this.updateState({ status: 'idle' });
-        return demoResponse;
-      }
-
-      const systemPrompt = this.buildSystemPrompt(context);
-      const response = await this.openai.chat.completions.create({
-        model: this.config.model,
-        temperature: this.config.temperature,
-        max_tokens: this.config.maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ]
-      });
-
-      const result = response.choices[0]?.message?.content || '';
-      this.updateState({ status: 'idle' });
-      return result;
+        return result;
     } catch (error) {
       this.updateState({ status: 'error' });
-      throw new Error(`Agent thinking failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+      
+      // Enhanced error handling
+      const agentError = errorHandler.handleError(
+        this.config.id,
+        error,
+        ErrorCategory.API,
+        error instanceof Error && error.message.includes('rate limit') 
+          ? ErrorSeverity.HIGH 
+          : ErrorSeverity.MEDIUM
+      );
+      
+      // Attempt retry if recoverable
+      if (agentError.recoverable && agentError.retryCount < agentError.maxRetries) {
+        try {
+          return await errorHandler.retry(
+            () => this.think(prompt, context),
+            agentError
+          );
+        } catch (retryError) {
+          throw new Error(`Agent thinking failed after ${agentError.retryCount} retries: ${agentError.message}`);
+        }
+      }
+      
+      throw new Error(`Agent thinking failed: ${agentError.userMessage || agentError.message}`);
+      }
+    }, 60000); // Cache for 1 minute
   }
 
   async executeStep(action: string, input: any): Promise<any> {
@@ -110,19 +141,42 @@ export abstract class BaseAgent {
 
       return output;
     } catch (error) {
+      // Enhanced error handling
+      const agentError = errorHandler.handleError(
+        this.config.id,
+        error,
+        ErrorCategory.AGENT,
+        ErrorSeverity.MEDIUM
+      );
+      
       // Log error step
       const step: ExecutionStep = {
         id: stepId,
         agentId: this.config.id,
         action,
         input,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: agentError.message,
         duration: Date.now() - startTime,
         timestamp: startTime
       };
 
       this.context.executionHistory.push(step);
       this.updateState({ status: 'error' });
+      
+      // Send error notification
+      await this.sendMessage({
+        toAgent: 'orchestrator',
+        type: 'error',
+        conversationId: this.context.conversationId,
+        payload: {
+          errorId: agentError.id,
+          action,
+          message: agentError.message,
+          recoverable: agentError.recoverable,
+          resolution: agentError.resolution
+        }
+      });
+      
       throw error;
     }
   }
@@ -130,11 +184,11 @@ export abstract class BaseAgent {
   // Message handling
   async sendMessage(message: Omit<AgentMessage, 'id' | 'timestamp' | 'fromAgent'>): Promise<void> {
     const fullMessage: AgentMessage = {
+      ...message,
       id: `${this.config.id}-${Date.now()}`,
       fromAgent: this.config.id,
       timestamp: Date.now(),
-      conversationId: this.context.conversationId,
-      ...message
+      conversationId: this.context.conversationId
     };
 
     // Notify subscribers
@@ -190,6 +244,7 @@ export abstract class BaseAgent {
     this.sendMessage({
       toAgent: 'broadcast',
       type: 'status',
+      conversationId: this.context.conversationId,
       payload: { agentId: this.config.id, state: this.state }
     });
   }

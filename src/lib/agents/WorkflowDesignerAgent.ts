@@ -40,12 +40,15 @@ export class WorkflowDesignerAgent extends BaseAgent {
       model: 'gpt-4',
       temperature: 0.2,
       maxTokens: 3000,
-      systemPrompt: this.getSystemPrompt(),
+      systemPrompt: '',  // Will be set after super() call
       tools: ['node_generation', 'connection_mapping', 'pattern_matching', 'optimization'],
       fallbackAgent: undefined
     };
 
     super(config, context);
+    
+    // Now set the system prompt after super() has been called
+    this.config.systemPrompt = this.getSystemPrompt();
     this.initializeNodeLibrary();
     this.initializeDesignPatterns();
   }
@@ -352,7 +355,8 @@ Return as N8nConnection object format.`;
         const sourceExists = nodes.find(n => n.name === sourceNode);
         if (!sourceExists) continue;
 
-        for (const output of outputs.main || []) {
+        const outputsTyped = outputs as { main?: any[] };
+        for (const output of outputsTyped.main || []) {
           for (const connection of output) {
             const targetExists = nodes.find(n => n.name === connection.node);
             if (targetExists) {
@@ -469,7 +473,8 @@ Suggest specific optimizations with estimated performance impact.`;
         errors.push(`Connection source '${source}' does not exist`);
       }
 
-      for (const outputConnections of connections.main || []) {
+      const connectionsTyped = connections as { main?: any[] };
+      for (const outputConnections of connectionsTyped.main || []) {
         for (const conn of outputConnections) {
           if (!nodeNames.has(conn.node)) {
             errors.push(`Connection target '${conn.node}' does not exist`);

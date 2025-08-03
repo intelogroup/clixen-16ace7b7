@@ -4,6 +4,8 @@ import { Send, Loader2, Zap, CheckCircle, XCircle, Bot, User, Cog, AlertTriangle
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { agentCoordinator } from '../lib/agents';
+import { AgentMonitor } from '../components/AgentMonitor';
+import { WorkflowPhase } from '../lib/agents/types';
 
 interface Message {
   id: string;
@@ -29,6 +31,8 @@ interface AgentStatus {
     status: 'idle' | 'thinking' | 'working' | 'waiting' | 'error' | 'completed';
     progress: number;
     currentTask?: string;
+    lastUpdate: number;
+    metadata: Record<string, any>;
   };
 }
 
@@ -44,8 +48,8 @@ export default function Chat() {
   ]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [currentPhase, setCurrentPhase] = useState('understanding');
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
+  const [currentPhase, setCurrentPhase] = useState<WorkflowPhase>('understanding' as WorkflowPhase);
   const [overallProgress, setOverallProgress] = useState(0);
   const [agentStatus, setAgentStatus] = useState<AgentStatus>({});
   const [showAgentPanel, setShowAgentPanel] = useState(false);
@@ -82,7 +86,9 @@ export default function Chat() {
           name: data.fromAgent.replace('-', ' '),
           status: data.payload.state?.status || 'idle',
           progress: data.payload.state?.progress || 0,
-          currentTask: data.payload.state?.currentTask
+          currentTask: data.payload.state?.currentTask,
+          lastUpdate: Date.now(),
+          metadata: data.payload.state?.metadata || {}
         }
       }));
     };
@@ -151,13 +157,13 @@ export default function Chat() {
         content: response.response,
         agentId: 'orchestrator',
         phase: response.phase,
-        progress: response.progress,
+        progress: 'progress' in response ? response.progress : 0,
         status: response.phase === 'completed' ? 'complete' : 'generating'
       });
 
       // Update UI state
       setCurrentPhase(response.phase);
-      setOverallProgress(response.progress);
+      setOverallProgress('progress' in response ? response.progress : 0);
       setAgentStatus(response.agentStatus);
 
       if (response.phase === 'completed') {
@@ -378,67 +384,21 @@ Would you like to try again?`,
         </form>
       </div>
 
-      {/* Agent Status Panel */}
+      {/* Enhanced Agent Monitor Panel */}
       {showAgentPanel && (
         <motion.div
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 320, opacity: 1 }}
+          animate={{ width: 480, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
-          className="border-l border-zinc-800 bg-zinc-950/50 overflow-hidden"
+          className="border-l border-zinc-800 bg-white overflow-y-auto"
         >
           <div className="p-4">
-            <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-              <Bot className="w-4 h-4" />
-              Agent Status
-            </h3>
-            
-            <div className="space-y-3">
-              {Object.entries(agentStatus).map(([agentId, status]) => (
-                <div key={agentId} className="p-3 bg-zinc-900 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <AgentIcon agentId={agentId} />
-                      <span className="text-sm font-medium capitalize">
-                        {status.name}
-                      </span>
-                    </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${getAgentStatusColor(status.status)}`}>
-                      {status.status}
-                    </span>
-                  </div>
-                  
-                  {status.progress > 0 && (
-                    <div className="mb-2">
-                      <div className="flex justify-between text-xs text-zinc-400 mb-1">
-                        <span>Progress</span>
-                        <span>{status.progress}%</span>
-                      </div>
-                      <div className="w-full bg-zinc-800 rounded-full h-1">
-                        <div 
-                          className="bg-blue-400 h-1 rounded-full transition-all duration-300"
-                          style={{ width: `${status.progress}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {status.currentTask && (
-                    <div className="text-xs text-zinc-400">
-                      <div className="font-medium mb-1">Current Task:</div>
-                      <div className="truncate">{status.currentTask}</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {Object.keys(agentStatus).length === 0 && (
-                <div className="text-center text-zinc-500 py-8">
-                  <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <div className="text-sm">No active agents</div>
-                  <div className="text-xs">Start a conversation to see agent activity</div>
-                </div>
-              )}
-            </div>
+            <AgentMonitor 
+              agentStates={agentStatus}
+              currentPhase={currentPhase}
+              overallProgress={overallProgress}
+              conversationId={conversationId}
+            />
           </div>
         </motion.div>
       )}

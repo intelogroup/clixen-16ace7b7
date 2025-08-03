@@ -41,12 +41,15 @@ export class OrchestratorAgent extends BaseAgent {
       model: 'gpt-4',
       temperature: 0.1,
       maxTokens: 2000,
-      systemPrompt: this.getSystemPrompt(),
+      systemPrompt: '',  // Will be set after super() call
       tools: ['conversation_analysis', 'requirement_extraction', 'task_planning', 'quality_assessment'],
       fallbackAgent: undefined
     };
 
     super(config, context);
+    
+    // Now set the system prompt after super() has been called
+    this.config.systemPrompt = this.getSystemPrompt();
   }
 
   private getSystemPrompt(): string {
@@ -271,6 +274,7 @@ Return detailed JSON plan optimizing for parallel execution where possible.`;
         await this.sendMessage({
           toAgent: assignment.agent,
           type: 'task',
+          conversationId: this.context.conversationId,
           payload: {
             taskId,
             action: task,
@@ -508,6 +512,7 @@ Return validation results with score (0-100), specific issues, and improvement s
     await this.sendMessage({
       toAgent: message.fromAgent,
       type: 'result',
+      conversationId: this.context.conversationId,
       payload: { answer: response, questionId: message.payload.questionId }
     });
   }
@@ -533,6 +538,7 @@ Return validation results with score (0-100), specific issues, and improvement s
       await this.sendMessage({
         toAgent: 'broadcast',
         type: 'status',
+        conversationId: this.context.conversationId,
         payload: { 
           type: 'phase_change', 
           newPhase: this.currentPhase,
@@ -557,6 +563,7 @@ Return validation results with score (0-100), specific issues, and improvement s
       await this.sendMessage({
         toAgent: 'broadcast',
         type: 'error',
+        conversationId: this.context.conversationId,
         payload: {
           type: 'task_failure',
           taskId: failurePayload.taskId,

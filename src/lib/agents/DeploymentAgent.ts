@@ -41,12 +41,15 @@ export class DeploymentAgent extends BaseAgent {
       model: 'gpt-4',
       temperature: 0.1,
       maxTokens: 2000,
-      systemPrompt: this.getSystemPrompt(),
+      systemPrompt: '',  // Will be set after super() call
       tools: ['n8n_api', 'deployment_validation', 'health_checks', 'rollback_execution'],
       fallbackAgent: undefined
     };
 
     super(config, context);
+    
+    // Now set the system prompt after super() has been called
+    this.config.systemPrompt = this.getSystemPrompt();
   }
 
   private getSystemPrompt(): string {
@@ -795,7 +798,9 @@ Your responses should include:
     // Keep only last 50 deployments
     if (this.deploymentHistory.size > 50) {
       const firstKey = this.deploymentHistory.keys().next().value;
-      this.deploymentHistory.delete(firstKey);
+      if (firstKey !== undefined) {
+        this.deploymentHistory.delete(firstKey);
+      }
     }
   }
 

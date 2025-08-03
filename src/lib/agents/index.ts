@@ -7,5 +7,8 @@ export { AgentCoordinator } from './AgentCoordinator';
 
 export * from './types';
 
+// Import AgentCoordinator to create singleton
+import { AgentCoordinator } from './AgentCoordinator';
+
 // Create and export singleton coordinator instance
 export const agentCoordinator = new AgentCoordinator();
