@@ -18,8 +18,8 @@
       "command": "node",
       "args": ["/root/repo/clixen/packages/mcp-server/dist/index.js"],
       "env": {
-        "N8N_API_URL": "https://n8n.clixen.com/api/v1",
-        "N8N_API_KEY": "your-n8n-api-key-here"
+        "N8N_API_URL": "http://18.221.12.50:5678/api/v1",
+        "N8N_API_KEY": "b38356d3-075f-4b69-9b31-dc90c71ba40a"
       }
     },
     "filesystem": {
