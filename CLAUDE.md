@@ -122,7 +122,19 @@ The following MCP servers are installed and configured:
 ```bash
 # Supabase Configuration (PRODUCTION VERIFIED)
 VITE_SUPABASE_URL=https://zfbgdixbzezpxllkoyfc.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw
+
+# CRITICAL: Service Role Key for Admin Operations
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig
+
+# Database Direct Connection (USE POOLER!)
+DATABASE_URL=postgresql://postgres.zfbgdixbzezpxllkoyfc:Jimkali90#@aws-0-us-east-2.pooler.supabase.com:5432/postgres
+
+# Supabase Management API
+SUPABASE_ACCESS_TOKEN=sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f
+
+# JWT Secret for Token Verification
+SUPABASE_JWT_SECRET=K1DeOU0LsLIZSeK87bTNdRks7cBiHb8NlzJHia59gOS4vgWyeb0bEhgGUgFVYUGLng5wYoG6LZ+0FL1uAZ7A4w==
 
 # Authentication Credentials (TESTED)
 Test User: jayveedz19@gmail.com
@@ -135,6 +147,50 @@ VITE_OPENAI_API_KEY=your-openai-api-key-here
 # n8n Configuration  
 VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1
 VITE_N8N_API_KEY=b38356d3-075f-4b69-9b31-dc90c71ba40a
+```
+
+### **🚀 Supabase Database Configuration**
+
+#### **OAuth & API Tables (MIGRATED ✅)**
+```sql
+-- Tables successfully created on August 3, 2025
+user_oauth_tokens    -- OAuth token storage with encryption
+api_usage           -- API usage tracking for quotas
+api_quotas          -- Tier-based limits (free/pro/enterprise)
+oauth_flow_states   -- OAuth flow security management
+```
+
+#### **How to Run Database Migrations**
+```bash
+# Direct method that WORKS (no Supabase CLI needed!)
+node scripts/run-migration-direct.js
+
+# Connection configuration that works:
+Host: aws-0-us-east-2.pooler.supabase.com  # USE POOLER!
+Port: 5432
+User: postgres.zfbgdixbzezpxllkoyfc  # FULL USERNAME!
+Password: Jimkali90#
+SSL: rejectUnauthorized: false
+```
+
+#### **Available Supabase Extensions**
+The database has many powerful extensions activated that can be leveraged:
+- **pg_vector**: Vector similarity search for AI embeddings
+- **pg_net**: HTTP client for webhook calls
+- **pg_cron**: Scheduled jobs directly in database
+- **uuid-ossp**: UUID generation
+- **pgcrypto**: Encryption functions
+- **pgjwt**: JWT token generation/verification
+- **pg_stat_statements**: Query performance monitoring
+- **plv8**: JavaScript stored procedures
+- **http**: HTTP client functions
+
+### **🔐 Supabase MCP Configuration**
+```bash
+# For future MCP setup with these tokens:
+SUPABASE_URL=https://zfbgdixbzezpxllkoyfc.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<use service role key above>
+SUPABASE_ACCESS_TOKEN=sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f
 ```
 
 ### **Critical Security Notes**
@@ -151,18 +207,25 @@ VITE_N8N_API_KEY=b38356d3-075f-4b69-9b31-dc90c71ba40a
 ├── src/                       # 🎯 MAIN APPLICATION (Standard Repo Structure)
 │   ├── lib/agents/           # 🤖 MULTI-AGENT SYSTEM (NEW!)
 │   │   ├── BaseAgent.ts           # Core agent foundation with OpenAI
-│   │   ├── OrchestratorAgent.ts   # Lead conversation manager
+│   │   ├── OrchestratorAgent.ts   # Lead conversation manager with OAuth detection
 │   │   ├── WorkflowDesignerAgent.ts # n8n workflow specialist
 │   │   ├── DeploymentAgent.ts     # Production deployment agent
 │   │   ├── AgentCoordinator.ts    # Multi-agent orchestration hub
 │   │   ├── types.ts               # Comprehensive TypeScript interfaces
 │   │   └── index.ts               # Clean exports and singleton
+│   ├── lib/oauth/            # 🔐 OAUTH MANAGEMENT (NEW!)
+│   │   └── OAuthManager.ts        # OAuth flow and token management
+│   ├── lib/api/              # 🌐 CENTRALIZED API MANAGEMENT (NEW!)
+│   │   └── CentralizedAPIManager.ts # Platform API quota & rate limiting
 │   ├── lib/supabase.ts       # Enhanced auth with error handling
 │   ├── lib/n8n.ts           # n8n API integration
 │   ├── lib/workflowGenerator.ts # Workflow generation utilities
+│   ├── components/           # UI Components
+│   │   └── PermissionModal.tsx    # OAuth permission request UI (NEW!)
 │   ├── pages/Chat.tsx        # 🎭 MULTI-AGENT CHAT INTERFACE (ENHANCED!)
 │   ├── pages/Dashboard.tsx   # Workflow management dashboard
-│   └── pages/Auth.tsx        # Authentication pages
+│   ├── pages/Auth.tsx        # Authentication pages
+│   └── pages/OAuthCallback.tsx # OAuth callback handler (NEW!)
 ├── clixen/                    # Legacy monorepo structure (for reference)
 │   ├── apps/edge/            # Supabase functions
 │   ├── packages/shared/      # Shared types
