@@ -1,6 +1,6 @@
 [build]
-  # Build command - using pnpm workspace with proper turbo setup
-  command = "npm run netlify:build"
+  # Build command - build web app only (no workspace dependencies needed)
+  command = "cd apps/web && npm install && npm run build"
   
   # Publish directory (Vite builds to dist by default)
   publish = "apps/web/dist"

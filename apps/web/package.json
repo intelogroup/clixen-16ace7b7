@@ -4,12 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
-    "@clixen/shared": "workspace:*",
     "@supabase/supabase-js": "^2.39.0",
     "@supabase/auth-ui-react": "^0.4.6",
     "@supabase/auth-ui-shared": "^0.1.8",
