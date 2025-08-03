@@ -1,12 +1,12 @@
 [build]
-  # Build command - build web app only (no workspace dependencies needed)
-  command = "cd apps/web && npm install && npm run build"
+  # Build command - simple npm install and build
+  command = "npm install && npm run build"
   
   # Publish directory (Vite builds to dist by default)
-  publish = "apps/web/dist"
+  publish = "dist"
   
-  # Base directory for build context - repository root
-  base = "."
+  # Base directory for build context - web app directory
+  base = "apps/web"
 
 [build.environment]
   # Node.js version
