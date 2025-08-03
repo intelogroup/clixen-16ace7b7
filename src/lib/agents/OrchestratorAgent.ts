@@ -2,6 +2,8 @@
 import { BaseAgent } from './BaseAgent';
 import { AgentConfig, AgentContext, WorkflowRequirement, WorkflowPhase, AgentMessage } from './types';
 import { n8nValidator } from './N8nValidator';
+import OAuthManager from '../oauth/OAuthManager';
+import CentralizedAPIManager from '../api/CentralizedAPIManager';
 
 export class OrchestratorAgent extends BaseAgent {
   private specialists: Map<string, BaseAgent> = new Map();
@@ -285,6 +287,15 @@ Remember: You're the primary interface between the user and the technical implem
         // Store the suggested structure for later use
         this.setMemory('workflow_structure', validation.suggestedStructure);
         
+        // Check required permissions
+        const workflowDesc = this.summarizeCurrentScope();
+        const permissions = await this.detectRequiredPermissions(workflowDesc);
+        
+        // Store permission requirements
+        this.setMemory('required_oauth', Array.from(permissions.oauthServices.entries()));
+        this.setMemory('required_apis', permissions.centralizedAPIs);
+        this.setMemory('permissions_granted', permissions.allPermissionsGranted);
+        
         let response = "Excellent! I've validated your workflow with our n8n system. Everything looks good!\n\n";
         response += `📊 **Workflow Summary:**\n`;
         response += `• **Trigger**: ${this.scopingData.trigger}\n`;
@@ -295,11 +306,35 @@ Remember: You're the primary interface between the user and the technical implem
         response += `• **Output**: ${this.scopingData.output}\n`;
         response += `• **Complexity**: ${validation.estimatedComplexity}\n\n`;
         
+        // Add permission requirements if any
+        if (permissions.oauthServices.size > 0 || permissions.centralizedAPIs.length > 0) {
+          response += `🔐 **Required Permissions:**\n`;
+          
+          if (permissions.oauthServices.size > 0) {
+            response += `• **OAuth Services**: `;
+            const services = Array.from(permissions.oauthServices.keys());
+            response += services.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
+            response += '\n';
+          }
+          
+          if (permissions.centralizedAPIs.length > 0) {
+            response += `• **Platform Services**: `;
+            response += permissions.centralizedAPIs.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ');
+            response += ' (provided by our platform)\n';
+          }
+          
+          response += '\n';
+        }
+        
         if (validation.warnings.length > 0) {
           response += `⚠️ **Notes:**\n${validation.warnings.map(w => `• ${w}`).join('\n')}\n\n`;
         }
         
-        response += "Ready to create your workflow! Click the 'Create Workflow' button below to proceed.";
+        if (!permissions.allPermissionsGranted) {
+          response += "🔑 **Next Step:** Click 'Create Workflow' to grant necessary permissions and build your automation.";
+        } else {
+          response += "✅ **Ready to create!** Click the 'Create Workflow' button below to build and deploy this automation.";
+        }
         
         return {
           response,
@@ -307,7 +342,13 @@ Remember: You're the primary interface between the user and the technical implem
           mode: 'validating',
           needsMoreInfo: false,
           canProceed: true,
-          scopeStatus: this.scopingData
+          scopeStatus: this.scopingData,
+          permissionStatus: {
+            required: permissions.oauthServices.size > 0 || permissions.centralizedAPIs.length > 0,
+            granted: permissions.allPermissionsGranted,
+            oauthServices: Array.from(permissions.oauthServices.entries()),
+            centralizedAPIs: permissions.centralizedAPIs
+          }
         };
       } else {
         // Workflow not feasible, suggest alternatives
@@ -406,6 +447,71 @@ Only include what's explicitly mentioned.`;
     }
     
     return parts.join(', ') || "automate your workflow";
+  }
+
+  async detectRequiredPermissions(workflowDescription: string): Promise<{
+    oauthServices: Map<string, string[]>;
+    centralizedAPIs: string[];
+    allPermissionsGranted: boolean;
+  }> {
+    // Detect OAuth services needed
+    const oauthServices = await OAuthManager.detectRequiredScopes(workflowDescription);
+    
+    // Detect centralized APIs needed
+    const centralizedAPIs = this.detectCentralizedAPIs(workflowDescription);
+    
+    // Check if user has required permissions (if userId is available)
+    let allPermissionsGranted = true;
+    const userId = this.context.conversationId; // Using conversation ID as user ID for now
+    
+    if (userId && oauthServices.size > 0) {
+      const permissionChecks = await OAuthManager.checkExistingPermissions(userId, oauthServices);
+      allPermissionsGranted = permissionChecks.every(check => check.hasAccess);
+    }
+    
+    return {
+      oauthServices,
+      centralizedAPIs,
+      allPermissionsGranted
+    };
+  }
+
+  private detectCentralizedAPIs(description: string): string[] {
+    const apis: string[] = [];
+    const lowerDesc = description.toLowerCase();
+    
+    // WhatsApp detection
+    if (lowerDesc.includes('whatsapp') || lowerDesc.includes('whats app')) {
+      apis.push('whatsapp');
+    }
+    
+    // SMS/Twilio detection
+    if (lowerDesc.includes('sms') || lowerDesc.includes('text message') || lowerDesc.includes('twilio')) {
+      apis.push('twilio');
+    }
+    
+    // Email/SendGrid detection (for transactional emails)
+    if (lowerDesc.includes('sendgrid') || lowerDesc.includes('transactional email')) {
+      apis.push('sendgrid');
+    }
+    
+    // Slack detection
+    if (lowerDesc.includes('slack')) {
+      apis.push('slack');
+    }
+    
+    // OpenAI detection
+    if (lowerDesc.includes('gpt') || lowerDesc.includes('openai') || lowerDesc.includes('ai') || 
+        lowerDesc.includes('generate text') || lowerDesc.includes('summarize')) {
+      apis.push('openai');
+    }
+    
+    // Stripe detection
+    if (lowerDesc.includes('payment') || lowerDesc.includes('stripe') || lowerDesc.includes('charge')) {
+      apis.push('stripe');
+    }
+    
+    return apis;
   }
 
   async createWorkflowFromScope(): Promise<{

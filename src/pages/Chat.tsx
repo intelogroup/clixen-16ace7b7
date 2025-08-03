@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Zap, CheckCircle, XCircle, Bot, User, Cog, AlertTriangle, Plus, MessageSquare } from 'lucide-react';
+import { Send, Loader2, Zap, CheckCircle, XCircle, Bot, User, Cog, AlertTriangle, Plus, MessageSquare, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { agentCoordinator } from '../lib/agents';
 import { AgentMonitor } from '../components/AgentMonitor';
 import { WorkflowPhase } from '../lib/agents/types';
+import PermissionModal from '../components/PermissionModal';
+import OAuthManager from '../lib/oauth/OAuthManager';
+import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
 
 interface Message {
   id: string;
@@ -20,6 +24,12 @@ interface Message {
   conversationMode?: 'greeting' | 'scoping' | 'validating' | 'creating' | 'completed';
   scopeStatus?: any;
   canProceed?: boolean;
+  permissionStatus?: {
+    required: boolean;
+    granted: boolean;
+    oauthServices?: [string, string[]][];
+    centralizedAPIs?: string[];
+  };
   workflow?: {
     id: string;
     name: string;
@@ -49,6 +59,7 @@ interface ChatSession {
 }
 
 export default function Chat() {
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -62,6 +73,11 @@ export default function Chat() {
   const [conversationMode, setConversationMode] = useState<'greeting' | 'scoping' | 'validating' | 'creating' | 'completed'>('greeting');
   const [scopeData, setScopeData] = useState<any>({});
   const [canCreateWorkflow, setCanCreateWorkflow] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [requiredPermissions, setRequiredPermissions] = useState<any[]>([]);
+  const [centralizedAPIs, setCentralizedAPIs] = useState<string[]>([]);
+  const [workflowDescription, setWorkflowDescription] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -72,6 +88,32 @@ export default function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Get current user ID
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUserId();
+  }, []);
+
+  // Handle OAuth callback if coming from OAuth flow
+  useEffect(() => {
+    if (location.state?.oauthComplete) {
+      const { service, workflowContext } = location.state as any;
+      toast.success(`Successfully connected to ${service}!`);
+      
+      // Resume workflow creation if context exists
+      if (workflowContext?.workflowDescription) {
+        setWorkflowDescription(workflowContext.workflowDescription);
+        // Continue with workflow creation
+        handleCreateWorkflow();
+      }
+    }
+  }, [location]);
 
   // Initialize with greeting on mount
   useEffect(() => {
@@ -262,7 +304,10 @@ export default function Chat() {
         agentId: 'orchestrator',
         phase: response.phase,
         progress: 'progress' in response ? response.progress : 0,
-        status: response.phase === 'completed' ? 'complete' : 'generating'
+        status: response.phase === 'completed' ? 'complete' : 'generating',
+        permissionStatus: response.permissionStatus,
+        scopeStatus: response.scopeStatus,
+        canProceed: response.canProceed
       });
 
       // Update UI state
@@ -322,6 +367,37 @@ Would you like to try again?`,
   };
 
   const handleCreateWorkflow = async () => {
+    // Check if we need permissions first
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.permissionStatus && !lastMessage.permissionStatus.granted) {
+      // Need to show permission modal
+      const oauthServices = lastMessage.permissionStatus.oauthServices || [];
+      const centralApis = lastMessage.permissionStatus.centralizedAPIs || [];
+      
+      if (oauthServices.length > 0) {
+        // Prepare permission checks for OAuth services
+        const permissionChecks = [];
+        for (const [service, scopes] of oauthServices) {
+          permissionChecks.push({
+            service,
+            hasAccess: false,
+            requiredScopes: scopes,
+            missingScopes: scopes
+          });
+        }
+        
+        setRequiredPermissions(permissionChecks);
+        setCentralizedAPIs(centralApis);
+        setWorkflowDescription(scopeData.trigger ? 
+          `${scopeData.trigger} → ${scopeData.actions?.join(', ')} → ${scopeData.output}` :
+          'Your workflow automation'
+        );
+        setShowPermissionModal(true);
+        return;
+      }
+    }
+    
+    // Proceed with workflow creation
     setConversationMode('creating');
     setIsGenerating(true);
     
@@ -668,6 +744,22 @@ Would you like to try again?`,
           </div>
         </motion.div>
       )}
+
+      {/* Permission Modal */}
+      <PermissionModal
+        isOpen={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        userId={userId || ''}
+        requiredPermissions={requiredPermissions}
+        centralizedAPIs={centralizedAPIs}
+        workflowDescription={workflowDescription}
+        onPermissionsGranted={() => {
+          setShowPermissionModal(false);
+          toast.success('Permissions granted! Creating your workflow...');
+          // Continue with workflow creation after permissions are granted
+          handleCreateWorkflow();
+        }}
+      />
     </div>
   );
 }
