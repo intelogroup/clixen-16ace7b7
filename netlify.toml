@@ -4,9 +4,6 @@
   
   # Publish directory (Vite builds to dist by default)
   publish = "dist"
-  
-  # Base directory for build context - web app directory
-  base = "apps/web"
 
 [build.environment]
   # Node.js version

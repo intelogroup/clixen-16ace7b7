@@ -21,3 +21,5 @@ dist/
 # MCP Server git repositories (use as external dependencies)
 docker-hub-mcp/
 mcp-servers/
+# Local Netlify folder
+.netlify
