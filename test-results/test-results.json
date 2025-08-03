@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-08-03T11:34:46.689Z",
+  "authentication": false,
+  "multiAgent": false,
+  "n8nIntegration": false,
+  "systemHealth": {
+    "supabase": false,
+    "openai": false,
+    "n8n": false,
+    "agents": false
+  },
+  "errors": []
+}
