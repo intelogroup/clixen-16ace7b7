@@ -55,6 +55,12 @@
   to = "/.netlify/functions/api-proxy/webhook/:splat"
   status = 200
 
+# Environment test endpoint
+[[redirects]]
+  from = "/api/env-test"
+  to = "/.netlify/functions/env-test"
+  status = 200
+
 # Functions configuration
 [functions]
   directory = "netlify/functions"
