@@ -146,10 +146,12 @@ export class DatabaseChatService {
 
   async testDatabaseConnection(): Promise<{ success: boolean; message: string }> {
     try {
+      // Use a simple select query instead of count(*) to avoid parsing issues
       const { data, error } = await supabase
         .from('ai_chat_sessions')
-        .select('count(*)')
-        .eq('user_id', this.user?.id || 'test');
+        .select('id')
+        .eq('user_id', this.user?.id || 'test')
+        .limit(1);
 
       if (error) {
         return {
@@ -158,9 +160,17 @@ export class DatabaseChatService {
         };
       }
 
+      // Try to get actual count using head() method
+      const { count, error: countError } = await supabase
+        .from('ai_chat_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', this.user?.id || 'test');
+
+      const sessionCount = countError ? 0 : (count || 0);
+
       return {
         success: true,
-        message: `Database connected successfully. User has ${data?.[0]?.count || 0} sessions.`
+        message: `Database connected successfully. User has ${sessionCount} sessions.`
       };
     } catch (error) {
       return {
