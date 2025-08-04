@@ -450,7 +450,7 @@ const getOrCreateSession = async (userId: string, sessionId?: string): Promise<s
     .insert({
       user_id: userId,
       title: 'New AI Chat',
-      status: 'active',
+      is_active: true,
     })
     .select('id')
     .single();
