@@ -8,6 +8,8 @@
 [build.environment]
   # Node.js version - using Netlify default LTS version
   NODE_VERSION = "18"
+  # Force npm usage instead of pnpm auto-detection
+  NPM_FLAGS = "--legacy-peer-deps"
 
 # Security headers
 [[headers]]
