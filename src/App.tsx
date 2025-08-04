@@ -5,8 +5,8 @@ import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
 // Pages
-import Landing from './pages/Landing';
-import Auth from './pages/Auth';
+import ModernLanding from './pages/ModernLanding';
+import ModernAuth from './pages/ModernAuth';
 import EnhancedDashboard from './pages/EnhancedDashboard';
 import Chat from './pages/Chat';
 import OAuthCallback from './pages/OAuthCallback';
@@ -100,8 +100,8 @@ export default function App() {
       />
       
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<Auth />} />
+        <Route path="/" element={<ModernLanding />} />
+        <Route path="/auth" element={<ModernAuth />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
         
         <Route element={<ProtectedRoute session={session} />}>
