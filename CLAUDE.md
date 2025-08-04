@@ -128,7 +128,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig
 
 # Database Direct Connection (USE POOLER!)
-DATABASE_URL=postgresql://postgres.zfbgdixbzezpxllkoyfc:Jimkali90#@aws-0-us-east-2.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.zfbgdixbzezpxllkoyfc:Goldyear2023#@aws-0-us-east-2.pooler.supabase.com:5432/postgres
 
 # Supabase Management API
 SUPABASE_ACCESS_TOKEN=sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f
@@ -138,7 +138,7 @@ SUPABASE_JWT_SECRET=K1DeOU0LsLIZSeK87bTNdRks7cBiHb8NlzJHia59gOS4vgWyeb0bEhgGUgFV
 
 # Authentication Credentials (TESTED)
 Test User: jayveedz19@gmail.com
-Password: Jimkali90#
+Password: Goldyear2023#
 Status: ✅ Active and verified
 
 # AI Agent System Configuration
@@ -175,7 +175,7 @@ node scripts/run-migration-direct.js
 Host: aws-0-us-east-2.pooler.supabase.com  # USE POOLER!
 Port: 5432
 User: postgres.zfbgdixbzezpxllkoyfc  # FULL USERNAME!
-Password: Jimkali90#
+Password: Goldyear2023#
 SSL: rejectUnauthorized: false
 ```
 
