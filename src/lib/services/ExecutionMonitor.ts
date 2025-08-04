@@ -126,8 +126,8 @@ export class ExecutionMonitor {
    * Fetch execution status from n8n
    */
   private async fetchN8nExecutionStatus(executionId: string) {
-    const n8nUrl = process.env.VITE_N8N_API_URL || 'http://18.221.12.50:5678/api/v1';
-    const n8nApiKey = process.env.VITE_N8N_API_KEY;
+    const n8nUrl = process.env.N8N_API_URL || process.env.VITE_N8N_API_URL || 'http://18.221.12.50:5678/api/v1';
+    const n8nApiKey = process.env.N8N_API_KEY || process.env.VITE_N8N_API_KEY;
 
     const response = await fetch(`${n8nUrl}/executions/${executionId}?includeData=true`, {
       headers: {

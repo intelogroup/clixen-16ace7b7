@@ -1,6 +1,19 @@
+// Universal environment variable access (works in both browser and Node.js)
+const getEnvVar = (name: string): string | undefined => {
+  // In browser/Vite environment
+  if (typeof window !== 'undefined' && import.meta?.env) {
+    return import.meta.env[name];
+  }
+  // In Node.js environment (Netlify functions)
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[name];
+  }
+  return undefined;
+};
+
 // n8n API utility functions
-const N8N_API_URL = import.meta.env.VITE_N8N_API_URL || 'http://18.221.12.50:5678/api/v1';
-const N8N_API_KEY = import.meta.env.VITE_N8N_API_KEY || 'b38356d3-075f-4b69-9b31-dc90c71ba40a';
+const N8N_API_URL = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
+const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') || 'b38356d3-075f-4b69-9b31-dc90c71ba40a';
 const IS_DEMO_MODE = !N8N_API_URL.includes('18.221.12.50') && !N8N_API_URL.includes('localhost');
 
 export interface N8nWorkflow {
