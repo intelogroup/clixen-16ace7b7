@@ -23,7 +23,16 @@ if (isDev && supabaseUrl.includes('your-project')) {
   console.warn('⚠️ Using placeholder Supabase URL. Set VITE_SUPABASE_URL in .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'clixen-auth-token',
+  },
+});
 
 // Enhanced error handling for authentication
 export const getErrorMessage = (error: any): string => {
