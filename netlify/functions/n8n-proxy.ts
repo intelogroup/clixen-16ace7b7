@@ -49,7 +49,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
     console.log('Proxying to n8n:', {
       method: event.httpMethod,
       targetUrl,
-      hasBody: !!event.body
+      hasBody: !!event.body,
+      N8N_API_URL,
+      pathSegments: event.path.split('/'),
+      rawQuery: event.rawQuery
     });
 
     // Prepare headers for n8n
@@ -58,12 +61,20 @@ export const handler: Handler = async (event: HandlerEvent) => {
       'Content-Type': 'application/json',
     };
 
-    // Forward the request to n8n
-    const response = await fetch(targetUrl, {
-      method: event.httpMethod || 'GET',
-      headers,
-      body: event.body || undefined,
-    });
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    try {
+      // Forward the request to n8n
+      const response = await fetch(targetUrl, {
+        method: event.httpMethod || 'GET',
+        headers,
+        body: event.body || undefined,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
     // Get the response body
     const responseText = await response.text();
@@ -85,6 +96,22 @@ export const handler: Handler = async (event: HandlerEvent) => {
       },
       body: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody)
     };
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error('n8n fetch error:', fetchError);
+      
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          error: 'n8n fetch failed',
+          message: fetchError instanceof Error ? fetchError.message : 'Network error',
+          isTimeout: fetchError.name === 'AbortError',
+          timestamp: new Date().toISOString()
+        })
+      };
+    }
 
   } catch (error) {
     console.error('n8n proxy error:', error);
