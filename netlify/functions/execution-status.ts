@@ -7,7 +7,7 @@ import type { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -114,8 +114,8 @@ export const handler: Handler = async (event) => {
  */
 async function checkN8nStatus(executionId: string) {
   try {
-    const n8nUrl = process.env.VITE_N8N_API_URL;
-    const n8nApiKey = process.env.VITE_N8N_API_KEY;
+    const n8nUrl = process.env.N8N_API_URL;
+    const n8nApiKey = process.env.N8N_API_KEY;
 
     const response = await fetch(`${n8nUrl}/executions/${executionId}?includeData=true`, {
       headers: {

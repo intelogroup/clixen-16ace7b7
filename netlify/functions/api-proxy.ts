@@ -12,7 +12,7 @@ import { modelDecisionEngine } from '../../src/lib/services/ModelDecisionEngine'
 
 // Initialize Supabase
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for admin operations
 );
 
@@ -231,8 +231,8 @@ async function handleWebhook(userId: string, path: string, body: any, headers: a
  * Trigger n8n execution (fire and forget for serverless)
  */
 async function triggerN8nExecution(workflowId: string, data: any, executionId: string) {
-  const n8nUrl = process.env.VITE_N8N_API_URL;
-  const n8nApiKey = process.env.VITE_N8N_API_KEY;
+  const n8nUrl = process.env.N8N_API_URL;
+  const n8nApiKey = process.env.N8N_API_KEY;
 
   try {
     await fetch(`${n8nUrl}/workflows/${workflowId}/execute`, {
