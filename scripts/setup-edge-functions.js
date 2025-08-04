@@ -12,7 +12,7 @@ import path from 'path';
 // Configuration
 const SUPABASE_URL = 'https://zfbgdixbzezpxllkoyfc.supabase.co';
 const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig';
-const OPENAI_API_KEY = 'your-openai-api-key-here';
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'sk-proj-PLACEHOLDER_KEY_FOR_CONFIGURATION_SETUP';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
