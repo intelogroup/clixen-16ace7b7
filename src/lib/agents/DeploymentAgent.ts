@@ -2,6 +2,7 @@
 import { BaseAgent } from './BaseAgent';
 import { AgentConfig, AgentContext, WorkflowSpec } from './types';
 import { n8nApi } from '../n8n';
+import { apiOperationsClient, ApiOperationsError } from '../api/ApiOperationsClient';
 
 export class DeploymentAgent extends BaseAgent {
   private deploymentHistory: Map<string, any> = new Map();
@@ -168,13 +169,37 @@ Your responses should include:
       const rollbackId = await this.createRollbackPoint(workflowSpec);
       this.updateProgress(40);
 
-      // Step 4: Deploy to n8n
+      // Step 4: Deploy to n8n using API Operations client
       const n8nWorkflow = this.convertToN8nFormat(workflowSpec);
-      const deployResult = await n8nApi.createWorkflow(n8nWorkflow);
-      this.updateProgress(60);
+      
+      try {
+        const deployResult = await apiOperationsClient.deployWorkflowSafely(n8nWorkflow);
+        if (!deployResult.success) {
+          throw new Error(deployResult.error || 'Deployment failed');
+        }
+        this.updateProgress(60);
+        
+        // Get the created workflow details
+        const createdWorkflow = await apiOperationsClient.getWorkflow(deployResult.workflowId!);
+        var finalDeployResult = { id: deployResult.workflowId, ...createdWorkflow };
+      } catch (error) {
+        if (apiOperationsClient.isRateLimited(error)) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        } else if (apiOperationsClient.isAuthenticationError(error)) {
+          throw new Error('Authentication failed. Please log in again.');
+        } else if (apiOperationsClient.isNetworkError(error)) {
+          // Fallback to direct n8n API
+          console.warn('API Operations unavailable, falling back to direct n8n API');
+          const deployResult = await n8nApi.createWorkflow(n8nWorkflow);
+          var finalDeployResult = deployResult;
+          this.updateProgress(60);
+        } else {
+          throw error;
+        }
+      }
 
       // Step 5: Post-deployment validation
-      const postValidation = await this.postDeploymentValidation(deployResult.id);
+      const postValidation = await this.postDeploymentValidation(finalDeployResult.id);
       if (!postValidation.success) {
         // Rollback on validation failure
         await this.rollbackDeployment(deploymentId, 'Post-deployment validation failed');
@@ -190,12 +215,12 @@ Your responses should include:
       this.updateProgress(80);
 
       // Step 6: Generate webhook URLs
-      const webhookUrls = this.generateWebhookUrls(workflowSpec, deployResult.id);
+      const webhookUrls = this.generateWebhookUrls(workflowSpec, finalDeployResult.id);
       this.updateProgress(90);
 
       // Step 7: Record deployment
       this.recordDeployment(deploymentId, {
-        workflowId: deployResult.id,
+        workflowId: finalDeployResult.id,
         workflowSpec,
         timestamp: Date.now(),
         config,
@@ -207,7 +232,7 @@ Your responses should include:
       return {
         success: true,
         deploymentId,
-        workflowId: deployResult.id,
+        workflowId: finalDeployResult.id,
         webhookUrls,
         errors: [],
         warnings: validation.warnings,
@@ -235,8 +260,18 @@ Your responses should include:
     this.updateProgress(10);
 
     try {
-      // Get workflow from n8n
-      const workflow = await n8nApi.getWorkflow(workflowId);
+      // Get workflow using API Operations client first, fallback to direct API
+      let workflow;
+      try {
+        workflow = await apiOperationsClient.getWorkflow(workflowId);
+      } catch (error) {
+        if (apiOperationsClient.isNetworkError(error)) {
+          console.warn('API Operations unavailable, using direct n8n API');
+          workflow = await n8nApi.getWorkflow(workflowId);
+        } else {
+          throw error;
+        }
+      }
       this.updateProgress(30);
 
       const errors: string[] = [];
@@ -450,68 +485,109 @@ Your responses should include:
       const issues: string[] = [];
       const recommendations: string[] = [];
       
-      // Get workflow details
-      const workflow = await n8nApi.getWorkflow(workflowId);
-      this.updateProgress(40);
+      // Try to use API Operations client for enhanced metrics
+      try {
+        const apiMetrics = await apiOperationsClient.getWorkflowMetrics(workflowId);
+        const validation = await apiOperationsClient.validateWorkflowBeforeExecution(workflowId);
+        
+        // Use enhanced metrics from API Operations
+        if (!validation.valid) {
+          issues.push(...validation.issues);
+          recommendations.push('Fix workflow validation issues before deployment');
+        }
+        
+        if (apiMetrics.failedExecutions > apiMetrics.totalExecutions * 0.2) {
+          issues.push(`High failure rate: ${((apiMetrics.failedExecutions / apiMetrics.totalExecutions) * 100).toFixed(1)}%`);
+          recommendations.push('Review error logs and improve error handling');
+        }
+        
+        if (apiMetrics.averageExecutionTime > 300000) { // 5 minutes
+          issues.push('Long average execution time detected');
+          recommendations.push('Optimize workflow performance and add timeouts');
+        }
+        
+        this.updateProgress(60);
+        
+        const healthy = issues.length === 0 && apiMetrics.successfulExecutions > 0;
+        const status = healthy ? 'healthy' : issues.length > 0 ? 'issues_detected' : 'warning';
+        
+        this.updateProgress(100);
+        
+        return {
+          healthy,
+          status,
+          metrics: apiMetrics,
+          issues,
+          recommendations
+        };
+        
+      } catch (apiError) {
+        console.warn('API Operations health check failed, using fallback method');
+        
+        // Fallback to original method
+        // Get workflow details
+        const workflow = await n8nApi.getWorkflow(workflowId);
+        this.updateProgress(40);
 
-      // Check execution history
-      const executions = await n8nApi.getExecutions(workflowId);
-      this.updateProgress(60);
+        // Check execution history
+        const executions = await n8nApi.getExecutions(workflowId);
+        this.updateProgress(60);
 
-      // Analyze recent executions
-      const recentExecutions = executions.slice(0, 10);
-      const failedExecutions = recentExecutions.filter(exec => !exec.finished);
-      const successRate = recentExecutions.length > 0 
-        ? ((recentExecutions.length - failedExecutions.length) / recentExecutions.length) * 100 
-        : 100;
+        // Analyze recent executions
+        const recentExecutions = executions.slice(0, 10);
+        const failedExecutions = recentExecutions.filter(exec => !exec.finished);
+        const successRate = recentExecutions.length > 0 
+          ? ((recentExecutions.length - failedExecutions.length) / recentExecutions.length) * 100 
+          : 100;
 
-      if (successRate < 80) {
-        issues.push(`Low success rate: ${successRate.toFixed(1)}%`);
-        recommendations.push('Review error logs and improve error handling');
+        if (successRate < 80) {
+          issues.push(`Low success rate: ${successRate.toFixed(1)}%`);
+          recommendations.push('Review error logs and improve error handling');
+        }
+
+        // Check for long-running executions
+        const longRunning = recentExecutions.filter(exec => {
+          if (!exec.startedAt || !exec.stoppedAt) return false;
+          const duration = new Date(exec.stoppedAt).getTime() - new Date(exec.startedAt).getTime();
+          return duration > 300000; // 5 minutes
+        });
+
+        if (longRunning.length > 0) {
+          issues.push(`${longRunning.length} long-running executions detected`);
+          recommendations.push('Optimize workflow performance and add timeouts');
+        }
+
+        // Check workflow status
+        if (!workflow.active) {
+          issues.push('Workflow is not active');
+          recommendations.push('Activate workflow if it should be running');
+        }
+
+        this.updateProgress(80);
+
+        const metrics = {
+          totalExecutions: executions.length,
+          recentExecutions: recentExecutions.length,
+          failedExecutions: failedExecutions.length,
+          successRate,
+          averageExecutionTime: this.calculateAverageExecutionTime(recentExecutions),
+          lastExecution: recentExecutions[0]?.startedAt || null,
+          isActive: workflow.active
+        };
+
+        const healthy = issues.length === 0 && successRate >= 90;
+        const status = healthy ? 'healthy' : issues.length > 0 ? 'issues_detected' : 'warning';
+
+        this.updateProgress(100);
+
+        return {
+          healthy,
+          status,
+          metrics,
+          issues,
+          recommendations
+        };
       }
-
-      // Check for long-running executions
-      const longRunning = recentExecutions.filter(exec => {
-        if (!exec.startedAt || !exec.stoppedAt) return false;
-        const duration = new Date(exec.stoppedAt).getTime() - new Date(exec.startedAt).getTime();
-        return duration > 300000; // 5 minutes
-      });
-
-      if (longRunning.length > 0) {
-        issues.push(`${longRunning.length} long-running executions detected`);
-        recommendations.push('Optimize workflow performance and add timeouts');
-      }
-
-      // Check workflow status
-      if (!workflow.active) {
-        issues.push('Workflow is not active');
-        recommendations.push('Activate workflow if it should be running');
-      }
-
-      this.updateProgress(80);
-
-      const metrics = {
-        totalExecutions: executions.length,
-        recentExecutions: recentExecutions.length,
-        failedExecutions: failedExecutions.length,
-        successRate,
-        averageExecutionTime: this.calculateAverageExecutionTime(recentExecutions),
-        lastExecution: recentExecutions[0]?.startedAt || null,
-        isActive: workflow.active
-      };
-
-      const healthy = issues.length === 0 && successRate >= 90;
-      const status = healthy ? 'healthy' : issues.length > 0 ? 'issues_detected' : 'warning';
-
-      this.updateProgress(100);
-
-      return {
-        healthy,
-        status,
-        metrics,
-        issues,
-        recommendations
-      };
 
     } catch (error) {
       return {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../lib/AuthContext';
 import { DatabaseChatService, MultiAgentResponse, ChatMessage, AgentType } from '../lib/services/DatabaseChatService';
 import { Send, Bot, User, AlertCircle, CheckCircle, Clock, Zap } from 'lucide-react';
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { netlifyAPI } from '../lib/api/netlify-client';
+import { supabaseAPI } from '../lib/api/supabase-edge-client';
 import { supabase } from '../lib/supabase';
 
 interface ExecutionStatus {
@@ -48,7 +48,7 @@ export const WorkflowExecutionPanel: React.FC = () => {
   // Load usage statistics
   const loadUsageStats = async () => {
     try {
-      const stats = await netlifyAPI.getUsageStats();
+      const stats = await supabaseAPI.getUsageStats();
       setUsageStats(stats);
     } catch (error) {
       console.error('Failed to load usage stats:', error);
@@ -58,7 +58,7 @@ export const WorkflowExecutionPanel: React.FC = () => {
   // Load execution history
   const loadExecutionHistory = async () => {
     try {
-      const history = await netlifyAPI.getUserExecutions();
+      const history = await supabaseAPI.getUserExecutions();
       setExecutions(history);
     } catch (error) {
       console.error('Failed to load execution history:', error);
@@ -71,13 +71,13 @@ export const WorkflowExecutionPanel: React.FC = () => {
     if (!user) return;
 
     // Subscribe to execution updates
-    netlifyAPI.subscribeToExecutions(user.id, (payload) => {
+    supabaseAPI.subscribeToExecutions(user.id, (payload) => {
       console.log('Execution update:', payload);
       loadExecutionHistory();
     });
 
     // Subscribe to notifications
-    netlifyAPI.subscribeToNotifications(user.id, (payload) => {
+    supabaseAPI.subscribeToNotifications(user.id, (payload) => {
       console.log('New notification:', payload);
       // Show notification to user
     });
@@ -90,11 +90,11 @@ export const WorkflowExecutionPanel: React.FC = () => {
     setLoading(true);
     try {
       // 1. Generate workflow with AI
-      const workflow = await netlifyAPI.generateWorkflow(userRequest, 'balanced');
+      const workflow = await supabaseAPI.generateWorkflow(userRequest, 'balanced');
       console.log('Generated workflow:', workflow);
 
       // 2. Execute the workflow
-      const execution = await netlifyAPI.executeWorkflow(workflow.id, {
+      const execution = await supabaseAPI.executeWorkflow(workflow.id, {
         userInput: userRequest,
       });
 
@@ -105,7 +105,7 @@ export const WorkflowExecutionPanel: React.FC = () => {
       });
 
       // 3. Poll for status updates
-      const finalStatus = await netlifyAPI.pollExecutionStatus(
+      const finalStatus = await supabaseAPI.pollExecutionStatus(
         execution.executionId,
         (status) => {
           setExecutionStatus(status);

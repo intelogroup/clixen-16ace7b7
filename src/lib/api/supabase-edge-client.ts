@@ -1,12 +1,12 @@
 /**
- * Netlify Functions API Client
- * Client-side helper for interacting with Netlify Functions
+ * Supabase Edge Functions API Client
+ * Client-side helper for interacting with Supabase Edge Functions
  */
 
 import { supabase } from '../supabase';
 
-export class NetlifyAPIClient {
-  private baseUrl = '/api/v1';
+export class SupabaseAPIClient {
+  private baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
   
   /**
    * Get auth token for API calls
@@ -43,7 +43,7 @@ export class NetlifyAPIClient {
   }
 
   /**
-   * Generate workflow from user request
+   * Generate workflow from user request using Supabase Edge Functions
    */
   async generateWorkflow(request: string, preference: 'speed' | 'accuracy' | 'balanced' = 'balanced') {
     const { data: userQuota } = await supabase
@@ -52,9 +52,10 @@ export class NetlifyAPIClient {
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
       .single();
 
-    return this.request('/workflows/generate', {
+    return this.request('/api-operations', {
       method: 'POST',
       body: JSON.stringify({
+        action: 'generate-workflow',
         request,
         tier: userQuota?.tier || 'free',
         preference,
@@ -63,12 +64,16 @@ export class NetlifyAPIClient {
   }
 
   /**
-   * Execute workflow
+   * Execute workflow using Supabase Edge Functions
    */
   async executeWorkflow(workflowId: string, data: any = {}) {
-    return this.request('/workflows/execute', {
+    return this.request('/api-operations', {
       method: 'POST',
-      body: JSON.stringify({ workflowId, data }),
+      body: JSON.stringify({ 
+        action: 'execute-workflow',
+        workflowId, 
+        data 
+      }),
     });
   }
 
@@ -76,10 +81,17 @@ export class NetlifyAPIClient {
    * Get execution status (with polling support)
    */
   async getExecutionStatus(executionId: string) {
-    const response = await fetch(`/api/executions/${executionId}`, {
+    const token = await this.getAuthToken();
+    const response = await fetch(`${this.baseUrl}/api-operations`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${await this.getAuthToken()}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        action: 'get-execution-status',
+        executionId
+      }),
     });
 
     if (!response.ok) {
@@ -127,28 +139,37 @@ export class NetlifyAPIClient {
   }
 
   /**
-   * Get user executions history
+   * Get user executions history using Supabase Edge Functions
    */
   async getUserExecutions() {
-    return this.request('/executions');
+    return this.request('/api-operations', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'get-user-executions' }),
+    });
   }
 
   /**
-   * Get usage statistics
+   * Get usage statistics using Supabase Edge Functions
    */
   async getUsageStats() {
-    return this.request('/usage');
+    return this.request('/api-operations', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'get-usage-stats' }),
+    });
   }
 
   /**
-   * Get billing report
+   * Get billing report using Supabase Edge Functions
    */
   async getBillingReport(startDate?: Date, endDate?: Date) {
-    const params = new URLSearchParams();
-    if (startDate) params.append('start', startDate.toISOString());
-    if (endDate) params.append('end', endDate.toISOString());
-    
-    return this.request(`/billing?${params.toString()}`);
+    return this.request('/api-operations', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        action: 'get-billing-report',
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString()
+      }),
+    });
   }
 
   /**
@@ -191,4 +212,7 @@ export class NetlifyAPIClient {
 }
 
 // Singleton instance
-export const netlifyAPI = new NetlifyAPIClient();
+export const supabaseAPI = new SupabaseAPIClient();
+
+// Legacy alias for backward compatibility
+export const netlifyAPI = supabaseAPI;
