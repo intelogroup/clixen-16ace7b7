@@ -1,180 +1,138 @@
-#!/usr/bin/env node
-
-/**
- * Direct Database Migration Script
- * 
- * This script runs the OAuth and API management migration directly on the database
- * using the PostgreSQL connection.
- */
-
 import pg from 'pg';
-import { readFileSync } from 'fs';
+import fs from 'fs';
+import path from 'path';
+import { config } from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { dirname } from 'path';
 
 const { Client } = pg;
 
-async function runMigration() {
-  // Direct connection configuration - use pooler for better connectivity
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables
+config();
+
+async function executeMigration() {
+  // Use the pooler connection string for better performance
+  const connectionString = `postgresql://postgres.zfbgdixbzezpxllkoyfc:${encodeURIComponent('Jimkali90#')}@aws-0-us-east-2.pooler.supabase.com:5432/postgres`;
+  
   const client = new Client({
-    host: 'aws-0-us-east-2.pooler.supabase.com',
-    port: 5432,
-    database: 'postgres',
-    user: 'postgres.zfbgdixbzezpxllkoyfc',
-    password: 'Jimkali90#',
-    ssl: { 
-      rejectUnauthorized: false 
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false
     }
   });
 
   try {
-    console.log('🔌 Connecting to database...');
-    console.log('   Host: aws-0-us-east-2.pooler.supabase.com');
-    console.log('   Database: postgres');
-    
+    console.log('🚀 Connecting to Supabase PostgreSQL...');
     await client.connect();
-    console.log('✅ Connected to database');
+    console.log('✅ Connected successfully!');
 
-    // Read migration file
-    console.log('📄 Reading migration file...');
-    const migrationPath = join(__dirname, '..', 'supabase', 'migrations', '002_oauth_and_api_management.sql');
-    const migrationSQL = readFileSync(migrationPath, 'utf8');
-
-    // Split migration into individual statements
-    // Remove comments and split by semicolons
-    const statements = migrationSQL
-      .split('\n')
-      .filter(line => !line.trim().startsWith('--')) // Remove SQL comments
-      .join('\n')
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
-
-    console.log(`📊 Found ${statements.length} SQL statements to execute`);
-    console.log('⚙️  Running migration...\n');
-
-    let successCount = 0;
-    let skipCount = 0;
-    let errorCount = 0;
-
-    for (let i = 0; i < statements.length; i++) {
-      const statement = statements[i];
-      
-      // Skip empty statements
-      if (!statement || statement.length === 0) continue;
-
-      // Extract a readable name for the statement
-      let statementName = 'Statement';
-      if (statement.includes('CREATE TABLE')) {
-        const match = statement.match(/CREATE TABLE (?:IF NOT EXISTS )?([\w.]+)/i);
-        statementName = match ? `CREATE TABLE ${match[1]}` : 'CREATE TABLE';
-      } else if (statement.includes('CREATE INDEX')) {
-        const match = statement.match(/CREATE INDEX (?:IF NOT EXISTS )?([\w.]+)/i);
-        statementName = match ? `CREATE INDEX ${match[1]}` : 'CREATE INDEX';
-      } else if (statement.includes('ALTER TABLE')) {
-        const match = statement.match(/ALTER TABLE ([\w.]+)/i);
-        statementName = match ? `ALTER TABLE ${match[1]}` : 'ALTER TABLE';
-      } else if (statement.includes('CREATE POLICY')) {
-        const match = statement.match(/CREATE POLICY "([^"]+)"/i);
-        statementName = match ? `CREATE POLICY "${match[1]}"` : 'CREATE POLICY';
-      } else if (statement.includes('CREATE FUNCTION')) {
-        const match = statement.match(/CREATE (?:OR REPLACE )?FUNCTION ([\w.]+)/i);
-        statementName = match ? `CREATE FUNCTION ${match[1]}` : 'CREATE FUNCTION';
-      } else if (statement.includes('INSERT INTO')) {
-        const match = statement.match(/INSERT INTO ([\w.]+)/i);
-        statementName = match ? `INSERT INTO ${match[1]}` : 'INSERT';
-      }
-
-      try {
-        await client.query(statement);
-        console.log(`  ✅ ${statementName}`);
-        successCount++;
-      } catch (error) {
-        if (error.code === '42P07' || error.message.includes('already exists')) {
-          console.log(`  ⏭️  ${statementName} (already exists)`);
-          skipCount++;
-        } else if (error.code === '23505' || error.message.includes('duplicate key')) {
-          console.log(`  ⏭️  ${statementName} (duplicate - skipped)`);
-          skipCount++;
-        } else {
-          console.log(`  ❌ ${statementName}: ${error.message}`);
-          errorCount++;
-        }
-      }
-    }
-
-    console.log('\n📊 Migration Summary:');
-    console.log(`  ✅ Success: ${successCount} statements`);
-    console.log(`  ⏭️  Skipped: ${skipCount} statements (already exist)`);
-    if (errorCount > 0) {
-      console.log(`  ❌ Errors: ${errorCount} statements`);
-    }
-
-    // Verify tables were created
-    console.log('\n🔍 Verifying tables...');
-    const tables = ['user_oauth_tokens', 'api_usage', 'api_quotas', 'oauth_flow_states'];
+    // Read the core migration SQL file (without extensions)
+    const migrationPath = path.join(__dirname, 'core-migration.sql');
+    const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
     
-    for (const table of tables) {
-      const result = await client.query(
-        `SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = $1
-        )`,
-        [table]
-      );
+    console.log('📝 Executing migration SQL...');
+    console.log(`📋 Migration size: ${migrationSQL.length} characters`);
+    
+    // Set the search path to public schema
+    await client.query('SET search_path TO public');
+    
+    // Execute the entire migration as one transaction
+    await client.query('BEGIN');
+    
+    try {
+      // Execute the migration
+      const result = await client.query(migrationSQL);
+      console.log('✅ Migration executed successfully!');
       
-      if (result.rows[0].exists) {
-        // Get row count
-        const countResult = await client.query(`SELECT COUNT(*) FROM ${table}`);
-        console.log(`  ✅ Table '${table}' exists (${countResult.rows[0].count} rows)`);
-      } else {
-        console.log(`  ❌ Table '${table}' not found`);
-      }
+      await client.query('COMMIT');
+      console.log('✅ Transaction committed!');
+      
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ Migration failed, rolled back:', error.message);
+      throw error;
     }
-
-    // Check if RLS is enabled
-    console.log('\n🔒 Checking Row Level Security...');
-    const rlsResult = await client.query(`
-      SELECT tablename, rowsecurity 
-      FROM pg_tables 
-      WHERE schemaname = 'public' 
-      AND tablename IN ('user_oauth_tokens', 'api_usage', 'api_quotas', 'oauth_flow_states')
+    
+    // Test the installation
+    console.log('\n🔍 Testing migration results...');
+    
+    // Check for workflow_executions table
+    const tablesResult = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name LIKE '%workflow%'
     `);
     
-    for (const row of rlsResult.rows) {
-      console.log(`  ${row.rowsecurity ? '✅' : '❌'} RLS ${row.rowsecurity ? 'enabled' : 'disabled'} on ${row.tablename}`);
+    console.log('📋 Workflow tables created:', tablesResult.rows.map(r => r.table_name));
+    
+    // Check for extensions
+    const extensionsResult = await client.query(`
+      SELECT extname 
+      FROM pg_extension 
+      WHERE extname IN ('pgmq', 'pg_cron', 'pg_net')
+    `);
+    
+    console.log('🧩 Extensions installed:', extensionsResult.rows.map(r => r.extname));
+    
+    // Check for custom functions
+    const functionsResult = await client.query(`
+      SELECT routine_name 
+      FROM information_schema.routines 
+      WHERE routine_schema = 'public' 
+      AND routine_name LIKE 'pgmq_%'
+    `);
+    
+    console.log('⚙️  Custom functions created:', functionsResult.rows.map(r => r.routine_name));
+    
+    // Check for queues (this might fail if pgmq isn't enabled)
+    try {
+      const queuesResult = await client.query(`
+        SELECT queue_name FROM pgmq.queue WHERE queue_name LIKE '%workflow%'
+      `);
+      console.log('📬 Queues created:', queuesResult.rows.map(r => r.queue_name));
+    } catch (queueError) {
+      console.log('⚠️  Queue check failed (pgmq might not be enabled):', queueError.message);
     }
-
+    
+    // Test basic queue functionality
+    try {
+      const testResult = await client.query(`SELECT pgmq_create_queue('test_queue')`);
+      console.log('✅ Queue functionality test passed');
+      
+      // Clean up test queue
+      await client.query(`SELECT pgmq.drop_queue('test_queue')`);
+    } catch (testError) {
+      console.log('⚠️  Queue functionality test failed:', testError.message);
+    }
+    
     console.log('\n🎉 Migration completed successfully!');
-    console.log('\n📝 Next steps:');
-    console.log('  1. Configure OAuth applications (Google, Microsoft, etc.)');
-    console.log('  2. Add API keys to .env file');
-    console.log('  3. Test OAuth flow in development');
-    console.log('  4. Deploy application updates');
-
+    
   } catch (error) {
-    console.error('\n❌ Migration failed:', error.message);
-    console.error('\nError details:', error);
-    console.error('\n💡 Troubleshooting tips:');
-    console.error('  1. Check database credentials');
-    console.error('  2. Ensure database is accessible from your location');
-    console.error('  3. Verify you have sufficient permissions');
+    console.error('💥 Migration failed:', error);
+    
+    // If it's an extension error, provide helpful guidance
+    if (error.message.includes('extension') || error.message.includes('pgmq')) {
+      console.log('\n💡 Extension Installation Guide:');
+      console.log('1. Go to https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc/settings/database');
+      console.log('2. Navigate to Extensions');
+      console.log('3. Enable these extensions:');
+      console.log('   - pgmq (Message Queue)');
+      console.log('   - pg_cron (Scheduled Jobs)');
+      console.log('   - pg_net (HTTP Client)');
+      console.log('4. Re-run this migration script');
+    }
+    
     process.exit(1);
   } finally {
     await client.end();
-    console.log('\n🔌 Database connection closed');
+    console.log('🔌 Database connection closed');
   }
 }
 
 // Run the migration
-console.log('🚀 OAuth & API Management Migration Tool');
-console.log('========================================\n');
-runMigration();
+executeMigration();
