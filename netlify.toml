@@ -57,6 +57,18 @@
   to = "/.netlify/functions/env-test"
   status = 200
 
+# Backend health check endpoint
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/backend-health"
+  status = 200
+
+# Backend comprehensive test endpoint  
+[[redirects]]
+  from = "/api/backend-test"
+  to = "/.netlify/functions/backend-test"
+  status = 200
+
 # Functions configuration
 [functions]
   directory = "netlify/functions"
