@@ -6,8 +6,8 @@
   publish = "dist"
 
 [build.environment]
-  # Node.js version
-  NODE_VERSION = "20"
+  # Node.js version - using specific supported version
+  NODE_VERSION = "20.18.0"
 
 # Security headers
 [[headers]]
