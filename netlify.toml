@@ -57,6 +57,24 @@
   to = "/.netlify/functions/env-test"
   status = 200
 
+# Backend health check endpoint
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/backend-health"
+  status = 200
+
+# Backend comprehensive test endpoint  
+[[redirects]]
+  from = "/api/backend-test"
+  to = "/.netlify/functions/backend-test"
+  status = 200
+
+# Complete backend test with S3 storage
+[[redirects]]
+  from = "/api/backend-full-test"
+  to = "/.netlify/functions/backend-full-test"
+  status = 200
+
 # Functions configuration
 [functions]
   directory = "netlify/functions"
@@ -106,8 +124,12 @@
   SUPABASE_URL = "https://zfbgdixbzezpxllkoyfc.supabase.co"
   SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw"
   SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig"
+  SUPABASE_JWT_SECRET = "K1DeOU0LsLIZSeK87bTNdRks7cBiHb8NlzJHia59gOS4vgWyeb0bEhgGUgFVYUGLng5wYoG6LZ+0FL1uAZ7A4w=="
+  DATABASE_URL = "postgresql://postgres.zfbgdixbzezpxllkoyfc:Jimkali90#@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+  SUPABASE_ACCESS_TOKEN = "sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f"
   N8N_API_URL = "http://18.221.12.50:5678/api/v1"
   N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU"
+  OPENAI_API_KEY = "your-openai-api-key-here"
 
 [context.branch-deploy.environment]
   # Frontend Vite Variables
@@ -120,8 +142,12 @@
   SUPABASE_URL = "https://zfbgdixbzezpxllkoyfc.supabase.co"
   SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N10.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw"
   SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig"
+  SUPABASE_JWT_SECRET = "K1DeOU0LsLIZSeK87bTNdRks7cBiHb8NlzJHia59gOS4vgWyeb0bEhgGUgFVYUGLng5wYoG6LZ+0FL1uAZ7A4w=="
+  DATABASE_URL = "postgresql://postgres.zfbgdixbzezpxllkoyfc:Jimkali90#@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+  SUPABASE_ACCESS_TOKEN = "sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f"
   N8N_API_URL = "http://18.221.12.50:5678/api/v1"
   N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU"
+  OPENAI_API_KEY = "your-openai-api-key-here"
 
 # SPA routing - redirect all non-API routes to index.html (MUST BE LAST)
 [[redirects]]
