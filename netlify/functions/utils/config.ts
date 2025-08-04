@@ -10,6 +10,13 @@ export interface BackendConfig {
     serviceRoleKey: string;
     jwtSecret?: string;
     databaseUrl?: string;
+    accessToken?: string;
+  };
+  storage: {
+    s3AccessKeyId?: string;
+    s3SecretAccessKey?: string;
+    s3Region?: string;
+    s3Endpoint?: string;
   };
   n8n: {
     apiUrl: string;
@@ -17,6 +24,9 @@ export interface BackendConfig {
   };
   openai: {
     apiKey: string;
+  };
+  netlify: {
+    accessToken?: string;
   };
   environment: {
     context: string;
@@ -38,6 +48,13 @@ export function getBackendConfig(): BackendConfig {
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '',
       jwtSecret: process.env.SUPABASE_JWT_SECRET,
       databaseUrl: process.env.DATABASE_URL,
+      accessToken: process.env.SUPABASE_ACCESS_TOKEN,
+    },
+    storage: {
+      s3AccessKeyId: process.env.SUPABASE_S3_ACCESS_KEY_ID,
+      s3SecretAccessKey: process.env.SUPABASE_S3_SECRET_ACCESS_KEY,
+      s3Region: process.env.SUPABASE_S3_REGION,
+      s3Endpoint: process.env.SUPABASE_S3_ENDPOINT,
     },
     n8n: {
       apiUrl: process.env.N8N_API_URL || process.env.VITE_N8N_API_URL || '',
@@ -45,6 +62,9 @@ export function getBackendConfig(): BackendConfig {
     },
     openai: {
       apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || '',
+    },
+    netlify: {
+      accessToken: process.env.NETLIFY_ACCESS_TOKEN,
     },
     environment: {
       context: process.env.CONTEXT || process.env.NETLIFY_CONTEXT || 'production',
@@ -106,6 +126,12 @@ export function getSafeConfig(config: BackendConfig): any {
       hasServiceRoleKey: !!config.supabase.serviceRoleKey,
       hasJwtSecret: !!config.supabase.jwtSecret,
       hasDatabaseUrl: !!config.supabase.databaseUrl,
+      hasAccessToken: !!config.supabase.accessToken,
+    },
+    storage: {
+      hasS3Config: !!config.storage.s3AccessKeyId && !!config.storage.s3SecretAccessKey,
+      region: config.storage.s3Region,
+      endpoint: config.storage.s3Endpoint,
     },
     n8n: {
       apiUrl: config.n8n.apiUrl,
@@ -114,6 +140,9 @@ export function getSafeConfig(config: BackendConfig): any {
     openai: {
       hasApiKey: !!config.openai.apiKey,
       keyPrefix: config.openai.apiKey ? config.openai.apiKey.substring(0, 10) + '...' : 'NOT_SET',
+    },
+    netlify: {
+      hasAccessToken: !!config.netlify.accessToken,
     },
     environment: config.environment,
   };

@@ -69,6 +69,12 @@
   to = "/.netlify/functions/backend-test"
   status = 200
 
+# Complete backend test with S3 storage
+[[redirects]]
+  from = "/api/backend-full-test"
+  to = "/.netlify/functions/backend-full-test"
+  status = 200
+
 # Functions configuration
 [functions]
   directory = "netlify/functions"
