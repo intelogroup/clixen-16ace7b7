@@ -37,6 +37,40 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Main API Proxy endpoint
+[[redirects]]
+  from = "/api/v1/*"
+  to = "/.netlify/functions/api-proxy/:splat"
+  status = 200
+
+# Execution status endpoint
+[[redirects]]
+  from = "/api/executions/*"
+  to = "/.netlify/functions/execution-status/:splat"
+  status = 200
+
+# Webhook endpoints
+[[redirects]]
+  from = "/webhook/*"
+  to = "/.netlify/functions/api-proxy/webhook/:splat"
+  status = 200
+
+# Functions configuration
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  
+  # Background function configuration
+  [functions."webhook-background"]
+    schedule = "@hourly" # Optional: can be triggered on schedule
+    
+  # Set function-specific environment variables if needed
+  [functions."api-proxy"]
+    external_node_modules = ["@supabase/supabase-js"]
+    
+  [functions."execution-status"]
+    external_node_modules = ["@supabase/supabase-js"]
+
 # Environment variables template
 # Set these in Netlify UI or using Netlify CLI
 [context.production.environment]
