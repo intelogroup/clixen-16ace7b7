@@ -4,8 +4,39 @@ import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } fr
 import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
 import { performanceOptimizer } from './PerformanceOptimizer';
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || 'demo-key';
-const IS_DEMO_MODE = !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'your-openai-api-key-here';
+// Enhanced environment variable detection with logging
+function getOpenAIKey(): { key: string; isDemoMode: boolean; source: string } {
+  // Try multiple sources for the API key
+  const viteKey = import.meta.env.VITE_OPENAI_API_KEY;
+  const envKey = (globalThis as any).process?.env?.OPENAI_API_KEY;
+  const windowKey = (window as any)?.ENV?.VITE_OPENAI_API_KEY;
+  
+  console.log('[BaseAgent] Environment variable check:', {
+    viteKey: viteKey ? '✅ Set' : '❌ Not set',
+    envKey: envKey ? '✅ Set' : '❌ Not set', 
+    windowKey: windowKey ? '✅ Set' : '❌ Not set',
+    viteKeyValue: viteKey?.substring(0, 10) + '...',
+    location: window.location.href
+  });
+  
+  const key = viteKey || envKey || windowKey || 'demo-key';
+  const isDemoMode = !key || key === 'demo-key' || key === 'your-openai-api-key-here' || key.startsWith('your-');
+  
+  const source = viteKey ? 'VITE_OPENAI_API_KEY' : 
+                 envKey ? 'OPENAI_API_KEY' :
+                 windowKey ? 'window.ENV.VITE_OPENAI_API_KEY' : 'fallback';
+  
+  console.log('[BaseAgent] OpenAI Configuration:', {
+    isDemoMode,
+    source,
+    keyLength: key.length,
+    keyPrefix: key.substring(0, 7)
+  });
+  
+  return { key, isDemoMode, source };
+}
+
+const { key: OPENAI_API_KEY, isDemoMode: IS_DEMO_MODE, source: KEY_SOURCE } = getOpenAIKey();
 
 export abstract class BaseAgent {
   protected openai: OpenAI;
@@ -16,15 +47,29 @@ export abstract class BaseAgent {
   protected subscribers: Set<(message: AgentMessage) => void> = new Set();
 
   constructor(config: AgentConfig, context: AgentContext) {
+    console.log(`[${config.id}] Initializing agent:`, {
+      isDemoMode: IS_DEMO_MODE,
+      keySource: KEY_SOURCE,
+      hasValidKey: OPENAI_API_KEY.length > 10 && !OPENAI_API_KEY.startsWith('your-'),
+      environment: import.meta.env.MODE || 'unknown'
+    });
+    
     if (!IS_DEMO_MODE) {
-      this.openai = new OpenAI({
-        apiKey: OPENAI_API_KEY,
-        dangerouslyAllowBrowser: true
-      });
+      try {
+        this.openai = new OpenAI({
+          apiKey: OPENAI_API_KEY,
+          dangerouslyAllowBrowser: true
+        });
+        console.log(`[${config.id}] ✅ OpenAI client initialized successfully`);
+      } catch (error) {
+        console.error(`[${config.id}] ❌ Failed to initialize OpenAI client:`, error);
+        throw new Error(`Failed to initialize OpenAI client: ${error}`);
+      }
     } else {
-      // Create a mock OpenAI client for demo mode
+      console.warn(`[${config.id}] ⚠️  Running in DEMO MODE - OpenAI API unavailable`);
       this.openai = null as any;
     }
+    
     this.config = config;
     this.context = context;
     this.state = {
@@ -33,7 +78,11 @@ export abstract class BaseAgent {
       status: 'idle',
       progress: 0,
       lastUpdate: Date.now(),
-      metadata: {}
+      metadata: {
+        isDemoMode: IS_DEMO_MODE,
+        keySource: KEY_SOURCE,
+        initialized: Date.now()
+      }
     };
   }
 
@@ -53,12 +102,16 @@ export abstract class BaseAgent {
 
       try {
         if (IS_DEMO_MODE) {
+          console.log(`[${this.config.id}] 🎭 Using demo mode for prompt:`, prompt.substring(0, 50) + '...');
           // Demo mode: return a simulated response
           await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
           const demoResponse = this.generateDemoResponse(prompt, context);
+          console.log(`[${this.config.id}] 🎭 Demo response:`, demoResponse.substring(0, 100) + '...');
           this.updateState({ status: 'idle' });
           return demoResponse;
         }
+        
+        console.log(`[${this.config.id}] 🤖 Making OpenAI API call for prompt:`, prompt.substring(0, 50) + '...');
 
         const systemPrompt = this.buildSystemPrompt(context);
         const response = await this.openai.chat.completions.create({
@@ -72,9 +125,22 @@ export abstract class BaseAgent {
         });
 
         const result = response.choices[0]?.message?.content || '';
+        console.log(`[${this.config.id}] ✅ OpenAI response received:`, {
+          length: result.length,
+          preview: result.substring(0, 100) + '...',
+          tokensUsed: response.usage?.total_tokens
+        });
         this.updateState({ status: 'idle' });
         return result;
     } catch (error) {
+      console.error(`[${this.config.id}] ❌ Error in think():`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        isDemoMode: IS_DEMO_MODE,
+        keySource: KEY_SOURCE,
+        prompt: prompt.substring(0, 50) + '...'
+      });
+      
       this.updateState({ status: 'error' });
       
       // Enhanced error handling
