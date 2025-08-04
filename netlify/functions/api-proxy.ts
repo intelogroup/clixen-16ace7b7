@@ -40,9 +40,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           timestamp: new Date().toISOString(),
           function: 'api-proxy',
           environment: {
-            hasSupabaseUrl: !!process.env.SUPABASE_URL,
-            hasN8nUrl: !!process.env.N8N_API_URL,
-            hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+            hasSupabaseUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+            hasN8nUrl: !!(process.env.N8N_API_URL || process.env.VITE_N8N_API_URL),
+            hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+            hasOpenAI: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY)
           }
         })
       };
@@ -55,11 +56,11 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         headers,
         body: JSON.stringify({
           environment: {
-            SUPABASE_URL: process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+            SUPABASE_URL: (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) ? 'SET' : 'MISSING',
             SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING',
-            N8N_API_URL: process.env.N8N_API_URL ? 'SET' : 'MISSING',
-            N8N_API_KEY: process.env.N8N_API_KEY ? 'SET' : 'MISSING',
-            OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'MISSING'
+            N8N_API_URL: (process.env.N8N_API_URL || process.env.VITE_N8N_API_URL) ? 'SET' : 'MISSING',
+            N8N_API_KEY: (process.env.N8N_API_KEY || process.env.VITE_N8N_API_KEY) ? 'SET' : 'MISSING',
+            OPENAI_API_KEY: (process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY) ? 'SET' : 'MISSING'
           }
         })
       };
@@ -69,7 +70,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     if (endpoint === 'test-supabase') {
       const { createClient } = await import('@supabase/supabase-js');
       
-      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
         return {
           statusCode: 500,
           headers,
@@ -77,10 +81,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         };
       }
 
-      const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_SERVICE_ROLE_KEY
-      );
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
       const { data, error } = await supabase
         .from('conversations')
@@ -100,7 +101,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
     // n8n test endpoint
     if (endpoint === 'test-n8n') {
-      if (!process.env.N8N_API_URL || !process.env.N8N_API_KEY) {
+      const n8nUrl = process.env.N8N_API_URL || process.env.VITE_N8N_API_URL;
+      const n8nKey = process.env.N8N_API_KEY || process.env.VITE_N8N_API_KEY;
+      
+      if (!n8nUrl || !n8nKey) {
         return {
           statusCode: 500,
           headers,
@@ -108,9 +112,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         };
       }
 
-      const response = await fetch(`${process.env.N8N_API_URL}/workflows`, {
+      const response = await fetch(`${n8nUrl}/workflows`, {
         headers: {
-          'X-N8N-API-KEY': process.env.N8N_API_KEY,
+          'X-N8N-API-KEY': n8nKey,
           'Content-Type': 'application/json'
         }
       });
