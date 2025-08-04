@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { n8nApi } from '../lib/n8n';
 import { workflowGenerator } from '../lib/workflowGenerator';
-import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon, BeakerIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon, ClockIcon, BeakerIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface Workflow {
@@ -180,34 +180,40 @@ export default function Dashboard() {
       </div>
 
       {/* n8n Status Card */}
-      <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6 mb-6">
+      <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 border border-white/10 rounded-xl p-6 mb-6 hover:border-white/20 transition-all duration-200">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">n8n Server Status</h2>
-            {n8nStatus ? (
-              <div className="flex items-center space-x-2">
-                {n8nStatus.connected ? (
-                  <CheckCircleIcon className="w-5 h-5 text-green-400" />
-                ) : (
-                  <XCircleIcon className="w-5 h-5 text-red-400" />
-                )}
-                <span className={n8nStatus.connected ? 'text-green-400' : 'text-red-400'}>
-                  {n8nStatus.message}
-                </span>
-                {n8nStatus.version && (
-                  <span className="text-zinc-500">({n8nStatus.version})</span>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <ClockIcon className="w-5 h-5 text-yellow-400 animate-spin" />
-                <span className="text-yellow-400">Testing connection...</span>
-              </div>
-            )}
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-lg ${n8nStatus?.connected ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+              {n8nStatus?.connected ? (
+                <CheckCircleIcon className="w-6 h-6 text-green-400" />
+              ) : (
+                <XCircleIcon className="w-6 h-6 text-red-400" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold mb-1">n8n Server Status</h2>
+              {n8nStatus ? (
+                <div className="flex items-center space-x-2">
+                  <span className={`font-medium ${n8nStatus.connected ? 'text-green-400' : 'text-red-400'}`}>
+                    {n8nStatus.message}
+                  </span>
+                  {n8nStatus.version && (
+                    <span className="text-zinc-500 text-sm bg-zinc-800 px-2 py-1 rounded">
+                      v{n8nStatus.version}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <ClockIcon className="w-4 h-4 text-yellow-400 animate-spin" />
+                  <span className="text-yellow-400">Testing connection...</span>
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={checkN8nConnection}
-            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm transition-colors"
+            className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
           >
             Refresh
           </button>
@@ -215,30 +221,58 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6">
-          <div className="text-sm font-medium text-zinc-400">Total Workflows</div>
-          <div className="text-2xl font-bold mt-1">{workflows.length}</div>
-        </div>
-        <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6">
-          <div className="text-sm font-medium text-zinc-400">Active</div>
-          <div className="text-2xl font-bold mt-1 text-green-400">
-            {workflows.filter(w => w.status === 'active').length}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all duration-200 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300">Total Workflows</div>
+              <div className="text-3xl font-bold mt-2 text-white">{workflows.length}</div>
+            </div>
+            <div className="p-3 bg-blue-500/10 rounded-lg">
+              <BeakerIcon className="w-6 h-6 text-blue-400" />
+            </div>
           </div>
         </div>
-        <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6">
-          <div className="text-sm font-medium text-zinc-400">Total Executions</div>
-          <div className="text-2xl font-bold mt-1">
-            {workflows.reduce((sum, w) => sum + w.total_executions, 0)}
+        <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all duration-200 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300">Active</div>
+              <div className="text-3xl font-bold mt-2 text-green-400">
+                {workflows.filter(w => w.status === 'active').length}
+              </div>
+            </div>
+            <div className="p-3 bg-green-500/10 rounded-lg">
+              <CheckCircleIcon className="w-6 h-6 text-green-400" />
+            </div>
           </div>
         </div>
-        <div className="bg-zinc-900/50 border border-white/10 rounded-lg p-6">
-          <div className="text-sm font-medium text-zinc-400">Success Rate</div>
-          <div className="text-2xl font-bold mt-1">
-            {workflows.length > 0 
-              ? Math.round(workflows.reduce((sum, w) => sum + w.success_rate, 0) / workflows.length)
-              : 0
-            }%
+        <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all duration-200 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300">Total Executions</div>
+              <div className="text-3xl font-bold mt-2 text-white">
+                {workflows.reduce((sum, w) => sum + w.total_executions, 0).toLocaleString()}
+              </div>
+            </div>
+            <div className="p-3 bg-purple-500/10 rounded-lg">
+              <PlayIcon className="w-6 h-6 text-purple-400" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all duration-200 group">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-zinc-400 group-hover:text-zinc-300">Success Rate</div>
+              <div className="text-3xl font-bold mt-2 text-white">
+                {workflows.length > 0 
+                  ? Math.round(workflows.reduce((sum, w) => sum + w.success_rate, 0) / workflows.length)
+                  : 0
+                }%
+              </div>
+            </div>
+            <div className="p-3 bg-yellow-500/10 rounded-lg">
+              <ChartBarIcon className="w-6 h-6 text-yellow-400" />
+            </div>
           </div>
         </div>
       </div>

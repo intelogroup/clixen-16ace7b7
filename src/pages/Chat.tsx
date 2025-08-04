@@ -622,9 +622,9 @@ Would you like to try again?`,
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100vh-8rem)] lg:h-[calc(100vh-2rem)]">
       {/* Chat Sessions Sidebar */}
-      <div className="w-64 bg-zinc-950 border-r border-zinc-800 flex flex-col">
+      <div className="hidden md:flex w-64 bg-zinc-950 border-r border-zinc-800 flex-col">
         <div className="p-4 border-b border-zinc-800">
           <button
             onClick={startNewChat}
