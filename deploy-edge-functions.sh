@@ -8,7 +8,7 @@ echo "🚀 Deploying Supabase Edge Functions..."
 # Set environment variables
 export SUPABASE_URL="https://zfbgdixbzezpxllkoyfc.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig"
-export OPENAI_API_KEY="your-openai-api-key-here"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-your-openai-api-key-here}"
 
 # Deploy each function
 echo "Deploying ai-chat-system..."
