@@ -7,7 +7,7 @@ import { Session } from '@supabase/supabase-js';
 // Pages
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
+import EnhancedDashboard from './pages/EnhancedDashboard';
 import Chat from './pages/Chat';
 import OAuthCallback from './pages/OAuthCallback';
 
@@ -106,7 +106,7 @@ export default function App() {
         
         <Route element={<ProtectedRoute session={session} />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<EnhancedDashboard />} />
             <Route path="/chat" element={<Chat />} />
           </Route>
         </Route>
