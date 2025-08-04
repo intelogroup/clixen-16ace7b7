@@ -11,10 +11,16 @@ const getEnvVar = (name: string): string | undefined => {
   return undefined;
 };
 
+// Detect if we're running on Netlify
+const isNetlify = typeof window !== 'undefined' && window.location?.hostname?.includes('netlify.app');
+
 // n8n API utility functions
-const N8N_API_URL = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
-const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') || 'b38356d3-075f-4b69-9b31-dc90c71ba40a';
-const IS_DEMO_MODE = !N8N_API_URL.includes('18.221.12.50') && !N8N_API_URL.includes('localhost');
+const N8N_API_URL_ENV = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
+const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
+
+// Use proxy on Netlify to avoid CORS issues
+const N8N_API_URL = isNetlify ? '/.netlify/functions/n8n-proxy' : N8N_API_URL_ENV;
+const IS_DEMO_MODE = false; // Disable demo mode since we have proxy
 
 export interface N8nWorkflow {
   id: string;
@@ -53,13 +59,21 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
   }
   
   try {
+    // When using proxy, don't send API key in header (proxy adds it)
+    const headers = isNetlify 
+      ? {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        }
+      : {
+          'X-N8N-API-KEY': N8N_API_KEY,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+
     const response = await fetch(url, {
       ...options,
-      headers: {
-        'X-N8N-API-KEY': N8N_API_KEY,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -145,18 +159,35 @@ export const n8nApi = {
     }
     
     try {
-      // First try the simple endpoint that doesn't require auth
+      // When using proxy, directly test the API
+      if (isNetlify) {
+        try {
+          await n8nRequest('/workflows');
+          return {
+            success: true,
+            message: 'Connected to n8n successfully via proxy',
+            version: 'API access working'
+          };
+        } catch (apiError) {
+          return {
+            success: false,
+            message: apiError instanceof N8nApiError 
+              ? `n8n API error: ${apiError.message}`
+              : 'API connection failed'
+          };
+        }
+      }
+      
+      // Direct connection (local development)
       const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
         signal: AbortSignal.timeout(5000) // 5 second timeout
       }).catch(() => null);
       
       if (!healthResponse || !healthResponse.ok) {
-        // Fallback to demo mode if server not responding
-        console.warn('n8n server not responding, using demo mode');
+        console.warn('n8n server not responding');
         return {
-          success: true,
-          message: 'Demo mode active (n8n server unreachable)',
-          version: 'Demo Version 1.0'
+          success: false,
+          message: 'n8n server unreachable',
         };
       }
 
@@ -179,11 +210,9 @@ export const n8nApi = {
         };
       }
     } catch (error) {
-      // Fallback to demo mode on any error
       return {
-        success: true,
-        message: 'Demo mode active (connection error)',
-        version: 'Demo Version 1.0'
+        success: false,
+        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       };
     }
   },
