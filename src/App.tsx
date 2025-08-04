@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 import ModernLanding from './pages/ModernLanding';
 import ModernAuth from './pages/ModernAuth';
 import EnhancedDashboard from './pages/EnhancedDashboard';
-import Chat from './pages/Chat';
+import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
 
 // Components
@@ -72,7 +72,7 @@ function AppContent() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<EnhancedDashboard />} />
-            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat" element={<DatabaseDrivenChat />} />
           </Route>
         </Route>
         
