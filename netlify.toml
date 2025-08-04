@@ -57,9 +57,14 @@
   to = "/.netlify/functions/env-test"
   status = 200
 
-# Backend health check endpoint
+# Backend health check endpoints (multiple paths for compatibility)
 [[redirects]]
   from = "/api/health"
+  to = "/.netlify/functions/backend-health"
+  status = 200
+
+[[redirects]]
+  from = "/api/backend-health"
   to = "/.netlify/functions/backend-health"
   status = 200
 
@@ -148,6 +153,19 @@
   N8N_API_URL = "http://18.221.12.50:5678/api/v1"
   N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU"
   OPENAI_API_KEY = "your-openai-api-key-here"
+
+# Add general API redirect with force flag to ensure it takes precedence
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+# Add direct function access
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
 
 # SPA routing - redirect all non-API routes to index.html (MUST BE LAST)
 [[redirects]]

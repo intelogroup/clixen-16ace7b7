@@ -10,6 +10,8 @@ import { WorkflowPhase } from '../lib/agents/types';
 import PermissionModal from '../components/PermissionModal';
 import OAuthManager from '../lib/oauth/OAuthManager';
 import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
+import { EnvironmentDebugger } from '../lib/debug/EnvironmentDebugger';
+import { SystemStatusBar } from '../components/SystemStatusBar';
 
 interface Message {
   id: string;
@@ -118,18 +120,31 @@ export default function Chat() {
   // Initialize with greeting on mount
   useEffect(() => {
     const initChat = async () => {
+      console.log('🚀 Initializing Chat component...');
+      
+      // Run environment debug check
+      const debugInfo = EnvironmentDebugger.debugEnvironment();
+      
       // Check if returning user by looking at localStorage
       const isReturningUser = localStorage.getItem('hasVisitedBefore') === 'true';
       localStorage.setItem('hasVisitedBefore', 'true');
       
+      // Create status message based on environment
+      let statusMessage = '';
+      if (debugInfo.keyAnalysis.shouldUseDemoMode) {
+        statusMessage = '⚠️ **Demo Mode Active** - OpenAI API not configured. Responses will be simulated.\\n\\n';
+      } else {
+        statusMessage = '✅ **AI Agents Ready** - Connected to OpenAI for intelligent workflow creation.\\n\\n';
+      }
+      
       // Call greet_user action on OrchestratorAgent
       const greetingResponse = {
-        message: isReturningUser 
+        message: statusMessage + (isReturningUser 
           ? "Welcome back! Ready to create another automation?"
-          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?",
+          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?"),
         suggestions: [
           "Send Slack notifications for new form submissions",
-          "Sync Google Sheets with a database",
+          "Sync Google Sheets with a database", 
           "Process emails automatically",
           "Generate reports from multiple sources"
         ],
@@ -145,6 +160,16 @@ export default function Chat() {
         suggestions: greetingResponse.suggestions,
         conversationMode: 'greeting'
       }]);
+      
+      // Add debug info message in development
+      if (import.meta.env.DEV) {
+        setTimeout(() => {
+          addMessage({
+            type: 'system',
+            content: `🛠️ **Debug Info**: Environment: ${debugInfo.environment.mode}, OpenAI: ${debugInfo.keyAnalysis.isValid ? 'Connected' : 'Demo Mode'}, Key Source: ${debugInfo.keyAnalysis.key ? 'Found' : 'Missing'}`
+          });
+        }, 1000);
+      }
     };
     
     if (messages.length === 0) {
@@ -352,46 +377,140 @@ export default function Chat() {
   };
 
   const processUserMessage = async (message: string) => {
+    console.log('💬 Processing user message:', message);
+    
+    // Handle debug commands
+    if (message.startsWith('/')) {
+      const command = message.toLowerCase().trim();
+      
+      if (command === '/debug') {
+        const debug = EnvironmentDebugger.debugEnvironment();
+        addMessage({
+          type: 'system',
+          content: `🔍 **Full Debug Report**:
+
+**Environment**:
+• Mode: ${debug.environment.mode}
+• Dev: ${debug.environment.dev}
+• URL: ${debug.environment.url}
+
+**OpenAI Configuration**:
+• VITE Key: ${debug.openaiKeys.vite_key.exists ? '✅' : '❌'} (${debug.openaiKeys.vite_key.length} chars)
+• Valid Key: ${debug.keyAnalysis.isValid ? '✅' : '❌'}
+• Demo Mode: ${debug.keyAnalysis.shouldUseDemoMode ? '🎭' : '🤖'}
+
+**Other Services**:
+• Supabase: ${debug.supabase.url.exists ? '✅' : '❌'}
+• n8n: ${debug.n8n.url.exists ? '✅' : '❌'}`
+        });
+        return;
+      } else if (command === '/test-openai') {
+        setIsGenerating(true);
+        addMessage({
+          type: 'system',
+          content: '🧪 Testing OpenAI connection...',
+          status: 'generating'
+        });
+        
+        try {
+          const result = await EnvironmentDebugger.testOpenAIConnection();
+          addMessage({
+            type: 'system',
+            content: result.success 
+              ? `✅ **OpenAI Test Successful**\nResponse: "${result.response}"\nTokens: ${result.usage?.total_tokens}`
+              : `❌ **OpenAI Test Failed**\nReason: ${result.reason || result.error}`,
+            status: result.success ? 'complete' : 'error'
+          });
+        } catch (error) {
+          addMessage({
+            type: 'system',
+            content: `❌ **Test Error**: ${error}`,
+            status: 'error'
+          });
+        } finally {
+          setIsGenerating(false);
+        }
+        return;
+      } else if (command === '/clear') {
+        setMessages([]);
+        setTimeout(() => {
+          addMessage({
+            type: 'system',
+            content: '🧹 Chat history cleared!'
+          });
+        }, 100);
+        return;
+      }
+    }
+    
     setIsGenerating(true);
+    
+    // Add loading message immediately
+    const loadingMessageId = addMessage({
+      type: 'system',
+      content: '🤖 Processing your request...',
+      status: 'generating'
+    });
     
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        console.error('❌ User not authenticated');
+        throw new Error('Not authenticated - please log in to continue');
+      }
+      
+      console.log('✅ User authenticated:', user.id);
 
       let response;
       
+      // Remove loading message
+      updateMessage(loadingMessageId, { content: '', status: undefined });
+      
       // Handle conversation based on current mode
       if (conversationMode === 'greeting' || conversationMode === 'scoping') {
-        // Use the natural conversation handler
-        response = await agentCoordinator.handleNaturalConversation(message, messages);
+        console.log('🔄 Using natural conversation handler, mode:', conversationMode);
         
-        // Update conversation state
-        setConversationMode(response.mode);
-        setScopeData(response.scopeStatus || scopeData);
-        setCanCreateWorkflow(response.canProceed);
-        
-        // Add assistant response
-        addMessage({
-          type: 'assistant',
-          content: response.response,
-          agentId: 'orchestrator',
-          conversationMode: response.mode,
-          scopeStatus: response.scopeStatus,
-          canProceed: response.canProceed
-        });
-        
-        // If we have all info and can proceed, show the create button
-        if (response.canProceed && response.mode === 'validating') {
-          setShowAgentPanel(true);
+        try {
+          // Use the natural conversation handler
+          response = await agentCoordinator.handleNaturalConversation(message, messages);
+          console.log('📝 Agent response:', response);
+          
+          // Update conversation state
+          setConversationMode(response.mode);
+          setScopeData(response.scopeStatus || scopeData);
+          setCanCreateWorkflow(response.canProceed);
+          
+          // Add assistant response
+          addMessage({
+            type: 'assistant',
+            content: response.response,
+            agentId: 'orchestrator',
+            conversationMode: response.mode,
+            scopeStatus: response.scopeStatus,
+            canProceed: response.canProceed
+          });
+          
+          // If we have all info and can proceed, show the create button
+          if (response.canProceed && response.mode === 'validating') {
+            setShowAgentPanel(true);
+            console.log('✅ Ready to create workflow');
+          }
+        } catch (agentError) {
+          console.error('❌ Agent coordinator error:', agentError);
+          throw new Error(`Agent processing failed: ${agentError.message}`);
         }
       } else if (conversationMode === 'creating') {
+        console.log('🏗️ Creating workflow, conversationId:', conversationId);
+        
         // Actually create the workflow
         if (!conversationId) {
           response = await agentCoordinator.startConversation(user.id, JSON.stringify(scopeData));
           setConversationId(response.conversationId);
+          console.log('🆕 Started new conversation:', response.conversationId);
         } else {
           response = await agentCoordinator.continueConversation(conversationId, message);
+          console.log('➡️ Continued conversation:', conversationId);
         }
       }
 
@@ -427,23 +546,63 @@ export default function Chat() {
       }
 
     } catch (error: any) {
-      console.error('Error in generateWorkflow:', error);
+      console.error('❌ Error in processUserMessage:', {
+        error: error.message,
+        stack: error.stack,
+        conversationMode,
+        userId: user?.id,
+        messageLength: message.length
+      });
+      
+      // Remove loading message if still present
+      updateMessage(loadingMessageId, { content: '', status: undefined });
+      
+      // Determine error type and provide specific guidance
+      let errorMessage = 'I encountered an error while processing your request.';
+      let suggestions: string[] = [];
+      
+      if (error.message.includes('Not authenticated')) {
+        errorMessage = '🔐 **Authentication Required** - Please log in to continue using the AI workflow assistant.';
+        suggestions = ['Please refresh the page and log in again'];
+      } else if (error.message.includes('OpenAI')) {
+        errorMessage = '🤖 **AI Service Issue** - There was a problem connecting to the AI service.';
+        suggestions = [
+          'Check if you have a stable internet connection',
+          'Try again in a few moments',
+          'Contact support if the issue persists'
+        ];
+      } else if (error.message.includes('network') || error.message.includes('fetch')) {
+        errorMessage = '🌐 **Network Issue** - Unable to connect to our services.';
+        suggestions = [
+          'Check your internet connection',
+          'Disable any ad blockers or VPNs temporarily',
+          'Try refreshing the page'
+        ];
+      } else {
+        errorMessage = `🚨 **Unexpected Error**: ${error.message}`;
+        suggestions = [
+          'Try rephrasing your request',
+          'Refresh the page and try again',
+          'Contact support with the error details'
+        ];
+      }
       
       addMessage({
         type: 'assistant',
-        content: `I encountered an error: ${error.message}
-
-This might be due to:
-• Network connectivity issues
-• OpenAI API rate limits
-• n8n server connectivity
-
-Would you like to try again?`,
+        content: errorMessage,
         status: 'error',
-        agentId: 'orchestrator'
+        agentId: 'orchestrator',
+        suggestions: suggestions
       });
 
-      toast.error('Failed to process request');
+      // Show different toast messages based on error type
+      if (error.message.includes('Not authenticated')) {
+        toast.error('Please log in to continue');
+      } else if (error.message.includes('OpenAI')) {
+        toast.error('AI service temporarily unavailable');
+      } else {
+        toast.error('Request failed - see chat for details');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -681,12 +840,38 @@ Would you like to try again?`,
                   />
                 </div>
               </div>
-              <button
-                onClick={() => setShowAgentPanel(!showAgentPanel)}
-                className="px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
-              >
-                {showAgentPanel ? 'Hide' : 'Show'} Agents
-              </button>
+              <div className="flex gap-2 items-center">
+                <SystemStatusBar />
+                <button
+                  onClick={() => setShowAgentPanel(!showAgentPanel)}
+                  className="px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
+                >
+                  {showAgentPanel ? 'Hide' : 'Show'} Agents
+                </button>
+                {import.meta.env.DEV && (
+                  <button
+                    onClick={() => {
+                      const debug = EnvironmentDebugger.debugEnvironment();
+                      addMessage({
+                        type: 'system',
+                        content: `🛠️ **Debug Report**:
+Environment: ${debug.environment.mode}
+OpenAI Key: ${debug.keyAnalysis.isValid ? '✅ Valid' : '❌ Invalid/Missing'}
+Demo Mode: ${debug.keyAnalysis.shouldUseDemoMode ? '🎭 Active' : '🤖 Disabled'}
+Key Source: ${debug.keyAnalysis.key ? 'Found' : 'Missing'}
+
+**Available Debug Commands**:
+• Type \`/debug\` - Show full environment details
+• Type \`/test-openai\` - Test OpenAI connection
+• Type \`/clear\` - Clear chat history`
+                      });
+                    }}
+                    className="px-3 py-1 text-xs bg-blue-800 hover:bg-blue-700 rounded-md transition-colors"
+                  >
+                    Debug
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -728,8 +913,21 @@ Would you like to try again?`,
                       )}
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap font-mono text-sm">
-                    {message.content}
+                  <div className="whitespace-pre-wrap text-sm">
+                    {/* Simple markdown-like formatting */}
+                    {message.content.split('\n').map((line, idx) => {
+                      if (line.startsWith('**') && line.endsWith('**')) {
+                        return <div key={idx} className="font-bold mb-1">{line.slice(2, -2)}</div>;
+                      } else if (line.startsWith('• ')) {
+                        return <div key={idx} className="ml-2 mb-1">• {line.slice(2)}</div>;
+                      } else if (line.startsWith('`') && line.endsWith('`')) {
+                        return <code key={idx} className="bg-zinc-800 px-1 py-0.5 rounded font-mono text-xs">{line.slice(1, -1)}</code>;
+                      } else if (line.trim() === '') {
+                        return <div key={idx} className="h-2" />;
+                      } else {
+                        return <div key={idx} className={message.type === 'system' ? 'font-mono' : ''}>{line}</div>;
+                      }
+                    })}
                   </div>
                   
                   {/* Workflow Suggestions */}
