@@ -67,6 +67,7 @@
   # Keep-warm function to prevent cold starts
   [functions."keep-warm"]
     schedule = "*/5 * * * *" # Every 5 minutes
+    external_node_modules = []
     
   # Set function-specific environment variables if needed
   [functions."api-proxy"]
@@ -74,9 +75,6 @@
     
   [functions."execution-status"]
     external_node_modules = ["@supabase/supabase-js"]
-    
-  [functions."keep-warm"]
-    external_node_modules = []
 
 # Environment variables template
 # Set these in Netlify UI or using Netlify CLI

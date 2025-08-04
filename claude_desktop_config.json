@@ -1,5 +1,30 @@
 {
   "mcpServers": {
+    "netlify": {
+      "command": "npx",
+      "args": ["-y", "@netlify/mcp"],
+      "env": {
+        "NETLIFY_PERSONAL_ACCESS_TOKEN": "nfp_nJDfV7UNE6CQxcHdBpz2HmNc3TFyxcas7a2e"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase"],
+      "env": {
+        "SUPABASE_URL": "https://zfbgdixbzezpxllkoyfc.supabase.co",
+        "SUPABASE_ACCESS_TOKEN": "sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig"
+      }
+    },
+    "supabase-custom": {
+      "command": "node",
+      "args": ["/root/repo/mcp/supabase-mcp-server.js"],
+      "env": {
+        "SUPABASE_URL": "https://zfbgdixbzezpxllkoyfc.supabase.co",
+        "SUPABASE_ACCESS_TOKEN": "sbp_b23d39d9adc897d932f1444da2dd24a00f0f149f",
+        "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig"
+      }
+    },
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
