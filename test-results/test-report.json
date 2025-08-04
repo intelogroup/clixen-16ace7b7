@@ -1,0 +1,74 @@
+{
+  "timestamp": "2025-08-04T11:37:30.703Z",
+  "backend": {
+    "n8n": {
+      "status": "PASS",
+      "statusCode": 200,
+      "workflows": 6
+    },
+    "supabase": {
+      "status": "PASS",
+      "statusCode": 200
+    },
+    "auth": {
+      "status": "PASS",
+      "statusCode": 200,
+      "hasToken": true
+    }
+  },
+  "frontend": {
+    "pageLoad": {
+      "status": "PASS",
+      "title": "Clixen - AI-Powered Workflow Automation"
+    },
+    "authentication": {
+      "status": "SKIP",
+      "message": "No auth form found"
+    },
+    "route_dashboard": {
+      "status": "PASS",
+      "url": "https://clixen.netlify.app/auth"
+    },
+    "route_chat": {
+      "status": "PASS",
+      "url": "https://clixen.netlify.app/auth"
+    },
+    "route_workflows": {
+      "status": "PASS",
+      "url": "https://clixen.netlify.app/"
+    },
+    "uiEvaluation": {
+      "colorScheme": "rgba(0, 0, 0, 0)",
+      "fontFamily": "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif",
+      "hasHeader": false,
+      "hasMainContent": true,
+      "hasFooter": false,
+      "responsive": "desktop",
+      "animations": true,
+      "darkMode": false
+    }
+  },
+  "multiAgent": {
+    "status": "FAIL",
+    "chatFound": false,
+    "message": "Chat interface not found"
+  },
+  "screenshots": [
+    "1754307453217-01-landing-page.png",
+    "1754307457636-route-dashboard.png",
+    "1754307461221-route-chat.png",
+    "1754307464824-route-workflows.png",
+    "1754307470061-chat-01-initial.png",
+    "1754307470922-chat-error-no-input.png",
+    "1754307471848-final-state.png"
+  ],
+  "errors": [],
+  "summary": {
+    "backend": "3/3 passed",
+    "frontend": "4/6 passed",
+    "multiAgent": "ISSUES DETECTED",
+    "screenshots": 7,
+    "errors": 0,
+    "overallStatus": "PARTIAL"
+  }
+}
