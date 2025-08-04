@@ -169,6 +169,50 @@ netlify dev --live  # Force reload
 const chunks = splitIntoChunks(data, 5 * 1024 * 1024); // 5MB chunks
 ```
 
+### Issue: Cold start performance (200ms+ delay)
+**Solution**: Implement function warming
+```typescript
+// netlify/functions/keep-warm.ts - Schedule every 5 minutes
+export const handler = async () => {
+  const functions = ['/api/v1/workflows/generate'];
+  await Promise.all(functions.map(fn => 
+    fetch(`${process.env.URL}${fn}`, { method: 'HEAD' })
+  ));
+  return { statusCode: 200 };
+};
+```
+
+### Issue: Rate limiting bypassed on cold starts
+**Solution**: Move rate limiting to Supabase
+```typescript
+const checkRateLimit = async (userId: string) => {
+  const { data } = await supabase.rpc('check_user_rate_limit', {
+    p_user_id: userId,
+    p_window_minutes: 1,
+    p_max_requests: 100
+  });
+  return data;
+};
+```
+
+### Issue: Concurrency limits at scale (1,000 concurrent functions)
+**Solution**: Request AWS Lambda concurrency increase via Netlify support
+```bash
+# When approaching 500 daily active users:
+# 1. Contact Netlify support for concurrency increase
+# 2. Consider reserved concurrency for critical functions
+# 3. Plan migration to dedicated infrastructure
+```
+
+### Issue: High function invocation costs
+**Solution**: Optimize function calls and add intelligent caching
+```typescript
+// Cache expensive AI model decisions
+const modelCache = new Map();
+const cacheKey = `${userTier}-${complexity}`;
+if (modelCache.has(cacheKey)) return modelCache.get(cacheKey);
+```
+
 ## 📊 Monitoring & Analytics
 
 ### Netlify Analytics
