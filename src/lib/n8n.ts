@@ -18,9 +18,9 @@ const isNetlify = typeof window !== 'undefined' && window.location?.hostname?.in
 const N8N_API_URL_ENV = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
 const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
 
-// Use proxy on Netlify to avoid CORS issues
-const N8N_API_URL = isNetlify ? '/.netlify/functions/n8n-proxy' : N8N_API_URL_ENV;
-const IS_DEMO_MODE = false; // Disable demo mode since we have proxy
+// Use direct n8n API URL - no proxy needed with database-driven approach
+const N8N_API_URL = N8N_API_URL_ENV;
+const IS_DEMO_MODE = false; // Using real n8n API with database-driven chat
 
 export interface N8nWorkflow {
   id: string;
