@@ -24,6 +24,7 @@ export const handler: Handler = async (event) => {
       VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT_SET',
       VITE_N8N_API_URL: process.env.VITE_N8N_API_URL || 'NOT_SET',
       VITE_N8N_API_KEY: process.env.VITE_N8N_API_KEY ? 'SET' : 'NOT_SET',
+      VITE_OPENAI_API_KEY: process.env.VITE_OPENAI_API_KEY ? 'SET' : 'NOT_SET',
       
       // Non-VITE_ prefixed (runtime)
       SUPABASE_URL: process.env.SUPABASE_URL || 'NOT_SET',
@@ -31,6 +32,7 @@ export const handler: Handler = async (event) => {
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'NOT_SET',
       N8N_API_URL: process.env.N8N_API_URL || 'NOT_SET',
       N8N_API_KEY: process.env.N8N_API_KEY ? 'SET' : 'NOT_SET',
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'SET' : 'NOT_SET',
       
       // Netlify specific
       NETLIFY: process.env.NETLIFY || 'NOT_SET',
