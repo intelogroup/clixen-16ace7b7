@@ -219,6 +219,104 @@ export default function Chat() {
     );
   };
 
+  // Save conversation to Supabase
+  const saveConversationToSupabase = async (messages: Message[], sessionId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const conversationData = {
+        user_id: user.id,
+        title: messages.find(m => m.type === 'user')?.content?.substring(0, 50) + '...' || 'New Conversation',
+        messages: JSON.stringify(messages),
+        status: 'active',
+        workflow_summary: messages.filter(m => m.type === 'assistant').slice(-1)[0]?.content?.substring(0, 200) || ''
+      };
+
+      const { data, error } = await supabase
+        .from('conversations')
+        .upsert(conversationData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving conversation:', error);
+      } else {
+        console.log('Conversation saved:', data?.id);
+      }
+    } catch (error) {
+      console.error('Failed to save conversation:', error);
+    }
+  };
+
+  // Auto-save conversations periodically
+  useEffect(() => {
+    if (messages.length > 1) {
+      const timer = setTimeout(() => {
+        saveConversationToSupabase(messages, activeSessionId);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, activeSessionId]);
+
+  // Load previous conversations on mount
+  useEffect(() => {
+    const loadPreviousConversations = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error('Error loading conversations:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Convert conversations to sessions
+          const loadedSessions = data.map(conv => ({
+            id: conv.id,
+            title: conv.title,
+            status: conv.status as 'scoping' | 'creating' | 'completed' | 'error',
+            createdAt: new Date(conv.created_at),
+            messages: conv.messages ? JSON.parse(conv.messages) : []
+          }));
+
+          setSessions(loadedSessions);
+          
+          // If there's a conversation from URL or set active to most recent
+          if (loadedSessions.length > 0 && !activeSessionId) {
+            const mostRecent = loadedSessions[0];
+            setActiveSessionId(mostRecent.id);
+            if (mostRecent.messages) {
+              setMessages(mostRecent.messages);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+      }
+    };
+
+    loadPreviousConversations();
+  }, []);
+
+  // Load specific conversation when activeSessionId changes
+  useEffect(() => {
+    if (activeSessionId && sessions.length > 0) {
+      const session = sessions.find(s => s.id === activeSessionId);
+      if (session && session.messages && session.messages.length > 0) {
+        setMessages(session.messages);
+      }
+    }
+  }, [activeSessionId, sessions]);
+
   const startNewChat = () => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
