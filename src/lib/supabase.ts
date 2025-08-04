@@ -1,11 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Universal environment variable access (works in both browser and Node.js)
+const getEnvVar = (name: string): string | undefined => {
+  // In browser/Vite environment
+  if (typeof window !== 'undefined' && import.meta?.env) {
+    return import.meta.env[name];
+  }
+  // In Node.js environment (Netlify functions)
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[name];
+  }
+  return undefined;
+};
+
 // Production Supabase configuration with validation
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zfbgdixbzezpxllkoyfc.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw';
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL') || 'https://zfbgdixbzezpxllkoyfc.supabase.co';
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw';
 
 // Development validation - warn about placeholder URLs
-if (import.meta.env.DEV && supabaseUrl.includes('your-project')) {
+const isDev = getEnvVar('NODE_ENV') !== 'production' || (typeof import.meta !== 'undefined' && import.meta?.env?.DEV);
+if (isDev && supabaseUrl.includes('your-project')) {
   console.warn('⚠️ Using placeholder Supabase URL. Set VITE_SUPABASE_URL in .env');
 }
 
