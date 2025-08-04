@@ -1,74 +1,18 @@
-// Base agent class with OpenAI integration
-import OpenAI from 'openai';
+// Base agent class with Supabase Edge Function integration
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
 import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
 import { performanceOptimizer } from './PerformanceOptimizer';
 
-// Enhanced environment variable detection with logging
-function getOpenAIKey(): { key: string; isDemoMode: boolean; source: string } {
-  // Try multiple sources for the API key
-  const viteKey = import.meta.env.VITE_OPENAI_API_KEY;
-  const envKey = (globalThis as any).process?.env?.OPENAI_API_KEY;
-  const windowKey = (window as any)?.ENV?.VITE_OPENAI_API_KEY;
-  
-  console.log('[BaseAgent] Environment variable check:', {
-    viteKey: viteKey ? '✅ Set' : '❌ Not set',
-    envKey: envKey ? '✅ Set' : '❌ Not set', 
-    windowKey: windowKey ? '✅ Set' : '❌ Not set',
-    viteKeyValue: viteKey?.substring(0, 10) + '...',
-    location: window.location.href
-  });
-  
-  const key = viteKey || envKey || windowKey || 'demo-key';
-  const isDemoMode = !key || key === 'demo-key' || key === 'your-openai-api-key-here' || key.startsWith('your-');
-  
-  const source = viteKey ? 'VITE_OPENAI_API_KEY' : 
-                 envKey ? 'OPENAI_API_KEY' :
-                 windowKey ? 'window.ENV.VITE_OPENAI_API_KEY' : 'fallback';
-  
-  console.log('[BaseAgent] OpenAI Configuration:', {
-    isDemoMode,
-    source,
-    keyLength: key.length,
-    keyPrefix: key.substring(0, 7)
-  });
-  
-  return { key, isDemoMode, source };
-}
-
-const { key: OPENAI_API_KEY, isDemoMode: IS_DEMO_MODE, source: KEY_SOURCE } = getOpenAIKey();
-
 export abstract class BaseAgent {
-  protected openai: OpenAI;
   protected config: AgentConfig;
   protected context: AgentContext;
   protected state: AgentState;
   protected messageQueue: AgentMessage[] = [];
   protected subscribers: Set<(message: AgentMessage) => void> = new Set();
+  protected lastAIProvider: string = 'unknown';
 
   constructor(config: AgentConfig, context: AgentContext) {
-    console.log(`[${config.id}] Initializing agent:`, {
-      isDemoMode: IS_DEMO_MODE,
-      keySource: KEY_SOURCE,
-      hasValidKey: OPENAI_API_KEY.length > 10 && !OPENAI_API_KEY.startsWith('your-'),
-      environment: import.meta.env.MODE || 'unknown'
-    });
-    
-    if (!IS_DEMO_MODE) {
-      try {
-        this.openai = new OpenAI({
-          apiKey: OPENAI_API_KEY,
-          dangerouslyAllowBrowser: true
-        });
-        console.log(`[${config.id}] ✅ OpenAI client initialized successfully`);
-      } catch (error) {
-        console.error(`[${config.id}] ❌ Failed to initialize OpenAI client:`, error);
-        throw new Error(`Failed to initialize OpenAI client: ${error}`);
-      }
-    } else {
-      console.warn(`[${config.id}] ⚠️  Running in DEMO MODE - OpenAI API unavailable`);
-      this.openai = null as any;
-    }
+    console.log(`[${config.id}] Initializing agent with Supabase Edge Function integration`);
     
     this.config = config;
     this.context = context;
@@ -79,8 +23,7 @@ export abstract class BaseAgent {
       progress: 0,
       lastUpdate: Date.now(),
       metadata: {
-        isDemoMode: IS_DEMO_MODE,
-        keySource: KEY_SOURCE,
+        usingEdgeFunction: true,
         initialized: Date.now()
       }
     };
@@ -101,43 +44,73 @@ export abstract class BaseAgent {
       this.updateState({ status: 'thinking' });
 
       try {
-        if (IS_DEMO_MODE) {
-          console.log(`[${this.config.id}] 🎭 Using demo mode for prompt:`, prompt.substring(0, 50) + '...');
-          // Demo mode: return a simulated response
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
-          const demoResponse = this.generateDemoResponse(prompt, context);
-          console.log(`[${this.config.id}] 🎭 Demo response:`, demoResponse.substring(0, 100) + '...');
-          this.updateState({ status: 'idle' });
-          return demoResponse;
+        // Always use the edge function for AI responses
+        console.log(`[${this.config.id}] 🤖 Calling Supabase AI edge function...`);
+        
+        // Get Supabase token
+        const supabase = (await import('../supabase')).supabase;
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          throw new Error('Not authenticated');
+        }
+
+        // Call the edge function
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              message: prompt,
+              user_id: session.user.id,
+              agent_type: this.config.id.split('-').pop(), // Extract agent type from ID
+              session_id: this.context.conversationId,
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Edge function error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        
+        console.log(`[${this.config.id}] ✅ Edge function response received:`, {
+          provider: data.ai_provider,
+          length: data.response?.length,
+          tokensUsed: data.tokens_used,
+          processingTime: data.processing_time
+        });
+        
+        // Show which AI provider was used
+        if (data.ai_provider === 'claude') {
+          console.log(`[${this.config.id}] 🎭 Using Claude as fallback AI provider`);
+        } else if (data.ai_provider === 'openai') {
+          console.log(`[${this.config.id}] 🤖 Using OpenAI as primary AI provider`);
         }
         
-        console.log(`[${this.config.id}] 🤖 Making OpenAI API call for prompt:`, prompt.substring(0, 50) + '...');
-
-        const systemPrompt = this.buildSystemPrompt(context);
-        const response = await this.openai.chat.completions.create({
-          model: this.config.model,
-          temperature: this.config.temperature,
-          max_tokens: this.config.maxTokens,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ]
+        // Store the AI provider info
+        this.lastAIProvider = data.ai_provider || 'unknown';
+        this.updateState({ 
+          status: 'idle',
+          metadata: {
+            ...this.state.metadata,
+            lastAIProvider: this.lastAIProvider,
+            lastResponseTime: data.processing_time
+          }
         });
-
-        const result = response.choices[0]?.message?.content || '';
-        console.log(`[${this.config.id}] ✅ OpenAI response received:`, {
-          length: result.length,
-          preview: result.substring(0, 100) + '...',
-          tokensUsed: response.usage?.total_tokens
-        });
-        this.updateState({ status: 'idle' });
-        return result;
+        
+        return data.response || '';
     } catch (error) {
       console.error(`[${this.config.id}] ❌ Error in think():`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        isDemoMode: IS_DEMO_MODE,
-        keySource: KEY_SOURCE,
+        usingEdgeFunction: true,
         prompt: prompt.substring(0, 50) + '...'
       });
       
@@ -419,20 +392,9 @@ export abstract class BaseAgent {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
-  // Demo mode response generator
-  protected generateDemoResponse(prompt: string, context?: any): string {
-    // Generate contextual demo responses based on agent type
-    const agentName = this.config.name.toLowerCase();
-    
-    if (agentName.includes('orchestrator')) {
-      return `I understand you want to: ${prompt}\n\nLet me coordinate with the other agents to help you build this workflow. I'll break this down into manageable tasks and delegate them to the appropriate specialists.`;
-    } else if (agentName.includes('workflow')) {
-      return `I'll design an n8n workflow for: ${prompt}\n\nThe workflow will include appropriate nodes and connections to handle your requirements efficiently.`;
-    } else if (agentName.includes('deployment')) {
-      return `I'll handle the deployment of your workflow. Once validated, I'll ensure it's properly deployed to your n8n instance.`;
-    } else {
-      return `Processing your request: ${prompt}\n\nNote: This is a demo response. Configure your OpenAI API key for full functionality.`;
-    }
+  // Get the last AI provider used
+  getLastAIProvider(): string {
+    return this.lastAIProvider;
   }
 
   // Cleanup

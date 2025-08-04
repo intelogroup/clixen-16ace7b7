@@ -27,6 +27,7 @@ interface MultiAgentResponse {
   conversation_context?: Record<string, any>;
   next_agent?: string;
   workflow_progress?: Record<string, any>;
+  ai_provider?: string;
 }
 
 // Agent system prompts
@@ -76,6 +77,7 @@ Focus on system reliability and comprehensive error handling.`
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
+const claudeApiKey = Deno.env.get('CLAUDE_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -234,34 +236,96 @@ const getAgentState = async (
   }
 };
 
-// Call OpenAI API with agent-specific configuration
-const callOpenAI = async (
+// Call Claude API as fallback
+const callClaude = async (
   messages: ChatMessage[],
-  agentConfig: AgentConfig,
-  stream = false
+  agentConfig: AgentConfig
 ): Promise<{ response: string; tokensUsed: number }> => {
-  const systemMessage = {
-    role: 'system' as const,
-    content: agentConfig.systemPrompt,
-  };
+  const systemMessage = agentConfig.systemPrompt;
+  
+  // Convert messages to Claude format
+  const claudeMessages = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content,
+  }));
 
-  const openaiMessages = [
-    systemMessage,
-    ...messages.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-    })),
-  ];
+  // Map OpenAI model to Claude model
+  let claudeModel = 'claude-3-opus-20240229';
+  if (agentConfig.model === 'gpt-3.5-turbo') {
+    claudeModel = 'claude-3-haiku-20240307';
+  } else if (agentConfig.model === 'gpt-4') {
+    claudeModel = 'claude-3-sonnet-20240229';
+  }
 
   const requestBody = {
-    model: agentConfig.model,
-    messages: openaiMessages,
+    model: claudeModel,
+    messages: claudeMessages,
+    system: systemMessage,
     max_tokens: agentConfig.maxTokens,
     temperature: agentConfig.temperature,
-    stream,
   };
 
   try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': claudeApiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    return {
+      response: data.content[0]?.text || 'No response generated',
+      tokensUsed: data.usage?.input_tokens + data.usage?.output_tokens || 0,
+    };
+  } catch (error) {
+    console.error('Error calling Claude:', error);
+    throw error;
+  }
+};
+
+// Call AI API with fallback support
+const callAI = async (
+  messages: ChatMessage[],
+  agentConfig: AgentConfig,
+  stream = false
+): Promise<{ response: string; tokensUsed: number; provider: string }> => {
+  // Try OpenAI first
+  try {
+    if (!openaiApiKey || openaiApiKey === 'your-openai-api-key-here') {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    const systemMessage = {
+      role: 'system' as const,
+      content: agentConfig.systemPrompt,
+    };
+
+    const openaiMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+    ];
+
+    const requestBody = {
+      model: agentConfig.model,
+      messages: openaiMessages,
+      max_tokens: agentConfig.maxTokens,
+      temperature: agentConfig.temperature,
+      stream,
+    };
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -281,13 +345,32 @@ const callOpenAI = async (
     return {
       response: data.choices[0]?.message?.content || 'No response generated',
       tokensUsed: data.usage?.total_tokens || 0,
+      provider: 'openai',
     };
-  } catch (error) {
-    console.error('Error calling OpenAI:', error);
-    return {
-      response: `I encountered an error processing your request: ${error.message}. Please try again.`,
-      tokensUsed: 0,
-    };
+  } catch (openaiError) {
+    console.error('OpenAI API failed, trying Claude:', openaiError);
+    
+    // Try Claude as fallback
+    try {
+      if (!claudeApiKey || claudeApiKey === 'your-claude-api-key-here') {
+        throw new Error('Claude API key not configured');
+      }
+
+      const claudeResult = await callClaude(messages, agentConfig);
+      return {
+        ...claudeResult,
+        provider: 'claude',
+      };
+    } catch (claudeError) {
+      console.error('Claude API also failed:', claudeError);
+      
+      // Both APIs failed
+      return {
+        response: `I encountered an error with both AI providers. OpenAI: ${openaiError.message}. Claude: ${claudeError.message}. Please try again later.`,
+        tokensUsed: 0,
+        provider: 'error',
+      };
+    }
   }
 };
 
@@ -355,10 +438,10 @@ const processMultiAgentChat = async (
       content: userMessage,
     });
     
-    // Call OpenAI with agent-specific configuration
-    const { response, tokensUsed } = await callOpenAI(contextualMessages, agentConfig);
+    // Call AI with fallback support
+    const { response, tokensUsed, provider } = await callAI(contextualMessages, agentConfig);
     
-    // Store AI response
+    // Store AI response with provider info
     const messageId = await storeMessage(
       sessionId,
       userId,
@@ -369,6 +452,7 @@ const processMultiAgentChat = async (
         tokens_used: tokensUsed,
         processing_time: Date.now() - startTime,
         model: agentConfig.model,
+        ai_provider: provider,
       }
     );
     
@@ -409,6 +493,7 @@ const processMultiAgentChat = async (
       conversation_context: updatedState,
       next_agent: nextAgent,
       workflow_progress: agentType === 'workflow_designer' ? { phase: 'design', status: 'in_progress' } : undefined,
+      ai_provider: provider,
     };
     
   } catch (error) {
@@ -512,16 +597,18 @@ serve(async (req) => {
       );
     }
     
-    // Verify OpenAI API key is configured
-    if (!openaiApiKey) {
+    // Verify at least one AI API key is configured
+    if ((!openaiApiKey || openaiApiKey === 'your-openai-api-key-here') && 
+        (!claudeApiKey || claudeApiKey === 'your-claude-api-key-here')) {
       return new Response(
         JSON.stringify({ 
-          error: 'OpenAI API key not configured',
-          response: 'Demo mode: This is a simulated AI response. Configure OpenAI API key for full functionality.',
+          error: 'No AI API keys configured',
+          response: 'Demo mode: This is a simulated AI response. Configure OpenAI or Claude API key for full functionality.',
           agent_type: 'system',
           message_id: 'demo',
           processing_time: 100,
           tokens_used: 0,
+          ai_provider: 'demo',
         }),
         { 
           status: 200, 
