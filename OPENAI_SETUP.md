@@ -1,8 +1,16 @@
-# OpenAI API Key Setup for Clixen
+# OpenAI API Configuration Guide
 
-## Important: Do NOT commit API keys to the repository!
+## ⚠️ Important Security Notice
+Never commit API keys to git repositories. This guide shows you how to configure OpenAI API keys securely for the Clixen multi-agent system.
 
-To enable full AI functionality in the Clixen chat system, you need to set the OpenAI API key in Netlify's environment variables.
+## 🤖 About the AI System
+Clixen features a sophisticated multi-agent system with:
+- **Orchestrator Agent**: Manages conversations and coordinates other agents
+- **Workflow Designer**: Specializes in creating n8n automation workflows  
+- **Deployment Agent**: Handles secure workflow deployment
+- **Real-time Communication**: Event-driven agent coordination
+
+To enable full AI functionality in the Clixen chat system, you need to configure the OpenAI API key properly.
 
 ## Setting the API Key in Netlify
 
