@@ -64,8 +64,8 @@ async function evaluateClixenUI() {
       });
 
       // Fill in credentials
-      await page.fill('input[type="email"]', 'jimkalinov@gmail.com');
-      await page.fill('input[type="password"]', 'Jimkali90#');
+      await page.fill('input[type="email"]', 'jayveedz19@gmail.com');
+      await page.fill('input[type="password"]', 'Goldyear2023#');
       
       // Find and click submit button
       const submitButton = await page.$('button[type="submit"]');

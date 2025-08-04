@@ -5,7 +5,7 @@ const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 
 // Test user credentials from CLAUDE.md
 const TEST_EMAIL = 'jayveedz19@gmail.com';
-const TEST_PASSWORD = 'Jimkali90#';
+const TEST_PASSWORD = 'Goldyear2023#';
 
 const supabase = createClient(supabaseUrl, anonKey);
 

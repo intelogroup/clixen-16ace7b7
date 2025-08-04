@@ -1,11 +1,11 @@
 {
-  "timestamp": "2025-08-04T09:05:13.951Z",
+  "timestamp": "2025-08-04T20:23:03.595Z",
   "url": "https://clixen.netlify.app",
   "findings": [
-    "✅ Page loads successfully in 757ms",
+    "✅ Page loads successfully in 728ms",
     "📱 Responsive design tested across devices",
-    "🎨 Found 70 animated elements",
-    "🔘 1 buttons, 0 inputs detected"
+    "🎨 Found 302 animated elements",
+    "🔘 2 buttons, 0 inputs detected"
   ],
   "recommendations": [
     "🔘 Consider adding more interactive elements"
@@ -19,11 +19,11 @@
       "family": "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif",
       "size": "16px"
     },
-    "animations": 70,
-    "buttons": 1,
+    "animations": 302,
+    "buttons": 2,
     "inputs": 0,
     "cards": 0
   },
-  "loadTime": 757,
+  "loadTime": 728,
   "finalUrl": "https://clixen.netlify.app/"
 }
