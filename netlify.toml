@@ -6,8 +6,8 @@
   publish = "dist"
 
 [build.environment]
-  # Node.js version - using specific supported version
-  NODE_VERSION = "20.18.0"
+  # Node.js version - using Netlify default LTS version
+  NODE_VERSION = "18"
 
 # Security headers
 [[headers]]
