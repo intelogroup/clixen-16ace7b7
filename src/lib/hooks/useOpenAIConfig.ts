@@ -14,7 +14,7 @@ export interface UseOpenAIConfigReturn {
 }
 
 export const useOpenAIConfig = (): UseOpenAIConfigReturn => {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const [config, setConfig] = useState<OpenAIConfig | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
