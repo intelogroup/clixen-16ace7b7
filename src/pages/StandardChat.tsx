@@ -186,6 +186,8 @@ export default function StandardChat() {
 
   const clearAllHistory = async () => {
     try {
+      setClearingHistory(true);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -206,6 +208,8 @@ export default function StandardChat() {
     } catch (error) {
       console.error('Failed to clear history:', error);
       toast.error('Failed to clear history');
+    } finally {
+      setClearingHistory(false);
     }
   };
 
