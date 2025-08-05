@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthContext } from '../lib/AuthContext';
+import { useAuth } from '../lib/AuthContext\';b/AuthContext';
 import { openAIConfigService, OpenAIConfig } from '../lib/services/OpenAIConfigService';
 import toast from 'react-hot-toast';
 
