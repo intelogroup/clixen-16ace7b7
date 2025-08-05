@@ -8,7 +8,6 @@ import { PlusIcon, PlayIcon, PauseIcon, TrashIcon, CheckCircleIcon, XCircleIcon,
 import toast from 'react-hot-toast';
 import { LoadingSpinner, SkeletonStatCard, SkeletonWorkflowCard, LoadingOverlay } from '../components/LoadingStates';
 import { AnimatedCard, AnimatedButton, staggerContainer, staggerItem, fadeIn } from '../components/AnimationUtils';
-import DebugStatus from '../components/DebugStatus';
 
 interface Workflow {
   id: string;
