@@ -19,6 +19,11 @@ export default function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Standard chat has its own layout
+  if (location.pathname === '/chat') {
+    return <Outlet />;
+  }
+
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -40,7 +45,7 @@ export default function Layout() {
       name: 'Create Workflow',
       href: '/chat',
       icon: ChatBubbleLeftRightIcon,
-      current: location.pathname === '/chat'
+      current: location.pathname === '/chat' || location.pathname === '/advanced-chat'
     },
     {
       name: 'Analytics',
