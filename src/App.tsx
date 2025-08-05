@@ -74,7 +74,8 @@ function AppContent() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<EnhancedDashboard />} />
-            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat" element={<StandardChat />} />
+            <Route path="/advanced-chat" element={<Chat />} />
             <Route path="/database-chat" element={<DatabaseDrivenChat />} />
           </Route>
         </Route>
