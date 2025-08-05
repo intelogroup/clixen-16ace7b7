@@ -280,10 +280,9 @@ const DatabaseDrivenChat: React.FC = () => {
                     </span>
                   </div>
                 )}
-                <div
-                  dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                  className={`text-sm ${message.role === 'user' ? 'text-white' : 'text-gray-800'}`}
-                />
+                <div className={`text-sm ${message.role === 'user' ? 'text-white' : 'text-gray-800'}`}>
+                  {message.content}
+                </div>
                 {message.metadata?.tokensUsed && (
                   <div className="text-xs text-gray-400 mt-1">
                     Tokens: {message.metadata.tokensUsed}
