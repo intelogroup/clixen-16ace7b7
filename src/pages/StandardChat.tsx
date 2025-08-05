@@ -27,6 +27,8 @@ export default function StandardChat() {
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
