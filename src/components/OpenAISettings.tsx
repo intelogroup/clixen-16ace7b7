@@ -8,7 +8,7 @@ interface OpenAISettingsProps {
 }
 
 export const OpenAISettings: React.FC<OpenAISettingsProps> = ({ onConfigUpdate }) => {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const [config, setConfig] = useState<OpenAIConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
