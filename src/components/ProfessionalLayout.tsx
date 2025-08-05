@@ -26,8 +26,8 @@ export default function ProfessionalLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Standard chat has its own layout
-  if (location.pathname === '/chat') {
+  // Advanced chat has its own layout (not professional layout)
+  if (location.pathname === '/advanced-chat') {
     return <Outlet />;
   }
 
@@ -53,7 +53,7 @@ export default function ProfessionalLayout() {
       name: 'Workflows',
       href: '/chat',
       icon: MessageSquare,
-      current: location.pathname === '/chat' || location.pathname === '/advanced-chat',
+      current: location.pathname === '/chat',
       description: 'Create and manage automations'
     },
     {

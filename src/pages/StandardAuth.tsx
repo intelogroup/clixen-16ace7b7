@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -24,6 +24,7 @@ import { ValidatedEmailInput, ValidatedPasswordInput, ValidatedNameInput } from 
 
 export default function StandardAuth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -68,7 +69,9 @@ export default function StandardAuth() {
       if (error) throw error;
       
       toast.success('Welcome back!');
-      navigate('/dashboard');
+      // Navigate to intended destination or default to dashboard
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     }
   };
 
