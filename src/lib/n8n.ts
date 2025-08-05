@@ -119,17 +119,23 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
 
 // Mock responses for demo mode
 function getMockResponse(endpoint: string, options: RequestInit = {}) {
-  // Simulate network delay
+  console.log(`[DEMO MODE] Simulating n8n API call: ${options.method || 'GET'} ${endpoint}`);
+
+  // Simulate realistic network delay
   return new Promise((resolve) => {
     setTimeout(() => {
       if (endpoint.includes('/workflows')) {
         if (options.method === 'POST') {
+          const body = options.body ? JSON.parse(options.body as string) : {};
           resolve({
             id: `demo-${Date.now()}`,
-            name: 'Demo Workflow',
+            name: body.name || 'Demo Workflow',
             active: false,
-            nodes: [],
-            connections: {},
+            nodes: body.nodes || [
+              { id: 'start', type: 'n8n-nodes-base.start', position: [250, 300] },
+              { id: 'webhook', type: 'n8n-nodes-base.webhook', position: [450, 300] }
+            ],
+            connections: body.connections || {},
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -137,13 +143,28 @@ function getMockResponse(endpoint: string, options: RequestInit = {}) {
           resolve({
             data: [
               {
-                id: 'demo-1',
-                name: 'Welcome Workflow',
+                id: 'demo-welcome',
+                name: 'Welcome to Clixen (Demo)',
                 active: true,
-                nodes: [{ id: 'start', type: 'n8n-nodes-base.start' }],
-                connections: {},
+                nodes: [
+                  { id: 'start', type: 'n8n-nodes-base.start' },
+                  { id: 'set', type: 'n8n-nodes-base.set' }
+                ],
+                connections: { start: { main: [{ node: 'set', type: 'main', index: 0 }] } },
                 createdAt: '2025-01-01T00:00:00Z',
-                updatedAt: '2025-01-01T00:00:00Z'
+                updatedAt: new Date().toISOString()
+              },
+              {
+                id: 'demo-webhook',
+                name: 'Sample Webhook Workflow (Demo)',
+                active: false,
+                nodes: [
+                  { id: 'webhook', type: 'n8n-nodes-base.webhook' },
+                  { id: 'response', type: 'n8n-nodes-base.respondToWebhook' }
+                ],
+                connections: { webhook: { main: [{ node: 'response', type: 'main', index: 0 }] } },
+                createdAt: '2025-01-01T10:00:00Z',
+                updatedAt: new Date().toISOString()
               }
             ]
           });
@@ -152,19 +173,48 @@ function getMockResponse(endpoint: string, options: RequestInit = {}) {
         resolve({
           data: [
             {
-              id: 'exec-1',
+              id: 'exec-demo-1',
               finished: true,
               mode: 'manual',
-              startedAt: new Date().toISOString(),
-              stoppedAt: new Date().toISOString(),
-              workflowId: 'demo-1'
+              status: 'success',
+              startedAt: new Date(Date.now() - 3600000).toISOString(),
+              stoppedAt: new Date(Date.now() - 3599000).toISOString(),
+              workflowId: 'demo-welcome'
+            },
+            {
+              id: 'exec-demo-2',
+              finished: true,
+              mode: 'webhook',
+              status: 'success',
+              startedAt: new Date(Date.now() - 7200000).toISOString(),
+              stoppedAt: new Date(Date.now() - 7199000).toISOString(),
+              workflowId: 'demo-webhook'
             }
           ]
         });
+      } else if (endpoint.includes('/activate') || endpoint.includes('/deactivate')) {
+        resolve({
+          id: endpoint.split('/')[2],
+          active: endpoint.includes('/activate'),
+          message: `Workflow ${endpoint.includes('/activate') ? 'activated' : 'deactivated'} successfully (demo)`
+        });
+      } else if (endpoint.includes('/execute')) {
+        resolve({
+          id: `exec-demo-${Date.now()}`,
+          finished: false,
+          mode: 'manual',
+          status: 'running',
+          startedAt: new Date().toISOString(),
+          message: 'Workflow execution started (demo mode)'
+        });
       } else {
-        resolve({ success: true, message: 'Demo mode active' });
+        resolve({
+          success: true,
+          message: 'Demo mode - n8n operations simulated',
+          version: 'Demo v1.0'
+        });
       }
-    }, 500);
+    }, Math.random() * 800 + 200); // Random delay between 200-1000ms for realism
   });
 }
 
