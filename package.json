@@ -20,7 +20,8 @@
     "test:report": "playwright show-report",
     "playwright:install": "playwright install",
     "test:integration": "node test-edge-function-integration.js",
-    "test:production": "node test-production-deployment.js"
+    "test:production": "node test-production-deployment.js",
+    "test:api-keys": "node scripts/test-api-key-retrieval.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
