@@ -47,6 +47,19 @@
         "N8N_API_KEY": "b38356d3-075f-4b69-9b31-dc90c71ba40a"
       }
     },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server"],
+      "env": {
+        "SENTRY_ORG_TOKEN": "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",
+        "SENTRY_USER_TOKEN": "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"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"],
+      "env": {}
+    },
     "filesystem": {
       "command": "npx",
       "args": [
