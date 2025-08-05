@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertTriangle, Wifi, WifiOff, Bot, Settings } from 'lucide-react';
 import { EnvironmentDebugger } from '../lib/debug/EnvironmentDebugger';
+import { useOpenAIStatus } from '../lib/hooks/useOpenAIConfig';
 
 interface SystemStatus {
   openai: 'connected' | 'demo' | 'error';
@@ -10,6 +11,7 @@ interface SystemStatus {
 }
 
 export function SystemStatusBar() {
+  const { hasValidKey, isDemoMode, isLoading: openaiLoading } = useOpenAIStatus();
   const [status, setStatus] = useState<SystemStatus>({
     openai: 'demo',
     supabase: 'connected',

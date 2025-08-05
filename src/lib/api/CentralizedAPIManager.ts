@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { openAIConfigService } from '../services/OpenAIConfigService\';ConfigService';
 
 export interface APIConfig {
   name: string;

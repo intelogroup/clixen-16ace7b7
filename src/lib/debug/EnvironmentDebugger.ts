@@ -96,35 +96,39 @@ export class EnvironmentDebugger {
     }
 
     try {
-      // Dynamic import to avoid loading OpenAI in demo mode
-      const { default: OpenAI } = await import('openai');
-      
-      const client = new OpenAI({
-        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-        dangerouslyAllowBrowser: true
+      // Use Supabase Edge Function instead of direct OpenAI to avoid CSP issues
+      const { supabase } = await import('../supabase');
+
+      console.log('🧪 Testing OpenAI connection via Supabase Edge Function...');
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+        body: {
+          message: 'Test connection - respond with "OK"',
+          agent_type: 'test',
+          user_id: user?.id || 'anonymous',
+          stream: false
+        }
       });
 
-      console.log('🧪 Testing OpenAI connection...');
-      
-      const response = await client.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: 'Test connection - respond with "OK"' }],
-        max_tokens: 5
-      });
+      if (error) {
+        throw new Error(`Edge function error: ${error.message}`);
+      }
 
-      const result = response.choices[0]?.message?.content || '';
-      
-      console.log('✅ OpenAI connection successful:', {
+      const result = data?.response || '';
+
+      console.log('✅ OpenAI connection successful via Edge Function:', {
         response: result,
-        tokensUsed: response.usage?.total_tokens,
-        model: response.model
+        tokensUsed: data?.tokens_used || 0,
+        processingTime: data?.processing_time
       });
 
-      return { 
-        success: true, 
-        response: result, 
-        usage: response.usage,
-        debugInfo 
+      return {
+        success: true,
+        response: result,
+        usage: { total_tokens: data?.tokens_used || 0 },
+        debugInfo
       };
 
     } catch (error) {
