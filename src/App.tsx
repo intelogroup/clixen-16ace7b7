@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 import ModernLanding from './pages/ModernLanding';
 import ModernAuth from './pages/ModernAuth';
 import EnhancedDashboard from './pages/EnhancedDashboard';
+import StandardChat from './pages/StandardChat';
 import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
