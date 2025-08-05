@@ -47,11 +47,20 @@ export default function EnhancedDashboard() {
         message: result.message,
         version: result.version,
       });
+
+      // Only show error toast if it's a real connection failure (not demo mode fallback)
+      if (!result.success && !result.message.includes('demo mode')) {
+        toast.error(`n8n connection failed: ${result.message}`);
+      } else if (!result.success && result.message.includes('demo mode')) {
+        toast.success('Running in demo mode - workflows will be simulated');
+      }
     } catch (error) {
+      console.error('n8n connection check error:', error);
       setN8nStatus({
         connected: false,
-        message: error instanceof Error ? error.message : 'Connection test failed',
+        message: 'Connection test failed - running in demo mode',
       });
+      toast.error('n8n connection test failed - switching to demo mode');
     }
   };
 
