@@ -86,9 +86,9 @@ function AppContent() {
         <Route path="/auth/callback" element={<OAuthCallback />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route element={<StandardLayout />}>
-            <Route path="/dashboard" element={<StandardDashboard />} />
-            <Route path="/chat" element={<StandardChat />} />
+          <Route element={<ProfessionalLayout />}>
+            <Route path="/dashboard" element={<ProfessionalDashboard />} />
+            <Route path="/chat" element={<ProfessionalChat />} />
             <Route path="/advanced-chat" element={<Chat />} />
             <Route path="/database-chat" element={<DatabaseDrivenChat />} />
           </Route>
