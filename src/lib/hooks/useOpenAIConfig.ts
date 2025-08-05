@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { openAIConfigService, OpenAIConfig } from '../services/OpenAIConfigService';
-import { useAuth } from '../AuthContext\';/AuthContext';
+import { useAuth } from '../AuthContext';
 
 export interface UseOpenAIConfigReturn {
   config: OpenAIConfig | null;
