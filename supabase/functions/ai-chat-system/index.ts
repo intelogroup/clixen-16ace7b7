@@ -75,9 +75,38 @@ Focus on system reliability and comprehensive error handling.`
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const openaiApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+// Function to retrieve API key from secure database
+const getApiKey = async (serviceName: string): Promise<string | null> => {
+  try {
+    console.log(`🔑 [API-KEY] Retrieving ${serviceName} API key from database`);
+    
+    const { data, error } = await supabase
+      .from('api_configurations')
+      .select('api_key')
+      .eq('service_name', serviceName)
+      .eq('is_active', true)
+      .single();
+    
+    if (error) {
+      console.error(`❌ [API-KEY] Error retrieving ${serviceName} key:`, error);
+      return null;
+    }
+    
+    if (!data?.api_key) {
+      console.warn(`⚠️  [API-KEY] No active ${serviceName} key found in database`);
+      return null;
+    }
+    
+    console.log(`✅ [API-KEY] Successfully retrieved ${serviceName} key`);
+    return data.api_key;
+  } catch (error) {
+    console.error(`❌ [API-KEY] Exception retrieving ${serviceName} key:`, error);
+    return null;
+  }
+};
 
 // Agent configuration
 const getAgentConfig = (agentType: string): AgentConfig => {
@@ -240,6 +269,19 @@ const callOpenAI = async (
   agentConfig: AgentConfig,
   stream = false
 ): Promise<{ response: string; tokensUsed: number }> => {
+  console.log(`🤖 [OPENAI] Starting API call with agent: ${agentConfig.type}`);
+  
+  // Get OpenAI API key from database
+  const openaiApiKey = await getApiKey('openai');
+  
+  if (!openaiApiKey) {
+    console.error('❌ [OPENAI] No API key available - returning demo response');
+    return {
+      response: '**Demo Mode Active** - OpenAI API not configured. Responses will be simulated.\n\nHi! I\'m your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?',
+      tokensUsed: 0,
+    };
+  }
+  
   const systemMessage = {
     role: 'system' as const,
     content: agentConfig.systemPrompt,
@@ -262,6 +304,8 @@ const callOpenAI = async (
   };
 
   try {
+    console.log(`🔄 [OPENAI] Making API request to ${agentConfig.model}`);
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -273,17 +317,20 @@ const callOpenAI = async (
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`❌ [OPENAI] API error: ${response.status} - ${errorText}`);
       throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    
+    console.log(`✅ [OPENAI] API call successful - tokens used: ${data.usage?.total_tokens || 0}`);
     
     return {
       response: data.choices[0]?.message?.content || 'No response generated',
       tokensUsed: data.usage?.total_tokens || 0,
     };
   } catch (error) {
-    console.error('Error calling OpenAI:', error);
+    console.error('❌ [OPENAI] Error calling OpenAI:', error);
     return {
       response: `I encountered an error processing your request: ${error.message}. Please try again.`,
       tokensUsed: 0,
@@ -512,23 +559,8 @@ serve(async (req) => {
       );
     }
     
-    // Verify OpenAI API key is configured
-    if (!openaiApiKey) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'OpenAI API key not configured',
-          response: 'Demo mode: This is a simulated AI response. Configure OpenAI API key for full functionality.',
-          agent_type: 'system',
-          message_id: 'demo',
-          processing_time: 100,
-          tokens_used: 0,
-        }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
+    // Log request for debugging
+    console.log(`📝 [REQUEST] Processing chat request for user: ${user_id}, agent: ${agent_type || 'auto'}`);
     
     // Get or create session
     const sessionId = await getOrCreateSession(user_id, session_id);
@@ -556,13 +588,13 @@ serve(async (req) => {
     );
     
   } catch (error) {
-    console.error('Edge function error:', error);
+    console.error('❌ [EDGE-FUNCTION] Edge function error:', error);
     
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
         details: error.message,
-        response: 'I apologize, but I encountered an unexpected error. Please try again.',
+        response: 'I apologize, but I encountered an unexpected error. Please try again. If this continues, please check the console for detailed error information.',
         agent_type: 'system',
         message_id: 'error',
         processing_time: 0,

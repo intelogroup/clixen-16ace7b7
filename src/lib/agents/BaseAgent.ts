@@ -1,45 +1,33 @@
-// Base agent class with OpenAI integration
-import OpenAI from 'openai';
+// Base agent class with Supabase Edge Function integration
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
 import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
 import { performanceOptimizer } from './PerformanceOptimizer';
+import { supabase } from '../supabase';
 
-// Enhanced environment variable detection with logging
-function getOpenAIKey(): { key: string; isDemoMode: boolean; source: string } {
-  // Try multiple sources for the API key
-  const viteKey = import.meta.env.VITE_OPENAI_API_KEY;
-  const envKey = (globalThis as any).process?.env?.OPENAI_API_KEY;
-  const windowKey = (window as any)?.ENV?.VITE_OPENAI_API_KEY;
+// Enhanced Supabase integration detection
+function checkSupabaseConnection(): { isConnected: boolean; source: string } {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   
-  console.log('[BaseAgent] Environment variable check:', {
-    viteKey: viteKey ? '✅ Set' : '❌ Not set',
-    envKey: envKey ? '✅ Set' : '❌ Not set', 
-    windowKey: windowKey ? '✅ Set' : '❌ Not set',
-    viteKeyValue: viteKey?.substring(0, 10) + '...',
+  console.log('[BaseAgent] Supabase connection check:', {
+    url: supabaseUrl ? '✅ Set' : '❌ Not set',
+    key: supabaseKey ? '✅ Set' : '❌ Not set',
     location: window.location.href
   });
   
-  const key = viteKey || envKey || windowKey || 'demo-key';
-  const isDemoMode = !key || key === 'demo-key' || key === 'your-openai-api-key-here' || key.startsWith('your-');
+  const isConnected = !!(supabaseUrl && supabaseKey);
   
-  const source = viteKey ? 'VITE_OPENAI_API_KEY' : 
-                 envKey ? 'OPENAI_API_KEY' :
-                 windowKey ? 'window.ENV.VITE_OPENAI_API_KEY' : 'fallback';
-  
-  console.log('[BaseAgent] OpenAI Configuration:', {
-    isDemoMode,
-    source,
-    keyLength: key.length,
-    keyPrefix: key.substring(0, 7)
+  console.log('[BaseAgent] Using Supabase Edge Functions for AI processing:', {
+    isConnected,
+    edgeFunctionMode: true
   });
   
-  return { key, isDemoMode, source };
+  return { isConnected, source: 'supabase-edge-functions' };
 }
 
-const { key: OPENAI_API_KEY, isDemoMode: IS_DEMO_MODE, source: KEY_SOURCE } = getOpenAIKey();
+const { isConnected: IS_SUPABASE_CONNECTED, source: CONNECTION_SOURCE } = checkSupabaseConnection();
 
 export abstract class BaseAgent {
-  protected openai: OpenAI;
   protected config: AgentConfig;
   protected context: AgentContext;
   protected state: AgentState;
@@ -48,26 +36,15 @@ export abstract class BaseAgent {
 
   constructor(config: AgentConfig, context: AgentContext) {
     console.log(`[${config.id}] Initializing agent:`, {
-      isDemoMode: IS_DEMO_MODE,
-      keySource: KEY_SOURCE,
-      hasValidKey: OPENAI_API_KEY.length > 10 && !OPENAI_API_KEY.startsWith('your-'),
+      supabaseConnected: IS_SUPABASE_CONNECTED,
+      connectionSource: CONNECTION_SOURCE,
       environment: import.meta.env.MODE || 'unknown'
     });
     
-    if (!IS_DEMO_MODE) {
-      try {
-        this.openai = new OpenAI({
-          apiKey: OPENAI_API_KEY,
-          dangerouslyAllowBrowser: true
-        });
-        console.log(`[${config.id}] ✅ OpenAI client initialized successfully`);
-      } catch (error) {
-        console.error(`[${config.id}] ❌ Failed to initialize OpenAI client:`, error);
-        throw new Error(`Failed to initialize OpenAI client: ${error}`);
-      }
+    if (IS_SUPABASE_CONNECTED) {
+      console.log(`[${config.id}] ✅ Using Supabase Edge Functions for AI processing`);
     } else {
-      console.warn(`[${config.id}] ⚠️  Running in DEMO MODE - OpenAI API unavailable`);
-      this.openai = null as any;
+      console.warn(`[${config.id}] ⚠️  Supabase connection not available - may fall back to demo mode`);
     }
     
     this.config = config;
@@ -79,8 +56,8 @@ export abstract class BaseAgent {
       progress: 0,
       lastUpdate: Date.now(),
       metadata: {
-        isDemoMode: IS_DEMO_MODE,
-        keySource: KEY_SOURCE,
+        supabaseConnected: IS_SUPABASE_CONNECTED,
+        connectionSource: CONNECTION_SOURCE,
         initialized: Date.now()
       }
     };
@@ -91,7 +68,7 @@ export abstract class BaseAgent {
   abstract validateInput(input: any): boolean;
   abstract getCapabilities(): string[];
 
-  // Core agent functionality with performance optimization
+  // Core agent functionality using Supabase Edge Functions
   async think(prompt: string, context?: any): Promise<string> {
     // Create cache key from prompt and context
     const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
@@ -101,43 +78,46 @@ export abstract class BaseAgent {
       this.updateState({ status: 'thinking' });
 
       try {
-        if (IS_DEMO_MODE) {
-          console.log(`[${this.config.id}] 🎭 Using demo mode for prompt:`, prompt.substring(0, 50) + '...');
-          // Demo mode: return a simulated response
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate thinking delay
-          const demoResponse = this.generateDemoResponse(prompt, context);
-          console.log(`[${this.config.id}] 🎭 Demo response:`, demoResponse.substring(0, 100) + '...');
-          this.updateState({ status: 'idle' });
-          return demoResponse;
+        console.log(`[${this.config.id}] 🚀 Using Supabase Edge Function for prompt:`, prompt.substring(0, 50) + '...');
+        
+        // Get current user for the edge function call
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.warn(`[${this.config.id}] ⚠️  No authenticated user - using guest mode`);
         }
         
-        console.log(`[${this.config.id}] 🤖 Making OpenAI API call for prompt:`, prompt.substring(0, 50) + '...');
-
-        const systemPrompt = this.buildSystemPrompt(context);
-        const response = await this.openai.chat.completions.create({
-          model: this.config.model,
-          temperature: this.config.temperature,
-          max_tokens: this.config.maxTokens,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ]
+        // Call the ai-chat-system edge function
+        const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+          body: {
+            message: prompt,
+            agent_type: this.config.id.split('-')[0], // Extract agent type from ID
+            user_id: user?.id || 'anonymous',
+            stream: false
+          }
         });
-
-        const result = response.choices[0]?.message?.content || '';
-        console.log(`[${this.config.id}] ✅ OpenAI response received:`, {
+        
+        if (error) {
+          console.error(`[${this.config.id}] ❌ Edge function error:`, error);
+          throw new Error(`Edge function error: ${error.message}`);
+        }
+        
+        const result = data?.response || '';
+        console.log(`[${this.config.id}] ✅ Edge function response received:`, {
           length: result.length,
           preview: result.substring(0, 100) + '...',
-          tokensUsed: response.usage?.total_tokens
+          tokensUsed: data?.tokens_used || 0,
+          agentType: data?.agent_type,
+          processingTime: data?.processing_time
         });
+        
         this.updateState({ status: 'idle' });
         return result;
     } catch (error) {
       console.error(`[${this.config.id}] ❌ Error in think():`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        isDemoMode: IS_DEMO_MODE,
-        keySource: KEY_SOURCE,
+        supabaseConnected: IS_SUPABASE_CONNECTED,
+        connectionSource: CONNECTION_SOURCE,
         prompt: prompt.substring(0, 50) + '...'
       });
       

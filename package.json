@@ -18,7 +18,8 @@
     "test:mobile": "playwright test --project=mobile-chrome",
     "test:desktop": "playwright test --project=chromium-desktop",
     "test:report": "playwright show-report",
-    "playwright:install": "playwright install"
+    "playwright:install": "playwright install",
+    "test:integration": "node test-edge-function-integration.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -32,6 +33,7 @@
     "clsx": "^2.0.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
+    "form-data": "^4.0.4",
     "framer-motion": "^10.18.0",
     "lucide-react": "^0.292.0",
     "node-fetch": "^3.3.2",
