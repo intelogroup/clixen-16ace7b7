@@ -6,15 +6,15 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 // Pages
 import StandardLanding from './pages/StandardLanding';
 import StandardAuth from './pages/StandardAuth';
-import StandardDashboard from './pages/StandardDashboard';
-import StandardChat from './pages/StandardChat';
+import ProfessionalDashboard from './pages/ProfessionalDashboard';
+import ProfessionalChat from './pages/ProfessionalChat';
 import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
 import NotFound from './pages/NotFound';
 
 // Components
-import StandardLayout from './components/StandardLayout';
+import ProfessionalLayout from './components/ProfessionalLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
