@@ -65,7 +65,7 @@ export default function StandardChat() {
     inputRef.current?.focus();
   };
 
-  // Load chat sessions
+  // Load chat sessions once on mount
   useEffect(() => {
     loadChatSessions();
   }, []);
