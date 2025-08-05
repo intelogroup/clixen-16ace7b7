@@ -78,9 +78,18 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-// Function to retrieve API key from secure database
+// Function to retrieve API key from secure database or environment
 const getApiKey = async (serviceName: string): Promise<string | null> => {
   try {
+    // First try environment variable (for development and Edge Function secrets)
+    const envVarName = `${serviceName.toUpperCase()}_API_KEY`;
+    const envKey = Deno.env.get(envVarName);
+    
+    if (envKey) {
+      console.log(`🔑 [API-KEY] Retrieved ${serviceName} key from environment variable`);
+      return envKey;
+    }
+    
     console.log(`🔑 [API-KEY] Retrieving ${serviceName} API key from database`);
     
     const { data, error } = await supabase
@@ -100,7 +109,15 @@ const getApiKey = async (serviceName: string): Promise<string | null> => {
       return null;
     }
     
-    console.log(`✅ [API-KEY] Successfully retrieved ${serviceName} key`);
+    console.log(`✅ [API-KEY] Successfully retrieved ${serviceName} key from database`);
+    
+    // Log API key access for audit
+    await supabase.rpc('log_api_key_access', {
+      p_service_name: serviceName,
+      p_action: 'accessed',
+      p_edge_function_name: 'ai-chat-system'
+    }).catch(err => console.warn('Failed to log API key access:', err));
+    
     return data.api_key;
   } catch (error) {
     console.error(`❌ [API-KEY] Exception retrieving ${serviceName} key:`, error);
