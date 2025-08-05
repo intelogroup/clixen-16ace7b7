@@ -424,10 +424,15 @@ export default function StandardChat() {
                         deleteSession(session.id);
                       }
                     }}
-                    className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                    disabled={deletingSessionId === session.id}
+                    className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all disabled:cursor-not-allowed"
                     title="Delete chat"
                   >
-                    <X className="w-4 h-4" />
+                    {deletingSessionId === session.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <X className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               ))}
