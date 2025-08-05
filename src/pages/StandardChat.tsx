@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Plus, User, Bot, Settings, MoreVertical } from 'lucide-react';
+import { Send, Loader2, Plus, User, Bot, Settings, MoreVertical, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { agentCoordinator } from '../lib/agents';
@@ -139,6 +139,60 @@ export default function StandardChat() {
       timestamp: new Date(),
       status: 'complete'
     }]);
+
+    // Don't save the session until the user sends their first message
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) {
+        console.error('Error deleting session:', error);
+        toast.error('Failed to delete chat');
+        return;
+      }
+
+      // If we're deleting the active session, create a new one
+      if (activeSessionId === sessionId) {
+        createNewChat();
+      }
+
+      // Refresh sessions list
+      loadChatSessions();
+      toast.success('Chat deleted');
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      toast.error('Failed to delete chat');
+    }
+  };
+
+  const clearAllHistory = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error clearing history:', error);
+        toast.error('Failed to clear history');
+        return;
+      }
+
+      setSessions([]);
+      createNewChat();
+      toast.success('All chat history cleared');
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+      toast.error('Failed to clear history');
+    }
   };
 
   const loadSession = async (sessionId: string) => {
@@ -202,9 +256,14 @@ export default function StandardChat() {
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      // Save session
+      // Save session (only save if we have an active session ID)
       if (activeSessionId) {
         await saveSession(activeSessionId, finalMessages);
+      } else {
+        // Create new session for first user message
+        const newSessionId = crypto.randomUUID();
+        setActiveSessionId(newSessionId);
+        await saveSession(newSessionId, finalMessages);
       }
 
     } catch (error: any) {
