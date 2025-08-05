@@ -40,7 +40,7 @@ export default function StandardChat() {
 
   // Initialize with welcome message
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !activeSessionId) {
       setMessages([{
         id: crypto.randomUUID(),
         type: 'assistant',
