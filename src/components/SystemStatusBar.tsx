@@ -11,6 +11,7 @@ interface SystemStatus {
 }
 
 export function SystemStatusBar() {
+  const { hasValidKey, isDemoMode, isLoading: openaiLoading } = useOpenAIStatus();
   const [status, setStatus] = useState<SystemStatus>({
     openai: 'demo',
     supabase: 'connected',
