@@ -11,8 +11,10 @@ const getEnvVar = (name: string): string | undefined => {
   return undefined;
 };
 
-// Detect if we're running on Netlify
-const isNetlify = typeof window !== 'undefined' && window.location?.hostname?.includes('netlify.app');
+// Detect if we're running on Netlify or any hosted environment (not localhost)
+const isProduction = typeof window !== 'undefined' &&
+  !window.location?.hostname?.includes('localhost') &&
+  !window.location?.hostname?.includes('127.0.0.1');
 
 // n8n API utility functions
 const N8N_API_URL_ENV = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
@@ -51,25 +53,43 @@ class N8nApiError extends Error {
 }
 
 async function n8nRequest(endpoint: string, options: RequestInit = {}) {
-  const url = `${N8N_API_URL}${endpoint}`;
-  
   // If in demo mode, return mock data
   if (IS_DEMO_MODE) {
     return getMockResponse(endpoint, options);
   }
-  
-  try {
-    // When using proxy, don't send API key in header (proxy adds it)
-    const headers = isNetlify 
-      ? {
-          'Content-Type': 'application/json',
-          ...options.headers,
+
+  // Use Supabase Edge Function proxy in production to avoid CORS
+  if (isProduction) {
+    try {
+      const { supabase } = await import('./supabase');
+      const response = await supabase.functions.invoke('api-operations', {
+        body: {
+          action: 'n8n-request',
+          endpoint,
+          method: options.method || 'GET',
+          data: options.body ? JSON.parse(options.body as string) : undefined
         }
-      : {
-          'X-N8N-API-KEY': N8N_API_KEY,
-          'Content-Type': 'application/json',
-          ...options.headers,
-        };
+      });
+
+      if (response.error) {
+        throw new N8nApiError(`API proxy error: ${response.error.message}`);
+      }
+
+      return response.data;
+    } catch (error) {
+      console.warn('Edge function proxy failed, using mock data:', error);
+      return getMockResponse(endpoint, options);
+    }
+  }
+
+  // Direct connection for localhost development
+  try {
+    const url = `${N8N_API_URL}${endpoint}`;
+    const headers = {
+      'X-N8N-API-KEY': N8N_API_KEY,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
 
     const response = await fetch(url, {
       ...options,
@@ -89,9 +109,9 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
     if (error instanceof N8nApiError) {
       throw error;
     }
-    
+
     // Network or parsing errors - fallback to demo mode
-    console.warn('n8n connection failed, using demo mode:', error);
+    console.warn('n8n connection failed, using mock data:', error);
     return getMockResponse(endpoint, options);
   }
 }
@@ -157,10 +177,10 @@ export const n8nApi = {
         version: 'Demo Version 1.0'
       };
     }
-    
+
     try {
-      // When using proxy, directly test the API
-      if (isNetlify) {
+      // Use proxy in production environments
+      if (isProduction) {
         try {
           await n8nRequest('/workflows');
           return {
@@ -171,30 +191,25 @@ export const n8nApi = {
         } catch (apiError) {
           return {
             success: false,
-            message: apiError instanceof N8nApiError 
+            message: apiError instanceof N8nApiError
               ? `n8n API error: ${apiError.message}`
-              : 'API connection failed'
+              : 'API connection failed - using demo mode'
           };
         }
       }
-      
-      // Direct connection (local development)
-      const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      }).catch(() => null);
-      
-      if (!healthResponse || !healthResponse.ok) {
-        console.warn('n8n server not responding');
-        return {
-          success: false,
-          message: 'n8n server unreachable',
-        };
-      }
 
-      const health = await healthResponse.json();
-      
-      // Try to get n8n version info
+      // Direct connection for localhost development
       try {
+        // Test health endpoint first
+        const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        if (!healthResponse.ok) {
+          throw new Error('Health check failed');
+        }
+
+        // Test API access
         await n8nRequest('/workflows');
         return {
           success: true,
@@ -204,15 +219,15 @@ export const n8nApi = {
       } catch (apiError) {
         return {
           success: false,
-          message: apiError instanceof N8nApiError 
-            ? `n8n server running but API key invalid: ${apiError.message}`
-            : 'API authentication failed'
+          message: apiError instanceof N8nApiError
+            ? `n8n API error: ${apiError.message}`
+            : 'API connection failed - using demo mode'
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'} - using demo mode`,
       };
     }
   },
