@@ -269,15 +269,25 @@ export default function EnhancedDashboard() {
               <h2 className="text-lg font-semibold mb-1">n8n Server Status</h2>
               {n8nStatus ? (
                 <div className="flex items-center space-x-2">
-                  <span className={`font-medium ${n8nStatus.connected ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className={`font-medium ${n8nStatus.connected ? 'text-green-400' :
+                    n8nStatus.message.includes('demo mode') ? 'text-yellow-400' : 'text-red-400'}`}>
                     {n8nStatus.message}
                   </span>
                   {n8nStatus.version && (
-                    <motion.span 
+                    <motion.span
                       className="text-zinc-500 text-sm bg-zinc-800 px-2 py-1 rounded"
                       whileHover={{ scale: 1.05 }}
                     >
-                      v{n8nStatus.version}
+                      {n8nStatus.version}
+                    </motion.span>
+                  )}
+                  {n8nStatus.message.includes('demo mode') && (
+                    <motion.span
+                      className="text-yellow-500 text-xs bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20"
+                      whileHover={{ scale: 1.05 }}
+                      title="Workflows will be simulated for demonstration purposes"
+                    >
+                      DEMO
                     </motion.span>
                   )}
                 </div>
