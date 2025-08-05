@@ -1,26 +1,19 @@
-// Dynamic CSP configuration based on environment
+// CSP configuration for production optimization
 (function() {
   const isDev = window.location.hostname === 'localhost' || 
                 window.location.hostname === '127.0.0.1' || 
-                window.location.port !== '';
+                window.location.port !== '' ||
+                window.location.hostname.includes('preview');
 
-  const baseCsp = "default-src 'self'; connect-src 'self' https://zfbgdixbzezpxllkoyfc.supabase.co http://18.221.12.50:5678 https://*.netlify.app https://api.openai.com";
-  
-  let scriptSrc = "'self' 'unsafe-inline'";
-  let connectSrc = baseCsp.split('connect-src ')[1].split(';')[0];
-
-  // Add development-specific CSP rules
-  if (isDev) {
-    scriptSrc += " 'unsafe-eval'"; // For hot reload and dev tools
-    connectSrc += " https://*.fly.dev ws: wss:"; // For dev tools and websockets
-  }
-
-  const fullCsp = `${baseCsp.split('connect-src')[0]}connect-src ${connectSrc}; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline';`;
-  
-  // Update CSP meta tag if it exists
-  const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-  if (cspMeta) {
-    cspMeta.setAttribute('content', fullCsp);
-    console.log('🔒 CSP updated for', isDev ? 'development' : 'production', 'environment');
+  // Only update CSP in production to remove unsafe-eval
+  if (!isDev) {
+    const cspMeta = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (cspMeta) {
+      const productionCsp = "default-src 'self'; connect-src 'self' https://zfbgdixbzezpxllkoyfc.supabase.co http://18.221.12.50:5678 https://*.netlify.app https://api.openai.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;";
+      cspMeta.setAttribute('content', productionCsp);
+      console.log('🔒 CSP updated for production environment (unsafe-eval removed)');
+    }
+  } else {
+    console.log('🛠️ Development environment detected - keeping permissive CSP for hot reload');
   }
 })();
