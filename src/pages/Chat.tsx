@@ -11,6 +11,8 @@ import PermissionModal from '../components/PermissionModal';
 import OAuthManager from '../lib/oauth/OAuthManager';
 import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
 import { ErrorLogger } from '../lib/logger/ErrorLogger';
+import OpenAIKeySetup from '../components/OpenAIKeySetup';
+import { openAIConfigService } from '../lib/services/OpenAIConfigService';
 
 interface Message {
   id: string;
@@ -79,6 +81,7 @@ export default function Chat() {
   const [centralizedAPIs, setCentralizedAPIs] = useState<string[]>([]);
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasOpenAIKey, setHasOpenAIKey] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -100,6 +103,23 @@ export default function Chat() {
     };
     getUserId();
   }, []);
+
+  // Check OpenAI API key availability
+  useEffect(() => {
+    const checkOpenAIKey = async () => {
+      try {
+        const hasValidKey = await openAIConfigService.hasValidConfig();
+        setHasOpenAIKey(hasValidKey);
+      } catch (error) {
+        console.error('Error checking OpenAI key:', error);
+        setHasOpenAIKey(false);
+      }
+    };
+    
+    if (userId) {
+      checkOpenAIKey();
+    }
+  }, [userId]);
 
   // Handle OAuth callback if coming from OAuth flow
   useEffect(() => {
@@ -543,6 +563,17 @@ export default function Chat() {
     await processUserMessage(userMessage);
   };
 
+  const focusInput = (e?: React.MouseEvent) => {
+    // Don't focus if user is selecting text
+    if (e && window.getSelection()?.toString()) {
+      return;
+    }
+    
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
   const handleCreateWorkflow = async () => {
     // Check if we need permissions first
     const lastMessage = messages[messages.length - 1];
@@ -772,8 +803,21 @@ export default function Chat() {
           </div>
         )}
 
+        {/* OpenAI Key Setup */}
+        {hasOpenAIKey === false && (
+          <div className="px-6 py-4 border-b border-zinc-800">
+            <OpenAIKeySetup 
+              onKeyConfigured={() => setHasOpenAIKey(true)}
+              className="max-w-4xl mx-auto"
+            />
+          </div>
+        )}
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div 
+          className="flex-1 overflow-y-auto px-6 py-4 space-y-4 cursor-text"
+          onClick={(e) => focusInput(e)}
+        >
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <motion.div
@@ -894,9 +938,10 @@ export default function Chat() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Describe your workflow... (e.g., 'Send me an email when someone fills out my form')"
-              className="w-full px-4 py-3 pr-12 bg-zinc-900 text-white placeholder-zinc-500 rounded-xl border border-zinc-800 focus:border-white/20 focus:outline-none resize-none font-mono text-sm"
+              className="w-full px-4 py-3 pr-12 bg-zinc-900 text-white placeholder-zinc-500 rounded-xl border border-zinc-800 focus:border-white/20 focus:outline-none resize-none font-mono text-sm relative z-10"
               rows={3}
               disabled={isGenerating}
+              autoFocus={!isGenerating}
             />
             <button
               type="submit"

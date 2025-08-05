@@ -14,6 +14,10 @@ import {
   Zap,
   Loader2
 } from 'lucide-react';
+import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
+import { validatePassword } from '../lib/validation/passwordValidation';
+import AuthErrorDisplay from '../components/AuthErrorDisplay';
+import { formatAuthError, getAuthErrorSeverity } from '../lib/auth/authErrorMessages';
 
 export default function StandardAuth() {
   const navigate = useNavigate();
@@ -25,11 +29,14 @@ export default function StandardAuth() {
     password: '',
     name: ''
   });
+  const [authError, setAuthError] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null); // Clear previous errors
+
     if (!formData.email || !formData.password) {
-      toast.error('Please fill in all required fields');
+      setAuthError({ message: 'Please fill in all required fields' });
       return;
     }
 
@@ -38,7 +45,19 @@ export default function StandardAuth() {
     try {
       if (isSignUp) {
         if (!formData.name) {
-          toast.error('Please enter your name');
+          setAuthError({ message: 'Please enter your name' });
+          setLoading(false);
+          return;
+        }
+
+        // Validate password strength for sign-ups
+        const passwordValidation = validatePassword(formData.password);
+        if (!passwordValidation.isValid) {
+          setAuthError({ 
+            message: 'Please create a stronger password. Check the requirements below.',
+            code: 'weak_password'
+          });
+          setLoading(false);
           return;
         }
         
@@ -68,17 +87,41 @@ export default function StandardAuth() {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      console.error('Auth error:', error);
+      setAuthError(error);
+      
+      // Also show toast for immediate feedback
+      const severity = getAuthErrorSeverity(error);
+      const message = formatAuthError(error);
+      
+      if (severity === 'error') {
+        toast.error(message);
+      } else if (severity === 'warning') {
+        toast(message, { icon: '⚠️' });
+      } else {
+        toast(message, { icon: 'ℹ️' });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear errors when user starts typing
+    if (authError) {
+      setAuthError(null);
+    }
+    
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setAuthError(null); // Clear errors when switching modes
+    setFormData({ email: '', password: '', name: '' }); // Reset form
   };
 
   return (
@@ -116,6 +159,13 @@ export default function StandardAuth() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Error Display */}
+              {authError && (
+                <AuthErrorDisplay 
+                  error={authError}
+                  onDismiss={() => setAuthError(null)}
+                />
+              )}
               {isSignUp && (
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -192,6 +242,14 @@ export default function StandardAuth() {
                 </div>
               </div>
 
+              {/* Password Strength Indicator for Sign Up */}
+              {isSignUp && formData.password && (
+                <PasswordStrengthIndicator 
+                  password={formData.password}
+                  className="mt-3"
+                />
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
@@ -216,7 +274,7 @@ export default function StandardAuth() {
               <p className="text-gray-600">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                 <button
-                  onClick={() => setIsSignUp(!isSignUp)}
+                  onClick={toggleMode}
                   className="text-black font-medium hover:underline focus:outline-none"
                   disabled={loading}
                 >

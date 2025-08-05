@@ -1,24 +1,8 @@
-// Universal environment variable access (works in both browser and Node.js)
-const getEnvVar = (name: string): string | undefined => {
-  // In browser/Vite environment
-  if (typeof window !== 'undefined' && import.meta?.env) {
-    return import.meta.env[name];
-  }
-  // In Node.js environment (Netlify functions)
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env[name];
-  }
-  return undefined;
-};
+import { n8nConfig, env } from './config/environment';
 
-// Detect if we're running on Netlify or any hosted environment (not localhost)
-const isProduction = typeof window !== 'undefined' &&
-  !window.location?.hostname?.includes('localhost') &&
-  !window.location?.hostname?.includes('127.0.0.1');
-
-// n8n API utility functions
-const N8N_API_URL_ENV = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
-const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
+// Use centralized environment configuration
+const N8N_API_URL_ENV = n8nConfig.apiUrl;
+const N8N_API_KEY = n8nConfig.apiKey;
 
 // Use direct n8n API URL - no proxy needed with database-driven approach
 const N8N_API_URL = N8N_API_URL_ENV;
