@@ -67,19 +67,19 @@ function AppContent() {
       />
       
       <Routes>
-        <Route path="/" element={<ModernLanding />} />
-        <Route path="/auth" element={<ModernAuth />} />
+        <Route path="/" element={<StandardLanding />} />
+        <Route path="/auth" element={<StandardAuth />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
-        
+
         <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<EnhancedDashboard />} />
+          <Route element={<StandardLayout />}>
+            <Route path="/dashboard" element={<StandardDashboard />} />
             <Route path="/chat" element={<StandardChat />} />
             <Route path="/advanced-chat" element={<Chat />} />
             <Route path="/database-chat" element={<DatabaseDrivenChat />} />
           </Route>
         </Route>
-        
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
