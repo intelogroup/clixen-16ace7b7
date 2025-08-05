@@ -110,8 +110,16 @@ export default function StandardChat() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const title = newMessages.find(m => m.type === 'user')?.content?.substring(0, 30) + '...' || 'New Chat';
-      
+      // Only save if there are user messages (meaningful conversation)
+      const userMessages = newMessages.filter(m => m.type === 'user');
+      if (userMessages.length === 0) return;
+
+      // Create title from first user message
+      const firstUserMessage = userMessages[0].content;
+      const title = firstUserMessage.length > 30
+        ? firstUserMessage.substring(0, 30) + '...'
+        : firstUserMessage;
+
       await supabase
         .from('conversations')
         .upsert({
@@ -121,9 +129,9 @@ export default function StandardChat() {
           messages: JSON.stringify(newMessages),
           status: 'active'
         });
-      
-      // Refresh sessions
-      loadChatSessions();
+
+      // Refresh sessions (debounced to avoid too many updates)
+      setTimeout(() => loadChatSessions(), 1000);
     } catch (error) {
       console.error('Failed to save session:', error);
     }
