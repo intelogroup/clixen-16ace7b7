@@ -11,6 +11,7 @@ import StandardChat from './pages/StandardChat';
 import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
+import NotFound from './pages/NotFound';
 
 // Components
 import StandardLayout from './components/StandardLayout';
