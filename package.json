@@ -19,7 +19,8 @@
     "test:desktop": "playwright test --project=chromium-desktop",
     "test:report": "playwright show-report",
     "playwright:install": "playwright install",
-    "test:integration": "node test-edge-function-integration.js"
+    "test:integration": "node test-edge-function-integration.js",
+    "test:production": "node test-production-deployment.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
