@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, getErrorMessage } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { SparklesIcon, EnvelopeIcon, LockClosedIcon, UserIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
@@ -8,6 +8,7 @@ import { SparklesIcon, EnvelopeIcon, LockClosedIcon, UserIcon, ArrowRightIcon } 
 export default function ModernAuth() {
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -15,13 +16,44 @@ export default function ModernAuth() {
     name: ''
   });
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    console.log('🔐 [AUTH] Starting password reset for email:', formData.email.substring(0, 5) + '***@' + formData.email.split('@')[1]);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+      });
+      
+      if (error) {
+        console.error('❌ [AUTH] Password reset error:', error.message, error.status);
+        throw error;
+      }
+      
+      console.log('✅ [AUTH] Password reset email sent successfully');
+      toast.success('Password reset link sent to your email!');
+      setIsPasswordReset(false);
+    } catch (error: any) {
+      console.error('💥 [AUTH] Password reset failed:', error);
+      const friendlyMessage = getErrorMessage(error);
+      toast.error(friendlyMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    console.log(`🔐 [AUTH] Starting ${isSignUp ? 'registration' : 'login'} for email:`, formData.email.substring(0, 5) + '***@' + formData.email.split('@')[1]);
+
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        console.log('📝 [AUTH] Attempting user registration...');
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
@@ -31,23 +63,39 @@ export default function ModernAuth() {
           }
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [AUTH] Registration error:', error.message, error.status);
+          throw error;
+        }
         
+        console.log('✅ [AUTH] Registration successful. User needs email confirmation:', !!data.user && !data.session);
         toast.success('Check your email to confirm your account!');
         setIsSignUp(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('🔑 [AUTH] Attempting user login...');
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [AUTH] Login error:', error.message, error.status);
+          throw error;
+        }
         
+        console.log('✅ [AUTH] Login successful. Session established:', !!data.session);
         toast.success('Welcome back!');
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      console.error('💥 [AUTH] Authentication failed:', error);
+      const friendlyMessage = getErrorMessage(error);
+      toast.error(friendlyMessage);
+      
+      // Clear password on failed login
+      if (error.message?.includes('Invalid login credentials')) {
+        setFormData({ ...formData, password: '' });
+      }
     } finally {
       setLoading(false);
     }
@@ -130,10 +178,10 @@ export default function ModernAuth() {
             className="text-center mb-8"
           >
             <h2 className="text-3xl font-bold mb-2">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
+              {isPasswordReset ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
             </h2>
             <p className="text-gray-400">
-              {isSignUp ? 'Start building amazing workflows' : 'Continue your automation journey'}
+              {isPasswordReset ? 'Enter your email to receive a password reset link' : isSignUp ? 'Start building amazing workflows' : 'Continue your automation journey'}
             </p>
           </motion.div>
 
@@ -183,7 +231,7 @@ export default function ModernAuth() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            onSubmit={handleSubmit}
+            onSubmit={isPasswordReset ? handlePasswordReset : handleSubmit}
             className="space-y-4"
           >
             {isSignUp && (
@@ -212,23 +260,29 @@ export default function ModernAuth() {
               />
             </div>
 
-            <div className="relative">
-              <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-500 focus:bg-white/10 transition-all duration-300 placeholder-gray-500"
-                required
-              />
-            </div>
+            {!isPasswordReset && (
+              <div className="relative">
+                <LockClosedIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-purple-500 focus:bg-white/10 transition-all duration-300 placeholder-gray-500"
+                  required
+                />
+              </div>
+            )}
 
-            {!isSignUp && (
+            {!isPasswordReset && !isSignUp && (
               <div className="flex justify-end">
-                <a href="#" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordReset(true)}
+                  className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
             )}
 
@@ -243,7 +297,7 @@ export default function ModernAuth() {
                 <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                  <span>{isPasswordReset ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}</span>
                   <ArrowRightIcon className="w-5 h-5" />
                 </>
               )}
@@ -258,12 +312,18 @@ export default function ModernAuth() {
             className="mt-6 text-center"
           >
             <p className="text-gray-400">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              {isPasswordReset ? 'Remember your password?' : isSignUp ? 'Already have an account?' : "Don't have an account?"}
               <button
-                onClick={() => setIsSignUp(!isSignUp)}
+                onClick={() => {
+                  if (isPasswordReset) {
+                    setIsPasswordReset(false);
+                  } else {
+                    setIsSignUp(!isSignUp);
+                  }
+                }}
                 className="ml-2 text-purple-400 hover:text-purple-300 font-medium transition-colors"
               >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                {isPasswordReset ? 'Sign In' : isSignUp ? 'Sign In' : 'Sign Up'}
               </button>
             </p>
           </motion.div>

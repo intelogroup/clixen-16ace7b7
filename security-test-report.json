@@ -1,0 +1,174 @@
+{
+  "timestamp": "2025-08-05T17:30:04.032Z",
+  "securityTests": [
+    {
+      "testName": "URL Manipulation: /dashboard/../auth",
+      "status": "passed",
+      "details": "Properly redirected to auth page. Current URL: http://localhost:8080/auth",
+      "timestamp": "2025-08-05T17:30:05.996Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard%2F..%2Fauth",
+      "status": "passed",
+      "details": "Safely handled malformed URL. Current URL: http://localhost:8080/",
+      "timestamp": "2025-08-05T17:30:07.688Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard?redirect=http://evil.com",
+      "status": "passed",
+      "details": "Properly redirected to auth page. Current URL: http://localhost:8080/auth",
+      "timestamp": "2025-08-05T17:30:09.367Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard#/../auth",
+      "status": "passed",
+      "details": "Properly redirected to auth page. Current URL: http://localhost:8080/auth",
+      "timestamp": "2025-08-05T17:30:11.091Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard/../../../etc/passwd",
+      "status": "passed",
+      "details": "Safely handled malformed URL. Current URL: http://localhost:8080/",
+      "timestamp": "2025-08-05T17:30:12.815Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard/..",
+      "status": "passed",
+      "details": "Safely handled malformed URL. Current URL: http://localhost:8080/",
+      "timestamp": "2025-08-05T17:30:14.543Z"
+    },
+    {
+      "testName": "URL Manipulation: //dashboard",
+      "status": "passed",
+      "details": "Safely handled malformed URL. Current URL: http://localhost:8080/",
+      "timestamp": "2025-08-05T17:30:16.264Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard/../",
+      "status": "passed",
+      "details": "Safely handled malformed URL. Current URL: http://localhost:8080/",
+      "timestamp": "2025-08-05T17:30:17.953Z"
+    },
+    {
+      "testName": "URL Manipulation: /dashboard/./",
+      "status": "passed",
+      "details": "Properly redirected to auth page. Current URL: http://localhost:8080/auth",
+      "timestamp": "2025-08-05T17:30:19.602Z"
+    },
+    {
+      "testName": "API Access: /api/auth",
+      "status": "passed",
+      "details": "Endpoint returns HTML (likely app routing). Status: 200",
+      "timestamp": "2025-08-05T17:30:20.366Z"
+    },
+    {
+      "testName": "API Access: /api/users",
+      "status": "passed",
+      "details": "Endpoint returns HTML (likely app routing). Status: 200",
+      "timestamp": "2025-08-05T17:30:21.026Z"
+    },
+    {
+      "testName": "API Access: /api/workflows",
+      "status": "passed",
+      "details": "Endpoint returns HTML (likely app routing). Status: 200",
+      "timestamp": "2025-08-05T17:30:21.757Z"
+    },
+    {
+      "testName": "API Access: /api/dashboard",
+      "status": "passed",
+      "details": "Endpoint returns HTML (likely app routing). Status: 200",
+      "timestamp": "2025-08-05T17:30:22.548Z"
+    },
+    {
+      "testName": "API Access: /.env",
+      "status": "warning",
+      "details": "Unexpected response. Status: 403, Content-Type: ",
+      "timestamp": "2025-08-05T17:30:23.092Z"
+    },
+    {
+      "testName": "API Access: /config.json",
+      "status": "passed",
+      "details": "Endpoint returns HTML (likely app routing). Status: 200",
+      "timestamp": "2025-08-05T17:30:23.727Z"
+    },
+    {
+      "testName": "API Access: /package.json",
+      "status": "warning",
+      "details": "Unexpected response. Status: 200, Content-Type: application/json",
+      "timestamp": "2025-08-05T17:30:24.265Z"
+    },
+    {
+      "testName": "Session Cleared Test",
+      "status": "passed",
+      "details": "Properly redirected to auth after clearing session. Current URL: http://localhost:8080/auth",
+      "timestamp": "2025-08-05T17:30:26.889Z"
+    },
+    {
+      "testName": "XSS Test: <script>alert(\"xss\")...",
+      "status": "passed",
+      "details": "No XSS executed, payload safely handled",
+      "timestamp": "2025-08-05T17:30:28.614Z"
+    },
+    {
+      "testName": "XSS Test: javascript:alert(\"xs...",
+      "status": "passed",
+      "details": "No XSS executed, payload safely handled",
+      "timestamp": "2025-08-05T17:30:30.292Z"
+    },
+    {
+      "testName": "XSS Test: \"><script>alert(\"xss...",
+      "status": "passed",
+      "details": "No XSS executed, payload safely handled",
+      "timestamp": "2025-08-05T17:30:32.081Z"
+    },
+    {
+      "testName": "XSS Test: '><script>alert('xss...",
+      "status": "passed",
+      "details": "No XSS executed, payload safely handled",
+      "timestamp": "2025-08-05T17:30:33.821Z"
+    },
+    {
+      "testName": "Security Header: x-frame-options",
+      "status": "warning",
+      "details": "Header missing: Prevents clickjacking",
+      "timestamp": "2025-08-05T17:30:34.102Z"
+    },
+    {
+      "testName": "Security Header: x-content-type-options",
+      "status": "warning",
+      "details": "Header missing: Prevents MIME sniffing",
+      "timestamp": "2025-08-05T17:30:34.102Z"
+    },
+    {
+      "testName": "Security Header: x-xss-protection",
+      "status": "warning",
+      "details": "Header missing: XSS protection",
+      "timestamp": "2025-08-05T17:30:34.102Z"
+    },
+    {
+      "testName": "Security Header: strict-transport-security",
+      "status": "warning",
+      "details": "Header missing: HTTPS enforcement",
+      "timestamp": "2025-08-05T17:30:34.102Z"
+    },
+    {
+      "testName": "Security Header: content-security-policy",
+      "status": "warning",
+      "details": "Header missing: Content security",
+      "timestamp": "2025-08-05T17:30:34.102Z"
+    },
+    {
+      "testName": "Overall Security Headers",
+      "status": "warning",
+      "details": "0/5 security headers present",
+      "timestamp": "2025-08-05T17:30:34.103Z"
+    }
+  ],
+  "summary": {
+    "totalTests": 27,
+    "passed": 19,
+    "failed": 0,
+    "warnings": 0,
+    "warning": null
+  }
+}

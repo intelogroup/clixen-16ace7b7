@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { supabase, getErrorMessage } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -44,13 +45,60 @@ export default function Auth() {
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/dashboard');
+      try {
+        console.log('🔍 [AUTH] Checking existing session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ [AUTH] Session check error:', error.message);
+          return;
+        }
+        
+        if (session) {
+          console.log('✅ [AUTH] Existing session found, redirecting to dashboard');
+          navigate('/dashboard');
+        } else {
+          console.log('ℹ️ [AUTH] No existing session, showing login form');
+        }
+      } catch (error: any) {
+        console.error('💥 [AUTH] Session check failed:', error);
       }
     };
     checkUser();
   }, [navigate]);
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+    
+    setIsLoading(true);
+    console.log('🔐 [AUTH] Starting password reset for email:', email.substring(0, 5) + '***@' + email.split('@')[1]);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset-password`,
+      });
+      
+      if (error) {
+        console.error('❌ [AUTH] Password reset error:', error.message, error.status);
+        throw error;
+      }
+      
+      console.log('✅ [AUTH] Password reset email sent successfully');
+      toast.success('Password reset link sent to your email!');
+      setIsPasswordReset(false);
+    } catch (error: any) {
+      console.error('💥 [AUTH] Password reset failed:', error);
+      const friendlyMessage = getErrorMessage(error);
+      toast.error(friendlyMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,10 +114,12 @@ export default function Auth() {
     }
     
     setIsLoading(true);
+    console.log(`🔐 [AUTH] Starting ${isSignUp ? 'registration' : 'login'} for email:`, email.substring(0, 5) + '***@' + email.split('@')[1]);
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        console.log('📝 [AUTH] Attempting user registration...');
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -77,39 +127,75 @@ export default function Auth() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [AUTH] Registration error:', error.message, error.status);
+          throw error;
+        }
         
-        toast.success('Check your email for the confirmation link!');
+        console.log('✅ [AUTH] Registration successful. User needs email confirmation:', !!data.user && !data.session);
+        
+        if (data.user && !data.session) {
+          toast.success('Check your email for the confirmation link!');
+        } else if (data.session) {
+          toast.success('Account created and signed in successfully!');
+          navigate('/dashboard');
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('🔑 [AUTH] Attempting user login...');
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [AUTH] Login error:', error.message, error.status);
+          throw error;
+        }
         
+        console.log('✅ [AUTH] Login successful. Session established:', !!data.session);
         toast.success('Signed in successfully!');
         navigate('/dashboard');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      console.error('💥 [AUTH] Authentication failed:', {
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        details: error.details
+      });
+      
+      const friendlyMessage = getErrorMessage(error);
+      toast.error(friendlyMessage);
+      
+      // Clear sensitive form data on certain errors
+      if (error.message?.includes('Invalid login credentials')) {
+        setPassword('');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleAuth = async () => {
+    console.log('🌐 [AUTH] Starting Google OAuth flow...');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [AUTH] Google OAuth error:', error.message, error.status);
+        throw error;
+      }
+      
+      console.log('🔄 [AUTH] Google OAuth redirect initiated:', data.url);
     } catch (error: any) {
-      toast.error(error.message || 'Google authentication failed');
+      console.error('💥 [AUTH] Google authentication failed:', error);
+      const friendlyMessage = getErrorMessage(error);
+      toast.error(friendlyMessage || 'Google authentication failed');
     }
   };
 
@@ -129,10 +215,12 @@ export default function Auth() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold font-mono mb-2">
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            {isPasswordReset ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
           </h2>
           <p className="text-zinc-400">
-            {isSignUp 
+            {isPasswordReset 
+              ? 'Enter your email to receive a password reset link'
+              : isSignUp 
               ? 'Start building AI-powered workflows'
               : 'Sign in to your Clixen account'
             }
@@ -140,7 +228,7 @@ export default function Auth() {
         </div>
 
         <div className="bg-zinc-900/50 border border-white/10 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleAuth}>
+          <form className="space-y-6" onSubmit={isPasswordReset ? handlePasswordReset : handleAuth}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-zinc-300">
                 Email address
@@ -165,29 +253,31 @@ export default function Auth() {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
-                  required
-                  value={password}
-                  onChange={handlePasswordChange}
-                  className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 sm:text-sm ${
-                    passwordError ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : 'border-white/20 focus:ring-white focus:border-white'
-                  }`}
-                  placeholder="Enter your password"
-                />
-                {passwordError && (
-                  <p className="mt-1 text-sm text-red-400">{passwordError}</p>
-                )}
+            {!isPasswordReset && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-zinc-300">
+                  Password
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                    required
+                    value={password}
+                    onChange={handlePasswordChange}
+                    className={`appearance-none block w-full px-3 py-2 border rounded-md placeholder-zinc-500 text-white bg-black focus:outline-none focus:ring-2 sm:text-sm ${
+                      passwordError ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : 'border-white/20 focus:ring-white focus:border-white'
+                    }`}
+                    placeholder="Enter your password"
+                  />
+                  {passwordError && (
+                    <p className="mt-1 text-sm text-red-400">{passwordError}</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <button
@@ -198,12 +288,25 @@ export default function Auth() {
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                 ) : (
-                  isSignUp ? 'Create Account' : 'Sign In'
+                  isPasswordReset ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'
                 )}
               </button>
             </div>
           </form>
 
+          {!isPasswordReset && !isSignUp && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsPasswordReset(true)}
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Forgot your password?
+              </button>
+            </div>
+          )}
+
+          {!isPasswordReset && (
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -241,19 +344,29 @@ export default function Auth() {
               </button>
             </div>
           </div>
+          )}
 
           <div className="mt-6 text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                if (isPasswordReset) {
+                  setIsPasswordReset(false);
+                } else {
+                  setIsSignUp(!isSignUp);
+                }
+              }}
               className="text-sm text-zinc-400 hover:text-white transition-colors"
             >
-              {isSignUp 
+              {isPasswordReset 
+                ? 'Back to sign in'
+                : isSignUp 
                 ? 'Already have an account? Sign in'
                 : "Don't have an account? Sign up"
               }
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>
