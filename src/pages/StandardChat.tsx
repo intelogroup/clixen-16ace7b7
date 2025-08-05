@@ -346,35 +346,67 @@ export default function StandardChat() {
             <div className="p-4 border-b border-gray-200">
               <button
                 onClick={createNewChat}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mb-3"
               >
                 <Plus className="w-4 h-4" />
                 New chat
               </button>
+
+              {sessions.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to clear all chat history? This cannot be undone.')) {
+                      clearAllHistory();
+                    }
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear all history
+                </button>
+              )}
             </div>
 
             {/* Chat Sessions */}
             <div className="flex-1 overflow-y-auto p-2">
               {sessions.map((session) => (
-                <button
+                <div
                   key={session.id}
-                  onClick={() => loadSession(session.id)}
-                  className={`w-full text-left p-3 rounded-lg mb-1 transition-colors ${
+                  className={`group relative rounded-lg mb-1 transition-colors ${
                     activeSessionId === session.id
                       ? 'bg-gray-200'
                       : 'hover:bg-gray-100'
                   }`}
                 >
-                  <div className="font-medium text-sm text-gray-900 truncate">
-                    {session.title}
-                  </div>
-                  <div className="text-xs text-gray-500 truncate mt-1">
-                    {session.lastMessage}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {session.timestamp.toLocaleDateString()}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => loadSession(session.id)}
+                    className="w-full text-left p-3 pr-8"
+                  >
+                    <div className="font-medium text-sm text-gray-900 truncate">
+                      {session.title}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate mt-1">
+                      {session.lastMessage}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {session.timestamp.toLocaleDateString()}
+                    </div>
+                  </button>
+
+                  {/* Delete button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Delete this chat?')) {
+                        deleteSession(session.id);
+                      }
+                    }}
+                    className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                    title="Delete chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               ))}
               
               {sessions.length === 0 && (
