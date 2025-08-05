@@ -51,6 +51,18 @@ export default function StandardChat() {
     }
   }, []);
 
+  const quickSuggestions = [
+    "Send me an email when someone fills out my contact form",
+    "Post to Slack when I get a new customer order",
+    "Save email attachments to Google Drive automatically",
+    "Create calendar events from project management tasks"
+  ];
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
+    inputRef.current?.focus();
+  };
+
   // Load chat sessions
   useEffect(() => {
     loadChatSessions();
