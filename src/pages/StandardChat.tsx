@@ -155,6 +155,8 @@ export default function StandardChat() {
 
   const deleteSession = async (sessionId: string) => {
     try {
+      setDeletingSessionId(sessionId);
+
       const { error } = await supabase
         .from('conversations')
         .delete()
@@ -177,6 +179,8 @@ export default function StandardChat() {
     } catch (error) {
       console.error('Failed to delete session:', error);
       toast.error('Failed to delete chat');
+    } finally {
+      setDeletingSessionId(null);
     }
   };
 
