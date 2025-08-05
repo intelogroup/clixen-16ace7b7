@@ -466,12 +466,12 @@ export default function StandardChat() {
               <button
                 type="submit"
                 disabled={!input.trim() || isGenerating}
-                className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-black disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-black disabled:opacity-30 disabled:hover:text-gray-400 transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 {isGenerating ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <Send className="w-5 h-5" />
+                  <Send className={`w-5 h-5 transition-colors ${input.trim() ? 'text-black' : ''}`} />
                 )}
               </button>
             </div>
