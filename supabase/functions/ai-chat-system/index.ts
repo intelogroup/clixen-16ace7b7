@@ -79,9 +79,31 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // Function to retrieve API key from secure database or environment
-const getApiKey = async (serviceName: string): Promise<string | null> => {
+const getApiKey = async (serviceName: string, userId?: string): Promise<string | null> => {
   try {
-    // First try environment variable (for development and Edge Function secrets)
+    // For OpenAI, get user-specific key first
+    if (serviceName === 'openai' && userId) {
+      console.log(`🔑 [API-KEY] Retrieving user's OpenAI API key for user ${userId}`);
+      
+      const { data, error } = await supabase
+        .from('api_keys')
+        .select('openai_api_key')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log(`⚠️  [API-KEY] No OpenAI key found for user ${userId}`);
+        } else {
+          console.error(`❌ [API-KEY] Error retrieving user's OpenAI key:`, error);
+        }
+      } else if (data?.openai_api_key) {
+        console.log(`✅ [API-KEY] Successfully retrieved user's OpenAI key`);
+        return data.openai_api_key;
+      }
+    }
+    
+    // Fallback to environment variable (for development and Edge Function secrets)
     const envVarName = `${serviceName.toUpperCase()}_API_KEY`;
     const envKey = Deno.env.get(envVarName);
     
@@ -284,17 +306,18 @@ const getAgentState = async (
 const callOpenAI = async (
   messages: ChatMessage[],
   agentConfig: AgentConfig,
+  userId?: string,
   stream = false
 ): Promise<{ response: string; tokensUsed: number }> => {
   console.log(`🤖 [OPENAI] Starting API call with agent: ${agentConfig.type}`);
   
-  // Get OpenAI API key from database
-  const openaiApiKey = await getApiKey('openai');
+  // Get OpenAI API key from database (user-specific or fallback)
+  const openaiApiKey = await getApiKey('openai', userId);
   
   if (!openaiApiKey) {
-    console.error('❌ [OPENAI] No API key available - returning demo response');
+    console.error('❌ [OPENAI] No API key available - user needs to configure their OpenAI API key');
     return {
-      response: '**Demo Mode Active** - OpenAI API not configured. Responses will be simulated.\n\nHi! I\'m your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?',
+      response: '⚠️ **OpenAI API Key Required**\n\nTo use the AI workflow assistant, you need to configure your OpenAI API key in your account settings.\n\n**How to get started:**\n1. Get your API key from [OpenAI](https://platform.openai.com/api-keys)\n2. Add it in your account settings\n3. Start creating amazing workflows!\n\nYour API key is stored securely and never shared.',
       tokensUsed: 0,
     };
   }
@@ -420,7 +443,7 @@ const processMultiAgentChat = async (
     });
     
     // Call OpenAI with agent-specific configuration
-    const { response, tokensUsed } = await callOpenAI(contextualMessages, agentConfig);
+    const { response, tokensUsed } = await callOpenAI(contextualMessages, agentConfig, userId);
     
     // Store AI response
     const messageId = await storeMessage(

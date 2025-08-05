@@ -10,8 +10,7 @@ import { WorkflowPhase } from '../lib/agents/types';
 import PermissionModal from '../components/PermissionModal';
 import OAuthManager from '../lib/oauth/OAuthManager';
 import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
-import { EnvironmentDebugger } from '../lib/debug/EnvironmentDebugger';
-import { SystemStatusBar } from '../components/SystemStatusBar';
+import { ErrorLogger } from '../lib/logger/ErrorLogger';
 
 interface Message {
   id: string;
@@ -120,28 +119,17 @@ export default function Chat() {
   // Initialize with greeting on mount
   useEffect(() => {
     const initChat = async () => {
-      console.log('🚀 Initializing Chat component...');
-      
-      // Run environment debug check
-      const debugInfo = EnvironmentDebugger.debugEnvironment();
+      ErrorLogger.logInfo('Initializing Chat component');
       
       // Check if returning user by looking at localStorage
       const isReturningUser = localStorage.getItem('hasVisitedBefore') === 'true';
       localStorage.setItem('hasVisitedBefore', 'true');
       
-      // Create status message based on environment
-      let statusMessage = '';
-      if (debugInfo.keyAnalysis.shouldUseDemoMode) {
-        statusMessage = '⚠️ **Demo Mode Active** - OpenAI API not configured. Responses will be simulated.\\n\\n';
-      } else {
-        statusMessage = '✅ **AI Agents Ready** - Connected to OpenAI for intelligent workflow creation.\\n\\n';
-      }
-      
       // Call greet_user action on OrchestratorAgent
       const greetingResponse = {
-        message: statusMessage + (isReturningUser 
+        message: isReturningUser 
           ? "Welcome back! Ready to create another automation?"
-          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?"),
+          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?",
         suggestions: [
           "Send Slack notifications for new form submissions",
           "Sync Google Sheets with a database", 
@@ -160,16 +148,6 @@ export default function Chat() {
         suggestions: greetingResponse.suggestions,
         conversationMode: 'greeting'
       }]);
-      
-      // Add debug info message in development
-      if (import.meta.env.DEV) {
-        setTimeout(() => {
-          addMessage({
-            type: 'system',
-            content: `🛠️ **Debug Info**: Environment: ${debugInfo.environment.mode}, OpenAI: ${debugInfo.keyAnalysis.isValid ? 'Connected' : 'Demo Mode'}, Key Source: ${debugInfo.keyAnalysis.key ? 'Found' : 'Missing'}`
-          });
-        }, 1000);
-      }
     };
     
     if (messages.length === 0) {
@@ -377,71 +355,7 @@ export default function Chat() {
   };
 
   const processUserMessage = async (message: string) => {
-    console.log('💬 Processing user message:', message);
-    
-    // Handle debug commands
-    if (message.startsWith('/')) {
-      const command = message.toLowerCase().trim();
-      
-      if (command === '/debug') {
-        const debug = EnvironmentDebugger.debugEnvironment();
-        addMessage({
-          type: 'system',
-          content: `🔍 **Full Debug Report**:
-
-**Environment**:
-• Mode: ${debug.environment.mode}
-• Dev: ${debug.environment.dev}
-• URL: ${debug.environment.url}
-
-**OpenAI Configuration**:
-• VITE Key: ${debug.openaiKeys.vite_key.exists ? '✅' : '❌'} (${debug.openaiKeys.vite_key.length} chars)
-• Valid Key: ${debug.keyAnalysis.isValid ? '✅' : '❌'}
-• Demo Mode: ${debug.keyAnalysis.shouldUseDemoMode ? '🎭' : '🤖'}
-
-**Other Services**:
-• Supabase: ${debug.supabase.url.exists ? '✅' : '❌'}
-• n8n: ${debug.n8n.url.exists ? '✅' : '❌'}`
-        });
-        return;
-      } else if (command === '/test-openai') {
-        setIsGenerating(true);
-        addMessage({
-          type: 'system',
-          content: '🧪 Testing OpenAI connection...',
-          status: 'generating'
-        });
-        
-        try {
-          const result = await EnvironmentDebugger.testOpenAIConnection();
-          addMessage({
-            type: 'system',
-            content: result.success 
-              ? `✅ **OpenAI Test Successful**\nResponse: "${result.response}"\nTokens: ${result.usage?.total_tokens}`
-              : `❌ **OpenAI Test Failed**\nReason: ${result.reason || result.error}`,
-            status: result.success ? 'complete' : 'error'
-          });
-        } catch (error) {
-          addMessage({
-            type: 'system',
-            content: `❌ **Test Error**: ${error}`,
-            status: 'error'
-          });
-        } finally {
-          setIsGenerating(false);
-        }
-        return;
-      } else if (command === '/clear') {
-        setMessages([]);
-        setTimeout(() => {
-          addMessage({
-            type: 'system',
-            content: '🧹 Chat history cleared!'
-          });
-        }, 100);
-        return;
-      }
-    }
+    ErrorLogger.logInfo('Processing user message', { messageLength: message.length });
     
     setIsGenerating(true);
     
@@ -456,11 +370,11 @@ export default function Chat() {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('❌ User not authenticated');
+        ErrorLogger.logError('User not authenticated');
         throw new Error('Not authenticated - please log in to continue');
       }
       
-      console.log('✅ User authenticated:', user.id);
+      ErrorLogger.logInfo('User authenticated', { userId: user.id });
 
       let response;
       
@@ -469,12 +383,12 @@ export default function Chat() {
       
       // Handle conversation based on current mode
       if (conversationMode === 'greeting' || conversationMode === 'scoping') {
-        console.log('🔄 Using natural conversation handler, mode:', conversationMode);
+        ErrorLogger.logInfo('Using natural conversation handler', { mode: conversationMode });
         
         try {
           // Use the natural conversation handler
           response = await agentCoordinator.handleNaturalConversation(message, messages);
-          console.log('📝 Agent response:', response);
+          ErrorLogger.logInfo('Agent response received', { mode: response.mode, canProceed: response.canProceed });
           
           // Update conversation state
           setConversationMode(response.mode);
@@ -494,23 +408,23 @@ export default function Chat() {
           // If we have all info and can proceed, show the create button
           if (response.canProceed && response.mode === 'validating') {
             setShowAgentPanel(true);
-            console.log('✅ Ready to create workflow');
+            ErrorLogger.logInfo('Ready to create workflow');
           }
         } catch (agentError) {
-          console.error('❌ Agent coordinator error:', agentError);
+          ErrorLogger.logAgentError('orchestrator', 'handleNaturalConversation', agentError);
           throw new Error(`Agent processing failed: ${agentError.message}`);
         }
       } else if (conversationMode === 'creating') {
-        console.log('🏗️ Creating workflow, conversationId:', conversationId);
+        ErrorLogger.logInfo('Creating workflow', { conversationId });
         
         // Actually create the workflow
         if (!conversationId) {
           response = await agentCoordinator.startConversation(user.id, JSON.stringify(scopeData));
           setConversationId(response.conversationId);
-          console.log('🆕 Started new conversation:', response.conversationId);
+          ErrorLogger.logInfo('Started new conversation', { conversationId: response.conversationId });
         } else {
           response = await agentCoordinator.continueConversation(conversationId, message);
-          console.log('➡️ Continued conversation:', conversationId);
+          ErrorLogger.logInfo('Continued conversation', { conversationId });
         }
       }
 
@@ -546,11 +460,10 @@ export default function Chat() {
       }
 
     } catch (error: any) {
-      console.error('❌ Error in processUserMessage:', {
+      ErrorLogger.logError('Error in processUserMessage', {
         error: error.message,
         stack: error.stack,
         conversationMode,
-        userId: user?.id,
         messageLength: message.length
       });
       
@@ -564,10 +477,17 @@ export default function Chat() {
       if (error.message.includes('Not authenticated')) {
         errorMessage = '🔐 **Authentication Required** - Please log in to continue using the AI workflow assistant.';
         suggestions = ['Please refresh the page and log in again'];
+      } else if (error.message.includes('OpenAI API Key Required')) {
+        errorMessage = '🔑 **OpenAI API Key Required** - Please configure your OpenAI API key to use the AI workflow assistant.';
+        suggestions = [
+          'Go to your account settings',
+          'Add your OpenAI API key',
+          'Get an API key from platform.openai.com'
+        ];
       } else if (error.message.includes('OpenAI')) {
         errorMessage = '🤖 **AI Service Issue** - There was a problem connecting to the AI service.';
         suggestions = [
-          'Check if you have a stable internet connection',
+          'Check if your OpenAI API key is valid',
           'Try again in a few moments',
           'Contact support if the issue persists'
         ];
@@ -841,36 +761,12 @@ export default function Chat() {
                 </div>
               </div>
               <div className="flex gap-2 items-center">
-                <SystemStatusBar />
                 <button
                   onClick={() => setShowAgentPanel(!showAgentPanel)}
                   className="px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
                 >
                   {showAgentPanel ? 'Hide' : 'Show'} Agents
                 </button>
-                {import.meta.env.DEV && (
-                  <button
-                    onClick={() => {
-                      const debug = EnvironmentDebugger.debugEnvironment();
-                      addMessage({
-                        type: 'system',
-                        content: `🛠️ **Debug Report**:
-Environment: ${debug.environment.mode}
-OpenAI Key: ${debug.keyAnalysis.isValid ? '✅ Valid' : '❌ Invalid/Missing'}
-Demo Mode: ${debug.keyAnalysis.shouldUseDemoMode ? '🎭 Active' : '🤖 Disabled'}
-Key Source: ${debug.keyAnalysis.key ? 'Found' : 'Missing'}
-
-**Available Debug Commands**:
-• Type \`/debug\` - Show full environment details
-• Type \`/test-openai\` - Test OpenAI connection
-• Type \`/clear\` - Clear chat history`
-                      });
-                    }}
-                    className="px-3 py-1 text-xs bg-blue-800 hover:bg-blue-700 rounded-md transition-colors"
-                  >
-                    Debug
-                  </button>
-                )}
               </div>
             </div>
           </div>
