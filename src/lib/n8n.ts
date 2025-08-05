@@ -11,8 +11,10 @@ const getEnvVar = (name: string): string | undefined => {
   return undefined;
 };
 
-// Detect if we're running on Netlify
-const isNetlify = typeof window !== 'undefined' && window.location?.hostname?.includes('netlify.app');
+// Detect if we're running on Netlify or any hosted environment (not localhost)
+const isProduction = typeof window !== 'undefined' &&
+  !window.location?.hostname?.includes('localhost') &&
+  !window.location?.hostname?.includes('127.0.0.1');
 
 // n8n API utility functions
 const N8N_API_URL_ENV = getEnvVar('VITE_N8N_API_URL') || getEnvVar('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
@@ -20,7 +22,8 @@ const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') ||
 
 // Use direct n8n API URL - no proxy needed with database-driven approach
 const N8N_API_URL = N8N_API_URL_ENV;
-const IS_DEMO_MODE = false; // Using real n8n API with database-driven chat
+// Enable demo mode in production environments to avoid CORS issues until proxy is set up
+const IS_DEMO_MODE = isProduction; // Use demo mode in production, real API in development
 
 export interface N8nWorkflow {
   id: string;
@@ -51,25 +54,43 @@ class N8nApiError extends Error {
 }
 
 async function n8nRequest(endpoint: string, options: RequestInit = {}) {
-  const url = `${N8N_API_URL}${endpoint}`;
-  
   // If in demo mode, return mock data
   if (IS_DEMO_MODE) {
     return getMockResponse(endpoint, options);
   }
-  
-  try {
-    // When using proxy, don't send API key in header (proxy adds it)
-    const headers = isNetlify 
-      ? {
-          'Content-Type': 'application/json',
-          ...options.headers,
+
+  // Use Supabase Edge Function proxy in production to avoid CORS
+  if (isProduction) {
+    try {
+      const { supabase } = await import('./supabase');
+      const response = await supabase.functions.invoke('api-operations', {
+        body: {
+          action: 'n8n-request',
+          endpoint,
+          method: options.method || 'GET',
+          data: options.body ? JSON.parse(options.body as string) : undefined
         }
-      : {
-          'X-N8N-API-KEY': N8N_API_KEY,
-          'Content-Type': 'application/json',
-          ...options.headers,
-        };
+      });
+
+      if (response.error) {
+        throw new N8nApiError(`API proxy error: ${response.error.message}`);
+      }
+
+      return response.data;
+    } catch (error) {
+      console.warn('Edge function proxy failed, using mock data:', error);
+      return getMockResponse(endpoint, options);
+    }
+  }
+
+  // Direct connection for localhost development
+  try {
+    const url = `${N8N_API_URL}${endpoint}`;
+    const headers = {
+      'X-N8N-API-KEY': N8N_API_KEY,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
 
     const response = await fetch(url, {
       ...options,
@@ -89,26 +110,32 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
     if (error instanceof N8nApiError) {
       throw error;
     }
-    
+
     // Network or parsing errors - fallback to demo mode
-    console.warn('n8n connection failed, using demo mode:', error);
+    console.warn('n8n connection failed, using mock data:', error);
     return getMockResponse(endpoint, options);
   }
 }
 
 // Mock responses for demo mode
 function getMockResponse(endpoint: string, options: RequestInit = {}) {
-  // Simulate network delay
+  console.log(`[DEMO MODE] Simulating n8n API call: ${options.method || 'GET'} ${endpoint}`);
+
+  // Simulate realistic network delay
   return new Promise((resolve) => {
     setTimeout(() => {
       if (endpoint.includes('/workflows')) {
         if (options.method === 'POST') {
+          const body = options.body ? JSON.parse(options.body as string) : {};
           resolve({
             id: `demo-${Date.now()}`,
-            name: 'Demo Workflow',
+            name: body.name || 'Demo Workflow',
             active: false,
-            nodes: [],
-            connections: {},
+            nodes: body.nodes || [
+              { id: 'start', type: 'n8n-nodes-base.start', position: [250, 300] },
+              { id: 'webhook', type: 'n8n-nodes-base.webhook', position: [450, 300] }
+            ],
+            connections: body.connections || {},
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -116,13 +143,28 @@ function getMockResponse(endpoint: string, options: RequestInit = {}) {
           resolve({
             data: [
               {
-                id: 'demo-1',
-                name: 'Welcome Workflow',
+                id: 'demo-welcome',
+                name: 'Welcome to Clixen (Demo)',
                 active: true,
-                nodes: [{ id: 'start', type: 'n8n-nodes-base.start' }],
-                connections: {},
+                nodes: [
+                  { id: 'start', type: 'n8n-nodes-base.start' },
+                  { id: 'set', type: 'n8n-nodes-base.set' }
+                ],
+                connections: { start: { main: [{ node: 'set', type: 'main', index: 0 }] } },
                 createdAt: '2025-01-01T00:00:00Z',
-                updatedAt: '2025-01-01T00:00:00Z'
+                updatedAt: new Date().toISOString()
+              },
+              {
+                id: 'demo-webhook',
+                name: 'Sample Webhook Workflow (Demo)',
+                active: false,
+                nodes: [
+                  { id: 'webhook', type: 'n8n-nodes-base.webhook' },
+                  { id: 'response', type: 'n8n-nodes-base.respondToWebhook' }
+                ],
+                connections: { webhook: { main: [{ node: 'response', type: 'main', index: 0 }] } },
+                createdAt: '2025-01-01T10:00:00Z',
+                updatedAt: new Date().toISOString()
               }
             ]
           });
@@ -131,19 +173,48 @@ function getMockResponse(endpoint: string, options: RequestInit = {}) {
         resolve({
           data: [
             {
-              id: 'exec-1',
+              id: 'exec-demo-1',
               finished: true,
               mode: 'manual',
-              startedAt: new Date().toISOString(),
-              stoppedAt: new Date().toISOString(),
-              workflowId: 'demo-1'
+              status: 'success',
+              startedAt: new Date(Date.now() - 3600000).toISOString(),
+              stoppedAt: new Date(Date.now() - 3599000).toISOString(),
+              workflowId: 'demo-welcome'
+            },
+            {
+              id: 'exec-demo-2',
+              finished: true,
+              mode: 'webhook',
+              status: 'success',
+              startedAt: new Date(Date.now() - 7200000).toISOString(),
+              stoppedAt: new Date(Date.now() - 7199000).toISOString(),
+              workflowId: 'demo-webhook'
             }
           ]
         });
+      } else if (endpoint.includes('/activate') || endpoint.includes('/deactivate')) {
+        resolve({
+          id: endpoint.split('/')[2],
+          active: endpoint.includes('/activate'),
+          message: `Workflow ${endpoint.includes('/activate') ? 'activated' : 'deactivated'} successfully (demo)`
+        });
+      } else if (endpoint.includes('/execute')) {
+        resolve({
+          id: `exec-demo-${Date.now()}`,
+          finished: false,
+          mode: 'manual',
+          status: 'running',
+          startedAt: new Date().toISOString(),
+          message: 'Workflow execution started (demo mode)'
+        });
       } else {
-        resolve({ success: true, message: 'Demo mode active' });
+        resolve({
+          success: true,
+          message: 'Demo mode - n8n operations simulated',
+          version: 'Demo v1.0'
+        });
       }
-    }, 500);
+    }, Math.random() * 800 + 200); // Random delay between 200-1000ms for realism
   });
 }
 
@@ -157,10 +228,10 @@ export const n8nApi = {
         version: 'Demo Version 1.0'
       };
     }
-    
+
     try {
-      // When using proxy, directly test the API
-      if (isNetlify) {
+      // Use proxy in production environments
+      if (isProduction) {
         try {
           await n8nRequest('/workflows');
           return {
@@ -171,30 +242,25 @@ export const n8nApi = {
         } catch (apiError) {
           return {
             success: false,
-            message: apiError instanceof N8nApiError 
+            message: apiError instanceof N8nApiError
               ? `n8n API error: ${apiError.message}`
-              : 'API connection failed'
+              : 'API connection failed - using demo mode'
           };
         }
       }
-      
-      // Direct connection (local development)
-      const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      }).catch(() => null);
-      
-      if (!healthResponse || !healthResponse.ok) {
-        console.warn('n8n server not responding');
-        return {
-          success: false,
-          message: 'n8n server unreachable',
-        };
-      }
 
-      const health = await healthResponse.json();
-      
-      // Try to get n8n version info
+      // Direct connection for localhost development
       try {
+        // Test health endpoint first
+        const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        if (!healthResponse.ok) {
+          throw new Error('Health check failed');
+        }
+
+        // Test API access
         await n8nRequest('/workflows');
         return {
           success: true,
@@ -204,15 +270,15 @@ export const n8nApi = {
       } catch (apiError) {
         return {
           success: false,
-          message: apiError instanceof N8nApiError 
-            ? `n8n server running but API key invalid: ${apiError.message}`
-            : 'API authentication failed'
+          message: apiError instanceof N8nApiError
+            ? `n8n API error: ${apiError.message}`
+            : 'API connection failed - using demo mode'
         };
       }
     } catch (error) {
       return {
         success: false,
-        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'} - using demo mode`,
       };
     }
   },

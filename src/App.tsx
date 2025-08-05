@@ -4,15 +4,17 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 
 // Pages
-import ModernLanding from './pages/ModernLanding';
-import ModernAuth from './pages/ModernAuth';
-import EnhancedDashboard from './pages/EnhancedDashboard';
+import StandardLanding from './pages/StandardLanding';
+import StandardAuth from './pages/StandardAuth';
+import ProfessionalDashboard from './pages/ProfessionalDashboard';
+import ProfessionalChat from './pages/ProfessionalChat';
 import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
+import NotFound from './pages/NotFound';
 
 // Components
-import Layout from './components/Layout';
+import ProfessionalLayout from './components/ProfessionalLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
@@ -56,29 +58,43 @@ function AppContent() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          className: 'font-mono',
           style: {
-            background: '#0a0a0a',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#ffffff',
+            color: '#374151',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#ffffff',
+            },
           },
         }}
       />
       
       <Routes>
-        <Route path="/" element={<ModernLanding />} />
-        <Route path="/auth" element={<ModernAuth />} />
+        <Route path="/" element={<StandardLanding />} />
+        <Route path="/auth" element={<StandardAuth />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
-        
+
         <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<EnhancedDashboard />} />
-            <Route path="/chat" element={<Chat />} />
+          <Route element={<ProfessionalLayout />}>
+            <Route path="/dashboard" element={<ProfessionalDashboard />} />
+            <Route path="/chat" element={<ProfessionalChat />} />
+            <Route path="/advanced-chat" element={<Chat />} />
             <Route path="/database-chat" element={<DatabaseDrivenChat />} />
           </Route>
         </Route>
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

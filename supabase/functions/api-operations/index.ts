@@ -499,10 +499,28 @@ serve(async (req) => {
       }
     }
 
+    // Handle special n8n-request action (for direct API proxying)
+    if (body.action === 'n8n-request') {
+      try {
+        const { endpoint, method: reqMethod = 'GET', data } = body;
+        response = await makeN8nRequest(endpoint, reqMethod, data);
+        await logApiUsage(userId, 'n8n', endpoint, 1, 0, 0.001, { operation: 'proxy' });
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `n8n proxy error: ${error.message}`,
+            timestamp: new Date().toISOString(),
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
     // Route handling
-    let response: any;
-
-    if (path.endsWith('/workflows') && method === 'GET') {
+    else if (path.endsWith('/workflows') && method === 'GET') {
       response = await getWorkflows(userId);
     } else if (path.match(/\/workflows\/[^\/]+$/) && method === 'GET') {
       const workflowId = path.split('/').pop()!;
