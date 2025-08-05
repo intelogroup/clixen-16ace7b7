@@ -377,10 +377,15 @@ export default function StandardChat() {
                       clearAllHistory();
                     }
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm"
+                  disabled={clearingHistory}
+                  className="w-full flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Clear all history
+                  {clearingHistory ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  {clearingHistory ? 'Clearing...' : 'Clear all history'}
                 </button>
               )}
             </div>
