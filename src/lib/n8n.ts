@@ -22,7 +22,8 @@ const N8N_API_KEY = getEnvVar('VITE_N8N_API_KEY') || getEnvVar('N8N_API_KEY') ||
 
 // Use direct n8n API URL - no proxy needed with database-driven approach
 const N8N_API_URL = N8N_API_URL_ENV;
-const IS_DEMO_MODE = false; // Using real n8n API with database-driven chat
+// Enable demo mode in production environments to avoid CORS issues until proxy is set up
+const IS_DEMO_MODE = isProduction; // Use demo mode in production, real API in development
 
 export interface N8nWorkflow {
   id: string;
