@@ -13,6 +13,7 @@ import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
 import { ErrorLogger } from '../lib/logger/ErrorLogger';
 import OpenAIKeySetup from '../components/OpenAIKeySetup';
 import { openAIConfigService } from '../lib/services/OpenAIConfigService';
+import { ValidatedWorkflowDescription } from '../components/ValidatedTextarea';
 
 interface Message {
   id: string;
@@ -932,16 +933,23 @@ export default function Chat() {
         {/* Input */}
         <form onSubmit={handleSubmit} className="p-6 border-t border-zinc-800">
           <div className="relative max-w-4xl mx-auto">
-            <textarea
+            <ValidatedWorkflowDescription
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onValidatedChange={(value, isValid, error) => {
+                // Additional validation handling if needed
+              }}
               placeholder="Describe your workflow... (e.g., 'Send me an email when someone fills out my form')"
-              className="w-full px-4 py-3 pr-12 bg-zinc-900 text-white placeholder-zinc-500 rounded-xl border border-zinc-800 focus:border-white/20 focus:outline-none resize-none font-mono text-sm relative z-10"
+              className="bg-zinc-900 text-white placeholder-zinc-500 border-zinc-800 focus:border-white/20 font-mono"
+              containerClassName="flex-1"
               rows={3}
               disabled={isGenerating}
               autoFocus={!isGenerating}
+              showValidation={false} // Hide validation UI for chat input
+              minHeight="80px"
+              maxLength={5000}
             />
             <button
               type="submit"

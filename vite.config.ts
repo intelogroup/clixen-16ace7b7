@@ -25,11 +25,44 @@ export default defineConfig(({ mode }) => ({
     cssMinify: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          supabase: ['@supabase/supabase-js', '@supabase/auth-ui-react'],
-          icons: ['@heroicons/react', 'lucide-react'],
-          utils: ['clsx', 'framer-motion']
+        manualChunks: (id) => {
+          // Vendor chunk for core dependencies
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor';
+            }
+            if (id.includes('@supabase') || id.includes('postgres')) {
+              return 'supabase';
+            }
+            if (id.includes('lucide-react') || id.includes('@heroicons')) {
+              return 'icons';
+            }
+            if (id.includes('framer-motion') || id.includes('react-hot-toast')) {
+              return 'animations';
+            }
+            if (id.includes('zod') || id.includes('validation')) {
+              return 'validation';
+            }
+            if (id.includes('openai') || id.includes('ai')) {
+              return 'ai';
+            }
+            // Other node_modules go to a general vendor chunk
+            return 'vendor-libs';
+          }
+          
+          // App chunks based on functionality
+          if (id.includes('/agents/')) {
+            return 'agents';
+          }
+          if (id.includes('/auth/') || id.includes('Auth')) {
+            return 'auth';
+          }
+          if (id.includes('/validation/')) {
+            return 'validation';
+          }
+          if (id.includes('/hooks/')) {
+            return 'hooks';
+          }
         },
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',

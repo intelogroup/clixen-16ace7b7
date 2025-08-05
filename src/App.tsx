@@ -3,19 +3,23 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 
-// Pages
-import StandardLanding from './pages/StandardLanding';
-import StandardAuth from './pages/StandardAuth';
-import ProfessionalDashboard from './pages/ProfessionalDashboard';
-import ProfessionalChat from './pages/ProfessionalChat';
-import Chat from './pages/Chat';
-import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
-import OAuthCallback from './pages/OAuthCallback';
-import NotFound from './pages/NotFound';
+// Lazy-loaded pages for better code splitting
+const StandardLanding = React.lazy(() => import('./pages/StandardLanding'));
+const StandardAuth = React.lazy(() => import('./pages/StandardAuth'));
+const ProfessionalDashboard = React.lazy(() => import('./pages/ProfessionalDashboard'));
+const ProfessionalChat = React.lazy(() => import('./pages/ProfessionalChat'));
+const Chat = React.lazy(() => import('./pages/Chat'));
+const DatabaseDrivenChat = React.lazy(() => import('./pages/DatabaseDrivenChat'));
+const OAuthCallback = React.lazy(() => import('./pages/OAuthCallback'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
 
 // Components
 import ProfessionalLayout from './components/ProfessionalLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import AsyncErrorBoundary from './components/AsyncErrorBoundary';
+import LazyLoadWrapper from './components/LazyLoadWrapper';
+import DevTools from './components/DevTools';
 
 function AppContent() {
   const { loading } = useAuth();
@@ -81,20 +85,64 @@ function AppContent() {
       />
       
       <Routes>
-        <Route path="/" element={<StandardLanding />} />
-        <Route path="/auth" element={<StandardAuth />} />
-        <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="/" element={
+          <LazyLoadWrapper>
+            <StandardLanding />
+          </LazyLoadWrapper>
+        } />
+        <Route path="/auth" element={
+          <LazyLoadWrapper>
+            <StandardAuth />
+          </LazyLoadWrapper>
+        } />
+        <Route path="/auth/callback" element={
+          <LazyLoadWrapper>
+            <OAuthCallback />
+          </LazyLoadWrapper>
+        } />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<ProfessionalLayout />}>
-            <Route path="/dashboard" element={<ProfessionalDashboard />} />
-            <Route path="/chat" element={<ProfessionalChat />} />
-            <Route path="/advanced-chat" element={<Chat />} />
-            <Route path="/database-chat" element={<DatabaseDrivenChat />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ErrorBoundary resetOnPropsChange>
+                  <ProfessionalDashboard />
+                </ErrorBoundary>
+              } 
+            />
+            <Route 
+              path="/chat" 
+              element={
+                <AsyncErrorBoundary autoRetry maxRetries={2}>
+                  <ProfessionalChat />
+                </AsyncErrorBoundary>
+              } 
+            />
+            <Route 
+              path="/advanced-chat" 
+              element={
+                <AsyncErrorBoundary autoRetry maxRetries={3}>
+                  <Chat />
+                </AsyncErrorBoundary>
+              } 
+            />
+            <Route 
+              path="/database-chat" 
+              element={
+                <AsyncErrorBoundary autoRetry maxRetries={2}>
+                  <DatabaseDrivenChat />
+                </AsyncErrorBoundary>
+              } 
+            />
           </Route>
         </Route>
 
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={
+          <LazyLoadWrapper>
+            <NotFound />
+          </LazyLoadWrapper>
+        } />
       </Routes>
     </BrowserRouter>
   );
@@ -102,8 +150,26 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary 
+      showDetails={process.env.NODE_ENV === 'development'}
+      onError={(error, errorInfo) => {
+        console.error('App-level error:', error, errorInfo);
+        // TODO: Send to error tracking service
+      }}
+    >
+      <AuthProvider>
+        <AsyncErrorBoundary
+          autoRetry={true}
+          maxRetries={3}
+          onRetry={async () => {
+            // Retry logic for network errors
+            window.location.reload();
+          }}
+        >
+          <AppContent />
+          <DevTools />
+        </AsyncErrorBoundary>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
