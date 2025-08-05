@@ -6,13 +6,13 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 // Pages
 import ModernLanding from './pages/ModernLanding';
 import ModernAuth from './pages/ModernAuth';
-import ModernDashboard from './pages/ModernDashboard';
-import ModernChat from './pages/ModernChat';
+import EnhancedDashboard from './pages/EnhancedDashboard';
+import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
 
 // Components
-import ModernLayout from './components/ModernLayout';
+import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
@@ -56,26 +56,11 @@ function AppContent() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          className: 'font-sans',
-          duration: 4000,
+          className: 'font-mono',
           style: {
-            background: 'rgba(10, 10, 10, 0.95)',
+            background: '#0a0a0a',
             color: '#fff',
-            border: '1px solid rgba(168, 85, 247, 0.3)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '8px',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
+            border: '1px solid rgba(255,255,255,0.1)',
           },
         }}
       />
@@ -86,9 +71,9 @@ function AppContent() {
         <Route path="/auth/callback" element={<OAuthCallback />} />
         
         <Route element={<ProtectedRoute />}>
-          <Route element={<ModernLayout />}>
-            <Route path="/dashboard" element={<ModernDashboard />} />
-            <Route path="/chat" element={<ModernChat />} />
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<EnhancedDashboard />} />
+            <Route path="/chat" element={<Chat />} />
             <Route path="/database-chat" element={<DatabaseDrivenChat />} />
           </Route>
         </Route>
