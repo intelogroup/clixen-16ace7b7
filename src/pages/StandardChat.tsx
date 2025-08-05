@@ -451,6 +451,24 @@ export default function StandardChat() {
             <div className="mt-2 text-xs text-gray-500 text-center">
               Press Enter to send • Shift+Enter for new line
             </div>
+
+            {/* Quick Suggestions */}
+            {messages.length <= 1 && !input && (
+              <div className="mt-4">
+                <div className="text-xs text-gray-500 mb-2">Try these examples:</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {quickSuggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="text-left p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                    >
+                      💡 {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         </div>
       </div>
