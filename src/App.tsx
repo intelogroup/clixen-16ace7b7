@@ -4,16 +4,16 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 
 // Pages
-import ModernLanding from './pages/ModernLanding';
-import ModernAuth from './pages/ModernAuth';
-import EnhancedDashboard from './pages/EnhancedDashboard';
+import StandardLanding from './pages/StandardLanding';
+import StandardAuth from './pages/StandardAuth';
+import StandardDashboard from './pages/StandardDashboard';
 import StandardChat from './pages/StandardChat';
 import Chat from './pages/Chat';
 import DatabaseDrivenChat from './pages/DatabaseDrivenChat';
 import OAuthCallback from './pages/OAuthCallback';
 
 // Components
-import Layout from './components/Layout';
+import StandardLayout from './components/StandardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
