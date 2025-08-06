@@ -1,0 +1,625 @@
+// Enhanced Base agent class with improved OpenAI integration and conversation flow
+import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
+import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
+import { performanceOptimizer } from './PerformanceOptimizer';
+import { contextManager } from './ContextManager';
+import { supabase } from '../supabase';
+import { openAIService } from '../services/OpenAIService';
+
+// Enhanced Supabase integration detection
+function checkSupabaseConnection(): { isConnected: boolean; source: string } {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  console.log('[BaseAgent] Supabase connection check:', {
+    url: supabaseUrl ? '✅ Set' : '❌ Not set',
+    key: supabaseKey ? '✅ Set' : '❌ Not set',
+    location: window.location.href
+  });
+  
+  const isConnected = !!(supabaseUrl && supabaseKey);
+  
+  console.log('[BaseAgent] Using enhanced OpenAI integration with fallbacks:', {
+    isConnected,
+    integrationMode: 'openai-direct-with-supabase-fallback'
+  });
+  
+  return { isConnected, source: 'openai-with-supabase-fallback' };
+}
+
+const { isConnected: IS_SUPABASE_CONNECTED, source: CONNECTION_SOURCE } = checkSupabaseConnection();
+
+export abstract class BaseAgent {
+  protected config: AgentConfig;
+  protected context: AgentContext;
+  protected state: AgentState;
+  protected messageQueue: AgentMessage[] = [];
+  protected subscribers: Set<(message: AgentMessage) => void> = new Set();
+
+  constructor(config: AgentConfig, context: AgentContext) {
+    console.log(`[${config.id}] Initializing enhanced agent:`, {
+      supabaseConnected: IS_SUPABASE_CONNECTED,
+      connectionSource: CONNECTION_SOURCE,
+      environment: import.meta.env.MODE || 'unknown'
+    });
+    
+    this.config = config;
+    this.context = context;
+    this.state = {
+      id: config.id,
+      name: config.name,
+      status: 'idle',
+      progress: 0,
+      lastUpdate: Date.now(),
+      metadata: {
+        supabaseConnected: IS_SUPABASE_CONNECTED,
+        connectionSource: CONNECTION_SOURCE,
+        initialized: Date.now()
+      }
+    };
+  }
+
+  // Abstract methods to be implemented by specialized agents
+  abstract processTask(task: any): Promise<any>;
+  abstract validateInput(input: any): boolean;
+  abstract getCapabilities(): string[];
+
+  // Core agent thinking functionality with improved OpenAI integration
+  async think(prompt: string, context?: any): Promise<string> {
+    const taskId = `think-${this.config.id}-${Date.now()}`;
+    
+    try {
+      // Acquire task lock to prevent duplicate work
+      const lockAcquired = await contextManager.acquireTaskLock(
+        this.context.conversationId, 
+        taskId, 
+        this.config.id,
+        { action: 'think', prompt: prompt.substring(0, 50) }
+      );
+
+      if (!lockAcquired) {
+        console.log(`[${this.config.id}] ⏸️ Task already being processed by another agent`);
+        // Wait a bit and check if task is completed by other agent
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const result = contextManager.getFromGlobalMemory(this.context.conversationId, taskId);
+        if (result) {
+          console.log(`[${this.config.id}] ✨ Using result from other agent`);
+          return result;
+        }
+      }
+
+      // Create cache key from prompt and context
+      const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
+      
+      // Get relevant context from shared memory
+      const relevantContext = contextManager.getRelevantContext(
+        this.context.conversationId,
+        this.config.id,
+        prompt
+      );
+      
+      // Use memoization for repeated queries
+      const result = await performanceOptimizer.memoize(cacheKey, async () => {
+        return await this.performThinking(prompt, context, relevantContext);
+      }, 60000); // Cache for 1 minute
+      
+      // Store result in global memory and return
+      contextManager.updateGlobalMemory(this.context.conversationId, taskId, result);
+      return result;
+      
+    } finally {
+      // Always release the task lock
+      contextManager.releaseTaskLock(this.context.conversationId, taskId, this.config.id);
+    }
+  }
+
+  // Separate method for the actual thinking logic to simplify error handling
+  private async performThinking(prompt: string, context?: any, relevantContext?: any): Promise<string> {
+    this.updateState({ status: 'thinking' });
+
+    try {
+      console.log(`[${this.config.id}] 🚀 Processing prompt:`, prompt.substring(0, 50) + '...');
+      console.log(`[${this.config.id}] 📋 Using relevant context:`, Object.keys(relevantContext?.globalMemory || {}));
+      
+      // Check if OpenAI is configured
+      const configStatus = await openAIService.getConfigStatus();
+      console.log(`[${this.config.id}] 🔧 OpenAI config status:`, configStatus);
+      
+      if (!configStatus.isConfigured) {
+        console.warn(`[${this.config.id}] ⚠️ OpenAI not configured, using demo mode`);
+        const demoResponse = this.generateDemoResponse(prompt, context);
+        this.updateState({ status: 'idle' });
+        return demoResponse;
+      }
+      
+      try {
+        // Use direct OpenAI integration for better control
+        const agentResponse = await openAIService.agentThink(
+          this.config.id,
+          prompt,
+          {
+            conversationHistory: context?.conversationHistory,
+            systemPrompt: this.buildSystemPrompt(context),
+            capabilities: this.getCapabilities()
+          }
+        );
+        
+        console.log(`[${this.config.id}] ✅ OpenAI response received:`, {
+          length: agentResponse.response.length,
+          preview: agentResponse.response.substring(0, 100) + '...',
+          tokensUsed: agentResponse.tokensUsed,
+          processingTime: agentResponse.processingTime,
+          source: configStatus.source
+        });
+        
+        this.updateState({ status: 'idle' });
+        
+        // Update agent state in shared context
+        contextManager.updateAgentState(
+          this.context.conversationId,
+          this.config.id,
+          {
+            ...this.state,
+            lastThought: agentResponse.response.substring(0, 100),
+            tokensUsed: agentResponse.tokensUsed,
+            processingTime: agentResponse.processingTime
+          }
+        );
+        
+        return agentResponse.response;
+        
+      } catch (openaiError) {
+        console.error(`[${this.config.id}] ❌ OpenAI error:`, openaiError);
+        
+        // If OpenAI fails, try Supabase Edge Function as fallback
+        if (IS_SUPABASE_CONNECTED) {
+          console.log(`[${this.config.id}] 🔄 Falling back to Supabase Edge Function`);
+          return await this.fallbackToSupabaseEdgeFunction(prompt);
+        } else {
+          // No Supabase connection, use demo mode
+          console.log(`[${this.config.id}] 🎭 Using demo mode (no Supabase connection)`);
+          this.updateState({ status: 'idle' });
+          return this.generateDemoResponse(prompt, context);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`[${this.config.id}] ❌ Error in thinking:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        prompt: prompt.substring(0, 50) + '...'
+      });
+      
+      this.updateState({ status: 'error' });
+      
+      // Enhanced error handling
+      const agentError = errorHandler.handleError(
+        this.config.id,
+        error,
+        ErrorCategory.API,
+        error instanceof Error && error.message.includes('rate limit') 
+          ? ErrorSeverity.HIGH 
+          : ErrorSeverity.MEDIUM
+      );
+      
+      // Attempt retry if recoverable
+      if (agentError.recoverable && agentError.retryCount < agentError.maxRetries) {
+        try {
+          return await errorHandler.retry(
+            () => this.performThinking(prompt, context),
+            agentError
+          );
+        } catch (retryError) {
+          throw new Error(`Agent thinking failed after ${agentError.retryCount} retries: ${agentError.message}`);
+        }
+      }
+      
+      throw new Error(`Agent thinking failed: ${agentError.userMessage || agentError.message}`);
+    }
+  }
+
+  // Fallback to Supabase Edge Function when OpenAI fails
+  private async fallbackToSupabaseEdgeFunction(prompt: string): Promise<string> {
+    try {
+      // Get current user for the edge function call with validation
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error(`[${this.config.id}] ❌ Auth error:`, authError);
+        throw new Error('Authentication service unavailable');
+      }
+      
+      // Validate or create UUID
+      let validUserId = user?.id || crypto.randomUUID();
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(validUserId)) {
+        console.warn(`[${this.config.id}] ⚠️ Invalid UUID format, generating new one:`, validUserId);
+        validUserId = crypto.randomUUID();
+      }
+    
+      console.log(`[${this.config.id}] 🔍 Using user ID:`, validUserId);
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn(`[${this.config.id}] ⏰ Edge function call timed out after 30s`);
+      }, 30000); // 30 second timeout
+      
+      try {
+        // Call the ai-chat-system edge function with timeout
+        const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+          body: {
+            message: prompt,
+            agent_type: this.config.id.split('-')[0], // Extract agent type from ID
+            user_id: validUserId,
+            stream: false
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.error(`[${this.config.id}] ❌ Edge function error:`, error);
+          throw new Error(`Edge function error: ${error.message}`);
+        }
+        
+        const result = data?.response || '';
+        console.log(`[${this.config.id}] ✅ Edge function response received (fallback):`, {
+          length: result.length,
+          preview: result.substring(0, 100) + '...',
+          tokensUsed: data?.tokens_used || 0,
+          agentType: data?.agent_type,
+          processingTime: data?.processing_time
+        });
+        
+        this.updateState({ status: 'idle' });
+        return result;
+        
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timed out - please try again');
+        }
+        
+        throw fetchError;
+      }
+    } catch (edgeFunctionError) {
+      console.error(`[${this.config.id}] ❌ Edge function fallback also failed:`, edgeFunctionError);
+      // Fall back to demo mode as last resort
+      console.log(`[${this.config.id}] 🎭 Using demo mode as final fallback`);
+      this.updateState({ status: 'idle' });
+      return this.generateDemoResponse(prompt, {});
+    }
+  }
+
+  // Enhanced demo mode response generator for better automation guidance
+  protected generateDemoResponse(prompt: string, context?: any): string {
+    // Generate contextual demo responses based on agent type
+    const agentName = this.config.name.toLowerCase();
+    
+    if (agentName.includes('orchestrator')) {
+      if (prompt.toLowerCase().includes('automat') || prompt.toLowerCase().includes('workflow')) {
+        return `I understand you want to create an automation workflow: "${prompt.substring(0, 100)}..."
+
+To help you build the perfect automation, I need to understand:
+
+**What triggers your workflow?** (e.g., new email, form submission, schedule)
+**What actions should happen?** (e.g., send notification, update database, create task)
+**What's your desired outcome?** (e.g., save time, reduce errors, improve efficiency)
+
+Once I have these details, I'll coordinate with my specialist agents to design and deploy your workflow.
+
+💡 *Configure your OpenAI API key for full AI-powered assistance.*`;
+      } else {
+        return `I'm your workflow orchestrator. I coordinate specialist agents to help you build automations.
+
+Let me guide you through creating a workflow. What process would you like to automate?
+
+Some popular automations:
+• Email notifications for form submissions
+• Data sync between apps
+• Scheduled reports and updates
+• Customer onboarding workflows
+
+💡 *Configure your OpenAI API key for full AI-powered assistance.*`;
+      }
+    } else if (agentName.includes('workflow')) {
+      return `I'll design an n8n workflow for your automation needs.
+
+Based on your request: "${prompt.substring(0, 100)}..."
+
+I'll create a workflow with:
+• Appropriate trigger nodes (HTTP, schedule, email, etc.)
+• Processing nodes for data transformation
+• Action nodes for your desired outcomes
+• Error handling and retry logic
+
+The workflow will be optimized for reliability and performance.
+
+💡 *Configure your OpenAI API key for full workflow generation.*`;
+    } else if (agentName.includes('deployment')) {
+      return `I'll handle the secure deployment of your workflow.
+
+For your request: "${prompt.substring(0, 100)}..."
+
+My deployment process includes:
+• Pre-deployment validation and testing
+• Safe deployment to your n8n instance
+• Post-deployment health monitoring
+• Rollback capabilities if issues arise
+
+Once validated, your workflow will be live and ready to use.
+
+💡 *Configure your OpenAI API key for full deployment assistance.*`;
+    } else {
+      return `Processing your automation request: "${prompt.substring(0, 100)}..."
+
+I'm here to help you build efficient workflow automations. Please describe what you'd like to automate, and I'll guide you through the process.
+
+Focus on:
+• What triggers the automation
+• What steps should happen
+• What the end result should be
+
+💡 *Configure your OpenAI API key for full AI assistance.*`;
+    }
+  }
+
+  async executeStep(action: string, input: any): Promise<any> {
+    const startTime = Date.now();
+    const stepId = `${this.config.id}-${Date.now()}`;
+
+    this.updateState({ 
+      status: 'working', 
+      currentTask: action,
+      progress: 0 
+    });
+
+    try {
+      // Log execution step
+      const step: ExecutionStep = {
+        id: stepId,
+        agentId: this.config.id,
+        action,
+        input,
+        duration: 0,
+        timestamp: startTime
+      };
+
+      // Execute the actual task
+      const output = await this.processTask({ action, input });
+      
+      // Complete the step
+      step.output = output;
+      step.duration = Date.now() - startTime;
+      
+      this.context.executionHistory.push(step);
+      this.updateState({ 
+        status: 'idle', 
+        progress: 100,
+        currentTask: undefined 
+      });
+
+      return output;
+    } catch (error) {
+      // Enhanced error handling
+      const agentError = errorHandler.handleError(
+        this.config.id,
+        error,
+        ErrorCategory.AGENT,
+        ErrorSeverity.MEDIUM
+      );
+      
+      // Log error step
+      const step: ExecutionStep = {
+        id: stepId,
+        agentId: this.config.id,
+        action,
+        input,
+        error: agentError.message,
+        duration: Date.now() - startTime,
+        timestamp: startTime
+      };
+
+      this.context.executionHistory.push(step);
+      this.updateState({ status: 'error' });
+      
+      // Send error notification
+      await this.sendMessage({
+        toAgent: 'orchestrator',
+        type: 'error',
+        conversationId: this.context.conversationId,
+        payload: {
+          errorId: agentError.id,
+          action,
+          message: agentError.message,
+          recoverable: agentError.recoverable,
+          resolution: agentError.resolution
+        }
+      });
+      
+      throw error;
+    }
+  }
+
+  // Message handling
+  async sendMessage(message: Omit<AgentMessage, 'id' | 'timestamp' | 'fromAgent'>): Promise<void> {
+    const fullMessage: AgentMessage = {
+      ...message,
+      id: `${this.config.id}-${Date.now()}`,
+      fromAgent: this.config.id,
+      timestamp: Date.now(),
+      conversationId: this.context.conversationId
+    };
+
+    // Notify subscribers
+    this.subscribers.forEach(callback => callback(fullMessage));
+  }
+
+  subscribe(callback: (message: AgentMessage) => void): () => void {
+    this.subscribers.add(callback);
+    return () => this.subscribers.delete(callback);
+  }
+
+  receiveMessage(message: AgentMessage): void {
+    this.messageQueue.push(message);
+    this.processMessageQueue();
+  }
+
+  protected async processMessageQueue(): Promise<void> {
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift()!;
+      await this.handleMessage(message);
+    }
+  }
+
+  protected async handleMessage(message: AgentMessage): Promise<void> {
+    // Default message handling - can be overridden by specialized agents
+    switch (message.type) {
+      case 'task':
+        await this.executeStep(message.payload.action, message.payload.input);
+        break;
+      case 'status':
+        // Update context or respond to status requests
+        break;
+      case 'question':
+        // Handle questions from other agents
+        break;
+      default:
+        console.warn(`Unhandled message type: ${message.type}`);
+    }
+  }
+
+  // State management
+  protected updateState(updates: Partial<AgentState>): void {
+    this.state = {
+      ...this.state,
+      ...updates,
+      lastUpdate: Date.now()
+    };
+
+    // Update context
+    this.context.agentStates[this.config.id] = this.state;
+
+    // Notify about state change
+    this.sendMessage({
+      toAgent: 'broadcast',
+      type: 'status',
+      conversationId: this.context.conversationId,
+      payload: { agentId: this.config.id, state: this.state }
+    });
+  }
+
+  getState(): AgentState {
+    return { ...this.state };
+  }
+
+  // Utility methods
+  protected buildSystemPrompt(context?: any): string {
+    let prompt = this.config.systemPrompt;
+    
+    // Add context information
+    if (this.context.userRequirements.length > 0) {
+      prompt += '\n\nUser Requirements:\n';
+      this.context.userRequirements.forEach(req => {
+        prompt += `- ${req.description} (${req.priority} priority, ${req.status})\n`;
+      });
+    }
+
+    if (this.context.currentWorkflow) {
+      prompt += '\n\nCurrent Workflow:\n';
+      prompt += `Name: ${this.context.currentWorkflow.name}\n`;
+      prompt += `Description: ${this.context.currentWorkflow.description}\n`;
+      prompt += `Nodes: ${this.context.currentWorkflow.nodes.length}\n`;
+    }
+
+    // Add execution history context
+    if (this.context.executionHistory.length > 0) {
+      prompt += '\n\nRecent Execution History:\n';
+      this.context.executionHistory.slice(-5).forEach(step => {
+        prompt += `- ${step.agentId}: ${step.action} (${step.duration}ms)\n`;
+      });
+    }
+
+    if (context) {
+      prompt += '\n\nAdditional Context:\n' + JSON.stringify(context, null, 2);
+    }
+
+    return prompt;
+  }
+
+  protected updateProgress(progress: number): void {
+    this.updateState({ progress: Math.max(0, Math.min(100, progress)) });
+  }
+
+  // Error handling with retry logic
+  protected async withRetry<T>(
+    operation: () => Promise<T>, 
+    maxRetries: number = 3,
+    delay: number = 1000
+  ): Promise<T> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        
+        if (attempt === maxRetries) break;
+        
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, attempt - 1)));
+      }
+    }
+
+    throw lastError!;
+  }
+
+  // Memory operations
+  protected setMemory(key: string, value: any): void {
+    this.context.sharedMemory[key] = value;
+  }
+
+  protected getMemory<T>(key: string): T | undefined {
+    return this.context.sharedMemory[key] as T;
+  }
+
+  protected clearMemory(key?: string): void {
+    if (key) {
+      delete this.context.sharedMemory[key];
+    } else {
+      this.context.sharedMemory = {};
+    }
+  }
+
+  // Validation helpers
+  protected validateRequiredFields(obj: any, fields: string[]): void {
+    const missing = fields.filter(field => !(field in obj) || obj[field] === undefined);
+    if (missing.length > 0) {
+      throw new Error(`Missing required fields: ${missing.join(', ')}`);
+    }
+  }
+
+  protected isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  protected isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Cleanup
+  destroy(): void {
+    this.subscribers.clear();
+    this.messageQueue = [];
+    this.updateState({ status: 'idle' });
+  }
+}
