@@ -72,7 +72,12 @@ class OpenAIService {
 
       // Fallback to environment variable
       const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (envKey && envKey !== 'your-openai-api-key-here' && envKey.startsWith('sk-')) {
+      if (envKey &&
+          envKey !== 'your-openai-api-key-here' &&
+          envKey !== 'sk-placeholder-replace-with-your-actual-openai-api-key' &&
+          !envKey.includes('placeholder') &&
+          envKey.startsWith('sk-') &&
+          envKey.length > 30) {
         this.cachedKey = envKey;
         this.keyTimestamp = Date.now();
         console.log('[OpenAIService] ✅ Using OpenAI key from environment variables');
@@ -117,7 +122,12 @@ class OpenAIService {
 
       // Check environment
       const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (envKey && envKey !== 'your-openai-api-key-here' && envKey.startsWith('sk-')) {
+      if (envKey &&
+          envKey !== 'your-openai-api-key-here' &&
+          envKey !== 'sk-placeholder-replace-with-your-actual-openai-api-key' &&
+          !envKey.includes('placeholder') &&
+          envKey.startsWith('sk-') &&
+          envKey.length > 30) {
         return {
           isConfigured: true,
           source: 'environment',
