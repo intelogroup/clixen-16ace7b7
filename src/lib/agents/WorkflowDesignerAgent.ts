@@ -436,8 +436,11 @@ Example template:
     };
   }
 
-  // Enhanced validation for n8n workflows
+  // Enhanced validation for n8n workflows with automatic healing
   private async validateAndEnhanceN8nSpec(spec: any): Promise<WorkflowSpec> {
+    // Apply automatic healing rules for n8n compatibility
+    spec = this.applyN8nCompatibilityFixes(spec);
+    
     // Ensure basic structure exists
     if (!spec.name) {
       spec.name = `Workflow ${Date.now()}`;
@@ -451,13 +454,28 @@ Example template:
       spec.connections = {};
     }
     
-    // Ensure required n8n fields
-    spec.active = false;
+    // DO NOT set active field - it's read-only in n8n API
     spec.settings = spec.settings || {};
     spec.staticData = spec.staticData || {};
     
+    // Remove any read-only fields that cause API errors
+    const readOnlyFields = ['active', 'id', 'createdAt', 'updatedAt', 'versionId', 'triggerCount'];
+    readOnlyFields.forEach(field => {
+      if (field in spec) {
+        delete spec[field];
+      }
+    });
+    
     // Validate and fix node structure
     spec.nodes = spec.nodes.map((node: any, index: number) => {
+      // Remove read-only fields from nodes
+      const nodeReadOnlyFields = ['createdAt', 'updatedAt', 'disabled'];
+      nodeReadOnlyFields.forEach(field => {
+        if (field in node) {
+          delete node[field];
+        }
+      });
+
       // Ensure node has required fields
       if (!node.id) {
         node.id = `node-${index}-${Date.now()}`;
@@ -503,6 +521,82 @@ Example template:
     spec.connections = validConnections;
     
     return spec as WorkflowSpec;
+  }
+
+  // Apply n8n-specific compatibility fixes
+  private applyN8nCompatibilityFixes(spec: any): any {
+    // Fix webhook paths to be valid
+    if (spec.nodes) {
+      spec.nodes = spec.nodes.map((node: any) => {
+        if (node.type === 'n8n-nodes-base.webhook' && node.parameters && node.parameters.path) {
+          let path = node.parameters.path;
+          
+          // Ensure path starts with /
+          if (!path.startsWith('/')) {
+            path = '/' + path;
+          }
+          
+          // Remove invalid characters and make lowercase
+          path = path.replace(/[^a-zA-Z0-9\-\_\/]/g, '-').toLowerCase();
+          
+          node.parameters.path = path;
+        }
+        return node;
+      });
+    }
+
+    // Ensure node names are unique
+    if (spec.nodes) {
+      const usedNames = new Set<string>();
+      const nameMap = new Map<string, string>();
+
+      spec.nodes = spec.nodes.map((node: any) => {
+        let originalName = node.name;
+        let uniqueName = originalName;
+        let counter = 1;
+
+        while (usedNames.has(uniqueName)) {
+          uniqueName = `${originalName} ${counter}`;
+          counter++;
+        }
+
+        usedNames.add(uniqueName);
+        
+        if (uniqueName !== originalName) {
+          nameMap.set(originalName, uniqueName);
+          node.name = uniqueName;
+        }
+        
+        return node;
+      });
+
+      // Update connections to use new names
+      if (spec.connections && nameMap.size > 0) {
+        const updatedConnections: any = {};
+        
+        for (const [sourceNode, connections] of Object.entries(spec.connections)) {
+          const newSourceName = nameMap.get(sourceNode) || sourceNode;
+          
+          if (connections && typeof connections === 'object') {
+            const conn = connections as any;
+            if (conn.main && Array.isArray(conn.main)) {
+              conn.main = conn.main.map((outputGroup: any[]) => {
+                return outputGroup.map((connection: any) => ({
+                  ...connection,
+                  node: nameMap.get(connection.node) || connection.node
+                }));
+              });
+            }
+          }
+          
+          updatedConnections[newSourceName] = connections;
+        }
+        
+        spec.connections = updatedConnections;
+      }
+    }
+
+    return spec;
   }
 
   async generateNodes(workflowSpec: WorkflowSpec): Promise<N8nNode[]> {

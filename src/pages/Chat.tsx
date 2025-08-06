@@ -14,6 +14,7 @@ import { ErrorLogger } from '../lib/logger/ErrorLogger';
 import OpenAIKeySetup from '../components/OpenAIKeySetup';
 import { openAIConfigService } from '../lib/services/OpenAIConfigService';
 import { ValidatedWorkflowDescription } from '../components/ValidatedTextarea';
+import WorkflowJourneyManager, { JourneyStage } from '../components/WorkflowJourneyManager';
 
 interface Message {
   id: string;
@@ -83,6 +84,8 @@ export default function Chat() {
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [hasOpenAIKey, setHasOpenAIKey] = useState<boolean | null>(null);
+  const [journeyStage, setJourneyStage] = useState<JourneyStage>('chat');
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
