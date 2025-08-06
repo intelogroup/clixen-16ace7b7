@@ -1,0 +1,58 @@
+{
+  "healthCheck": {
+    "success": false,
+    "error": {
+      "name": "FunctionsHttpError",
+      "context": {}
+    },
+    "responseTime": 137
+  },
+  "minimalPayload": {
+    "success": false,
+    "error": {
+      "name": "FunctionsHttpError",
+      "context": {}
+    },
+    "responseTime": 337
+  },
+  "chatSessions": {
+    "success": false,
+    "error": {
+      "name": "FunctionsHttpError",
+      "context": {}
+    },
+    "responseTime": 474
+  },
+  "directHTTP": {
+    "success": false,
+    "status": 400,
+    "statusText": "Bad Request",
+    "headers": {
+      "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+      "access-control-allow-methods": "POST, GET, OPTIONS, PUT, DELETE",
+      "access-control-allow-origin": "*",
+      "access-control-max-age": "86400",
+      "alt-svc": "h3=\":443\"; ma=86400",
+      "cf-cache-status": "DYNAMIC",
+      "cf-ray": "96aa7e29282c7534-SEA",
+      "connection": "keep-alive",
+      "content-encoding": "gzip",
+      "content-length": "75",
+      "content-type": "application/json",
+      "date": "Wed, 06 Aug 2025 00:42:10 GMT",
+      "sb-project-ref": "zfbgdixbzezpxllkoyfc",
+      "sb-request-id": "01987cd4-15c3-7eda-a825-6d9cf98a8fbb",
+      "server": "cloudflare",
+      "set-cookie": "__cf_bm=LIworljnufqpbF9d2GEr4c_EoNkyB8v6HA46QJSlgv0-1754440930-1.0.1.1-LZjM4GaNDUGjZj2As.P543G0gphFR.YLhrH_xI9in5oPXytANR2Tp_eR6xml0XqkwJ.1FCpnrrl.tDIi4fkFttf7KWNi5KcvLoYR2cZquy0; path=/; expires=Wed, 06-Aug-25 01:12:10 GMT; domain=.supabase.co; HttpOnly; Secure; SameSite=None",
+      "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+      "vary": "Accept-Encoding",
+      "x-deno-execution-id": "de31caf8-192f-4362-b833-773d91056cc6",
+      "x-sb-edge-region": "us-west-2",
+      "x-served-by": "supabase-edge-runtime"
+    },
+    "rawResponse": "{\"error\":\"Message is required and must be a string\"}",
+    "parsedResponse": {
+      "error": "Message is required and must be a string"
+    }
+  }
+}

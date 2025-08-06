@@ -80,38 +80,73 @@ export abstract class BaseAgent {
       try {
         console.log(`[${this.config.id}] 🚀 Using Supabase Edge Function for prompt:`, prompt.substring(0, 50) + '...');
         
-        // Get current user for the edge function call
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          console.warn(`[${this.config.id}] ⚠️  No authenticated user - using guest mode`);
+        // Get current user for the edge function call with validation
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError) {
+          console.error(`[${this.config.id}] ❌ Auth error:`, authError);
+          throw new Error('Authentication service unavailable');
         }
         
-        // Call the ai-chat-system edge function
-        const { data, error } = await supabase.functions.invoke('ai-chat-system', {
-          body: {
-            message: prompt,
-            agent_type: this.config.id.split('-')[0], // Extract agent type from ID
-            user_id: user?.id || 'anonymous',
-            stream: false
+        if (!user?.id) {
+          console.warn(`[${this.config.id}] ⚠️  No authenticated user - using anonymous UUID`);
+        }
+        
+        // Validate or create UUID
+        let validUserId = user?.id || crypto.randomUUID();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(validUserId)) {
+          console.warn(`[${this.config.id}] ⚠️  Invalid UUID format, generating new one:`, validUserId);
+          validUserId = crypto.randomUUID();
+        }
+        
+        console.log(`[${this.config.id}] 🔍 Using user ID:`, validUserId);
+        
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.warn(`[${this.config.id}] ⏰ Edge function call timed out after 30s`);
+        }, 30000); // 30 second timeout
+        
+        try {
+          // Call the ai-chat-system edge function with timeout
+          const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+            body: {
+              message: prompt,
+              agent_type: this.config.id.split('-')[0], // Extract agent type from ID
+              user_id: validUserId,
+              stream: false
+            },
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (error) {
+            console.error(`[${this.config.id}] ❌ Edge function error:`, error);
+            throw new Error(`Edge function error: ${error.message}`);
           }
-        });
-        
-        if (error) {
-          console.error(`[${this.config.id}] ❌ Edge function error:`, error);
-          throw new Error(`Edge function error: ${error.message}`);
+          
+          const result = data?.response || '';
+          console.log(`[${this.config.id}] ✅ Edge function response received:`, {
+            length: result.length,
+            preview: result.substring(0, 100) + '...',
+            tokensUsed: data?.tokens_used || 0,
+            agentType: data?.agent_type,
+            processingTime: data?.processing_time
+          });
+          
+          this.updateState({ status: 'idle' });
+          return result;
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Request timed out - please try again');
+          }
+          
+          throw fetchError;
         }
-        
-        const result = data?.response || '';
-        console.log(`[${this.config.id}] ✅ Edge function response received:`, {
-          length: result.length,
-          preview: result.substring(0, 100) + '...',
-          tokensUsed: data?.tokens_used || 0,
-          agentType: data?.agent_type,
-          processingTime: data?.processing_time
-        });
-        
-        this.updateState({ status: 'idle' });
-        return result;
     } catch (error) {
       console.error(`[${this.config.id}] ❌ Error in think():`, {
         error: error instanceof Error ? error.message : String(error),

@@ -311,6 +311,17 @@ const callOpenAI = async (
 ): Promise<{ response: string; tokensUsed: number }> => {
   console.log(`🤖 [OPENAI] Starting API call with agent: ${agentConfig.type}`);
   
+  // Validate user ID format
+  if (userId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.warn(`⚠️ [OPENAI] Invalid UUID format for user_id: ${userId}`);
+      // Continue with the request but log the warning
+    } else {
+      console.log(`✅ [OPENAI] Valid UUID format for user_id: ${userId}`);
+    }
+  }
+  
   // Get OpenAI API key from database (user-specific or fallback)
   const openaiApiKey = await getApiKey('openai', userId);
   
@@ -346,6 +357,13 @@ const callOpenAI = async (
   try {
     console.log(`🔄 [OPENAI] Making API request to ${agentConfig.model}`);
     
+    // Create abort controller for timeout (25s to leave buffer for edge function timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      console.warn('⏰ [OPENAI] API call timed out after 25 seconds');
+    }, 25000);
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -353,7 +371,10 @@ const callOpenAI = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -371,8 +392,24 @@ const callOpenAI = async (
     };
   } catch (error) {
     console.error('❌ [OPENAI] Error calling OpenAI:', error);
+    
+    // Handle different error types
+    let errorMessage = 'I encountered an error processing your request. Please try again.';
+    
+    if (error.name === 'AbortError') {
+      errorMessage = '⏰ The AI request timed out. Please try again with a shorter message or check your connection.';
+    } else if (error.message.includes('401') || error.message.includes('API key')) {
+      errorMessage = '🔑 Invalid or expired OpenAI API key. Please check your API key configuration.';
+    } else if (error.message.includes('429')) {
+      errorMessage = '📊 OpenAI API rate limit exceeded. Please wait a moment and try again.';
+    } else if (error.message.includes('quota')) {
+      errorMessage = '💳 OpenAI API quota exceeded. Please check your usage limits or billing.';
+    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+      errorMessage = '🌐 Network error connecting to OpenAI. Please check your connection and try again.';
+    }
+    
     return {
-      response: `I encountered an error processing your request: ${error.message}. Please try again.`,
+      response: errorMessage,
       tokensUsed: 0,
     };
   }
@@ -599,8 +636,29 @@ serve(async (req) => {
       );
     }
     
+    // Validate UUID format for user_id
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(user_id)) {
+      console.warn(`⚠️ [REQUEST] Invalid UUID format for user_id: ${user_id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid user ID format - must be a valid UUID',
+          details: 'The user_id parameter must be in UUID format (e.g., 123e4567-e89b-12d3-a456-426614174000)'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     // Log request for debugging
-    console.log(`📝 [REQUEST] Processing chat request for user: ${user_id}, agent: ${agent_type || 'auto'}`);
+    console.log(`📝 [REQUEST] Processing chat request:`, {
+      user_id,
+      agent_type: agent_type || 'auto',
+      message_length: message.length,
+      has_session_id: !!session_id
+    });
     
     // Get or create session
     const sessionId = await getOrCreateSession(user_id, session_id);

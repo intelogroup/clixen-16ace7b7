@@ -94,12 +94,44 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  // Get current user ID
+  // Get current user ID with UUID validation
   useEffect(() => {
     const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Auth error getting user:', error);
+          // Create fallback UUID for anonymous users
+          const fallbackId = crypto.randomUUID();
+          console.warn('Using fallback UUID for anonymous user:', fallbackId);
+          setUserId(fallbackId);
+          return;
+        }
+        
+        if (user?.id) {
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(user.id)) {
+            setUserId(user.id);
+            console.log('Valid user UUID set:', user.id);
+          } else {
+            console.error('Invalid UUID format from auth:', user.id);
+            // Create fallback UUID
+            const fallbackId = crypto.randomUUID();
+            setUserId(fallbackId);
+            console.warn('Using fallback UUID for invalid format:', fallbackId);
+          }
+        } else {
+          // No user, create anonymous UUID
+          const fallbackId = crypto.randomUUID();
+          setUserId(fallbackId);
+          console.log('No authenticated user, using anonymous UUID:', fallbackId);
+        }
+      } catch (error) {
+        console.error('Error in getUserId:', error);
+        const fallbackId = crypto.randomUUID();
+        setUserId(fallbackId);
+        console.warn('Using fallback UUID due to error:', fallbackId);
       }
     };
     getUserId();
@@ -388,11 +420,23 @@ export default function Chat() {
     });
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        ErrorLogger.logError('User not authenticated');
+      // Get current user with better error handling
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        ErrorLogger.logError('Authentication error:', authError);
+        throw new Error('Authentication service unavailable - please refresh and try again');
+      }
+      
+      if (!user?.id) {
+        ErrorLogger.logError('User not authenticated - no user object or ID');
         throw new Error('Not authenticated - please log in to continue');
+      }
+      
+      // Validate user ID is proper UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.id)) {
+        ErrorLogger.logError('Invalid user ID format:', user.id);
+        throw new Error('Authentication error - invalid user ID format');
       }
       
       ErrorLogger.logInfo('User authenticated', { userId: user.id });
@@ -617,9 +661,21 @@ export default function Chat() {
     });
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Get current user with UUID validation
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        throw new Error('Authentication service error - please refresh and try again');
+      }
+      
+      if (!user?.id) {
+        throw new Error('Not authenticated - please log in to continue');
+      }
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.id)) {
+        throw new Error('Authentication error - invalid user session');
+      }
       
       // Create a temporary context for the orchestrator
       const tempContext = {
