@@ -93,6 +93,7 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
     }]);
 
     try {
+      // FIXED: Proper response handling to prevent body stream already read error
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system`, {
         method: 'POST',
         headers: {
@@ -110,19 +111,30 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
         })
       });
 
-      // Read the response body first
-      const responseText = await response.text();
-      
-      // Try to parse as JSON, but handle errors gracefully
+      // Safe response handling - read body only once
       let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (parseError) {
-        data = { error: 'Invalid response format', raw: responseText };
-      }
+      let responseText = '';
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${data.error || responseText}`);
+      try {
+        // Always try JSON first if response is ok
+        if (response.ok) {
+          data = await response.json();
+        } else {
+          // For error responses, read as text and try to parse
+          responseText = await response.text();
+          try {
+            data = JSON.parse(responseText);
+          } catch (parseError) {
+            data = { error: 'Invalid response format', raw: responseText };
+          }
+          throw new Error(`HTTP ${response.status}: ${data.error || responseText || 'Request failed'}`);
+        }
+      } catch (jsonError) {
+        // If JSON parsing fails on success response, treat as error
+        if (response.ok) {
+          throw new Error('Server returned invalid JSON response');
+        }
+        throw jsonError; // Re-throw the original error
       }
       
       // Add AI response to conversation
