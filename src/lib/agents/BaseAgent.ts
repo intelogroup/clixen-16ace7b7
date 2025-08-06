@@ -1,7 +1,8 @@
-// Base agent class with Supabase Edge Function integration
+// Base agent class with Supabase Edge Function integration and enhanced context management
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
 import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
 import { performanceOptimizer } from './PerformanceOptimizer';
+import { contextManager } from './ContextManager';
 import { supabase } from '../supabase';
 
 // Enhanced Supabase integration detection
@@ -68,36 +69,66 @@ export abstract class BaseAgent {
   abstract validateInput(input: any): boolean;
   abstract getCapabilities(): string[];
 
-  // Core agent functionality using Supabase Edge Functions
+  // Core agent functionality using Supabase Edge Functions with context management
   async think(prompt: string, context?: any): Promise<string> {
-    // Create cache key from prompt and context
-    const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
+    const taskId = `think-${this.config.id}-${Date.now()}`;
     
-    // Use memoization for repeated queries
-    return performanceOptimizer.memoize(cacheKey, async () => {
-      this.updateState({ status: 'thinking' });
+    // Acquire task lock to prevent duplicate work
+    const lockAcquired = await contextManager.acquireTaskLock(
+      this.context.conversationId, 
+      taskId, 
+      this.config.id,
+      { action: 'think', prompt: prompt.substring(0, 50) }
+    );
 
-      try {
-        console.log(`[${this.config.id}] 🚀 Using Supabase Edge Function for prompt:`, prompt.substring(0, 50) + '...');
-        
-        // Get current user for the edge function call with validation
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error(`[${this.config.id}] ❌ Auth error:`, authError);
-          throw new Error('Authentication service unavailable');
-        }
-        
-        if (!user?.id) {
-          console.warn(`[${this.config.id}] ⚠️  No authenticated user - using anonymous UUID`);
-        }
-        
-        // Validate or create UUID
-        let validUserId = user?.id || crypto.randomUUID();
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        if (!uuidRegex.test(validUserId)) {
-          console.warn(`[${this.config.id}] ⚠️  Invalid UUID format, generating new one:`, validUserId);
-          validUserId = crypto.randomUUID();
-        }
+    if (!lockAcquired) {
+      console.log(`[${this.config.id}] ⏸️ Task already being processed by another agent`);
+      // Wait a bit and check if task is completed by other agent
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const result = contextManager.getFromGlobalMemory(this.context.conversationId, taskId);
+      if (result) {
+        console.log(`[${this.config.id}] ✨ Using result from other agent`);
+        return result;
+      }
+    }
+
+    try {
+      // Create cache key from prompt and context
+      const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
+      
+      // Get relevant context from shared memory
+      const relevantContext = contextManager.getRelevantContext(
+        this.context.conversationId,
+        this.config.id,
+        prompt
+      );
+      
+      // Use memoization for repeated queries
+      const result = await performanceOptimizer.memoize(cacheKey, async () => {
+        this.updateState({ status: 'thinking' });
+
+        try {
+          console.log(`[${this.config.id}] 🚀 Using Supabase Edge Function for prompt:`, prompt.substring(0, 50) + '...');
+          console.log(`[${this.config.id}] 📋 Using relevant context:`, Object.keys(relevantContext.globalMemory || {}));
+          
+          // Get current user for the edge function call with validation
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (authError) {
+            console.error(`[${this.config.id}] ❌ Auth error:`, authError);
+            throw new Error('Authentication service unavailable');
+          }
+          
+          if (!user?.id) {
+            console.warn(`[${this.config.id}] ⚠️  No authenticated user - using anonymous UUID`);
+          }
+          
+          // Validate or create UUID
+          let validUserId = user?.id || crypto.randomUUID();
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(validUserId)) {
+            console.warn(`[${this.config.id}] ⚠️  Invalid UUID format, generating new one:`, validUserId);
+            validUserId = crypto.randomUUID();
+          }
         
         console.log(`[${this.config.id}] 🔍 Using user ID:`, validUserId);
         
@@ -137,6 +168,26 @@ export abstract class BaseAgent {
           });
           
           this.updateState({ status: 'idle' });
+          
+          // Store result in shared context for other agents
+          contextManager.updateGlobalMemory(
+            this.context.conversationId,
+            taskId,
+            result
+          );
+          
+          // Update agent state in shared context
+          contextManager.updateAgentState(
+            this.context.conversationId,
+            this.config.id,
+            {
+              ...this.state,
+              lastThought: result.substring(0, 100),
+              tokensUsed: data?.tokens_used || 0,
+              processingTime: data?.processing_time
+            }
+          );
+          
           return result;
         } catch (fetchError) {
           clearTimeout(timeoutId);
@@ -183,6 +234,15 @@ export abstract class BaseAgent {
       throw new Error(`Agent thinking failed: ${agentError.userMessage || agentError.message}`);
       }
     }, 60000); // Cache for 1 minute
+    
+    // Store result in global memory and return
+    contextManager.updateGlobalMemory(this.context.conversationId, taskId, result);
+    return result;
+    
+    } finally {
+      // Always release the task lock
+      contextManager.releaseTaskLock(this.context.conversationId, taskId, this.config.id);
+    }
   }
 
   async executeStep(action: string, input: any): Promise<any> {

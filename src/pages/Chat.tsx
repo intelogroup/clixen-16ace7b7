@@ -15,6 +15,7 @@ import OpenAIKeySetup from '../components/OpenAIKeySetup';
 import { openAIConfigService } from '../lib/services/OpenAIConfigService';
 import { ValidatedWorkflowDescription } from '../components/ValidatedTextarea';
 import WorkflowJourneyManager, { JourneyStage } from '../components/WorkflowJourneyManager';
+import AgentPerformanceDashboard from '../components/AgentPerformanceDashboard';
 
 interface Message {
   id: string;
@@ -86,6 +87,7 @@ export default function Chat() {
   const [hasOpenAIKey, setHasOpenAIKey] = useState<boolean | null>(null);
   const [journeyStage, setJourneyStage] = useState<JourneyStage>('chat');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -1063,6 +1065,13 @@ export default function Chat() {
           // Continue with workflow creation after permissions are granted
           handleCreateWorkflow();
         }}
+      />
+
+      {/* Agent Performance Dashboard */}
+      <AgentPerformanceDashboard
+        conversationId={conversationId}
+        isVisible={showPerformanceDashboard}
+        onToggle={() => setShowPerformanceDashboard(!showPerformanceDashboard)}
       />
     </div>
   );
