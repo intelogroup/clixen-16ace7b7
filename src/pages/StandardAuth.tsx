@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -14,71 +14,115 @@ import {
   Zap,
   Loader2
 } from 'lucide-react';
+import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
+import { validatePassword } from '../lib/validation/passwordValidation';
+import AuthErrorDisplay from '../components/AuthErrorDisplay';
+import { formatAuthError, getAuthErrorSeverity } from '../lib/auth/authErrorMessages';
+import LoadingButton from '../components/LoadingButton';
+import { useAuthOperation } from '../lib/hooks/useLoadingState';
+import { ValidatedEmailInput, ValidatedPasswordInput, ValidatedNameInput } from '../components/ValidatedInput';
 
 export default function StandardAuth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: ''
   });
+  const [authError, setAuthError] = useState<any>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.email || !formData.password) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      if (isSignUp) {
-        if (!formData.name) {
-          toast.error('Please enter your name');
-          return;
-        }
-        
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              name: formData.name
-            }
-          }
-        });
-
-        if (error) throw error;
-        
-        toast.success('Check your email to confirm your account!');
-        setIsSignUp(false);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
-        });
-
-        if (error) throw error;
-        
-        toast.success('Welcome back!');
-        navigate('/dashboard');
+  // Create auth operation with retry logic
+  const performAuth = async () => {
+    if (isSignUp) {
+      if (!formData.name) {
+        throw new Error('Please enter your name');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
+
+      // Validate password strength for sign-ups
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        throw new Error('Please create a stronger password. Check the requirements below.');
+      }
+      
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name
+          }
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Check your email to confirm your account!');
+      setIsSignUp(false);
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (error) throw error;
+      
+      toast.success('Welcome back!');
+      // Navigate to intended destination or default to dashboard
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
     }
   };
 
+  const [authLoadingState, authActions] = useAuthOperation(performAuth, {
+    onError: (error) => {
+      setAuthError(error);
+      const severity = getAuthErrorSeverity(error);
+      const message = formatAuthError(error);
+      
+      if (severity === 'error') {
+        toast.error(message);
+      } else if (severity === 'warning') {
+        toast(message, { icon: '⚠️' });
+      } else {
+        toast(message, { icon: 'ℹ️' });
+      }
+    },
+    onRetry: (attempt, error) => {
+      toast(`Retrying authentication (${attempt})...`, { icon: '🔄' });
+    }
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null); // Clear previous errors
+
+    if (!formData.email || !formData.password) {
+      setAuthError({ message: 'Please fill in all required fields' });
+      return;
+    }
+
+    await authActions.execute();
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear errors when user starts typing
+    if (authError) {
+      setAuthError(null);
+    }
+    
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setAuthError(null); // Clear errors when switching modes
+    setFormData({ email: '', password: '', name: '' }); // Reset form
+    authActions.reset(); // Reset loading state
   };
 
   return (
@@ -116,99 +160,77 @@ export default function StandardAuth() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Error Display */}
+              {authError && (
+                <AuthErrorDisplay 
+                  error={authError}
+                  onDismiss={() => setAuthError(null)}
+                />
+              )}
               {isSignUp && (
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <User className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 placeholder-gray-500"
-                      placeholder="Enter your full name"
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
+                <ValidatedNameInput
+                  id="name"
+                  name="name"
+                  label="Full Name"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  onValidatedChange={(value, isValid, error) => {
+                    // You can add additional validation logic here
+                  }}
+                  disabled={authLoadingState.isLoading || authLoadingState.isRetrying}
+                  required
+                />
               )}
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 placeholder-gray-500"
-                    placeholder="Enter your email"
-                    disabled={loading}
-                  />
-                </div>
-              </div>
+              <ValidatedEmailInput
+                id="email"
+                name="email"
+                label="Email Address"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleChange}
+                onValidatedChange={(value, isValid, error) => {
+                  // Email validation handled by component
+                }}
+                disabled={authLoadingState.isLoading || authLoadingState.isRetrying}
+                required
+              />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-gray-900 placeholder-gray-500"
-                    placeholder="Enter your password"
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
-                </div>
-              </div>
+              <ValidatedPasswordInput
+                id="password"
+                name="password"
+                label="Password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                onValidatedChange={(value, isValid, error) => {
+                  // Password validation handled by component
+                }}
+                disabled={authLoadingState.isLoading || authLoadingState.isRetrying}
+                required
+              />
 
-              <button
+              {/* Password Strength Indicator for Sign Up */}
+              {isSignUp && formData.password && (
+                <PasswordStrengthIndicator 
+                  password={formData.password}
+                  className="mt-3"
+                />
+              )}
+
+              <LoadingButton
                 type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                loadingState={authLoadingState}
+                onRetry={authActions.retry}
+                loadingText={isSignUp ? 'Creating Account...' : 'Signing In...'}
+                variant="primary"
+                size="lg"
+                className="w-full bg-black hover:bg-gray-800 border-black"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {isSignUp ? 'Creating Account...' : 'Signing In...'}
-                  </>
-                ) : (
-                  <>
-                    {isSignUp ? 'Create Account' : 'Sign In'}
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
+                {isSignUp ? 'Create Account' : 'Sign In'}
+                <ArrowRight className="w-5 h-5" />
+              </LoadingButton>
             </form>
 
             {/* Toggle between sign in/up */}
@@ -216,9 +238,9 @@ export default function StandardAuth() {
               <p className="text-gray-600">
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                 <button
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-black font-medium hover:underline focus:outline-none"
-                  disabled={loading}
+                  onClick={toggleMode}
+                  className="text-black font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={authLoadingState.isLoading || authLoadingState.isRetrying}
                 >
                   {isSignUp ? 'Sign in' : 'Sign up'}
                 </button>

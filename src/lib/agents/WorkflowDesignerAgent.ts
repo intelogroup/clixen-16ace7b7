@@ -80,12 +80,46 @@ Design principles:
 - Follow security best practices
 - Plan for monitoring and debugging
 
-Your responses should include:
-- Detailed node configurations with all required parameters
-- Clear connection mappings between nodes
-- Comprehensive error handling strategies
-- Performance considerations and optimizations
-- Security recommendations for sensitive operations
+CRITICAL: When creating workflows, you MUST respond with a valid n8n workflow JSON structure wrapped in \`\`\`json code blocks. The JSON must include:
+- name: Descriptive workflow name
+- nodes: Array of node objects with proper types, parameters, and positions
+- connections: Object mapping node connections
+- active: Boolean (start as false)
+- settings: Object (can be empty)
+- staticData: Object (can be empty)
+
+Example format:
+\`\`\`json
+{
+  "name": "My Workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "unique-id",
+      "name": "Node Name",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    }
+  ],
+  "connections": {
+    "Node Name": {
+      "main": [
+        [
+          {
+            "node": "Target Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "staticData": {}
+}
+\`\`\`
 
 Always validate that your designs are technically implementable in n8n.`;
   }
@@ -243,41 +277,326 @@ Always validate that your designs are technically implementable in n8n.`;
 Requirements:
 ${requirements.map(req => `- ${req.type}: ${req.description} (${req.priority})`).join('\n')}
 
-Create a comprehensive workflow specification including:
-1. Appropriate trigger nodes
-2. Data processing and transformation nodes
-3. Integration nodes for external services
-4. Logic and conditional nodes
-5. Error handling and retry mechanisms
-6. Response and notification nodes
+You MUST create a valid n8n workflow JSON structure. Include:
 
-Consider:
-- Performance and efficiency
-- Security and authentication
-- Error handling and resilience
-- Maintainability and debugging
-- Monitoring and logging
+1. **Required Structure**:
+   - name: Descriptive workflow name
+   - nodes: Array of nodes with unique IDs, proper types, parameters, and positions
+   - connections: Object mapping how nodes connect
+   - active: false (for safety)
+   - settings: {} (empty object)
+   - staticData: {} (empty object)
 
-Return a detailed WorkflowSpec JSON object with complete node configurations.`;
+2. **Node Requirements**:
+   - Each node must have: id, name, type, typeVersion, position [x,y], parameters
+   - Use proper n8n node types like:
+     * n8n-nodes-base.webhook (for HTTP triggers)
+     * n8n-nodes-base.httpRequest (for API calls)
+     * n8n-nodes-base.set (for data manipulation)
+     * n8n-nodes-base.if (for conditions)
+     * n8n-nodes-base.code (for custom logic)
+     * n8n-nodes-base.respondToWebhook (for responses)
 
-    const response = await this.think(prompt, { nodeLibrary: Array.from(this.nodeLibrary.keys()) });
+3. **Connection Format**:
+   - Map source node names to target nodes
+   - Use format: { "Source Node": { "main": [[ { "node": "Target Node", "type": "main", "index": 0 } ]] }}
+
+4. **Node Positioning**:
+   - Start at [240, 300] and increment X by 220 for horizontal flow
+   - Use Y offsets for parallel branches
+
+**CRITICAL**: Your response must contain a valid JSON structure wrapped in \`\`\`json code blocks that can be immediately deployed to n8n.
+
+Example template:
+\`\`\`json
+{
+  "name": "Workflow Name",
+  "nodes": [
+    {
+      "parameters": { "path": "webhook-path" },
+      "id": "webhook-node",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    }
+  ],
+  "connections": {},
+  "active": false,
+  "settings": {},
+  "staticData": {}
+}
+\`\`\``;
+
+    const response = await this.think(prompt, { 
+      nodeLibrary: Array.from(this.nodeLibrary.keys()),
+      n8nNodeTypes: [
+        'n8n-nodes-base.webhook',
+        'n8n-nodes-base.httpRequest', 
+        'n8n-nodes-base.set',
+        'n8n-nodes-base.if',
+        'n8n-nodes-base.code',
+        'n8n-nodes-base.respondToWebhook',
+        'n8n-nodes-base.cron'
+      ]
+    });
     this.updateProgress(40);
 
+    // Extract JSON from response if it exists
+    let workflowSpec: any;
     try {
-      const workflowSpec = JSON.parse(response);
-      
-      // Validate and enhance the specification
-      const validatedSpec = await this.validateAndEnhanceSpec(workflowSpec);
-      this.updateProgress(70);
-      
-      // Store in context
-      this.context.currentWorkflow = validatedSpec;
-      this.updateProgress(100);
-      
-      return validatedSpec;
-    } catch (error) {
-      throw new Error(`Failed to design workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Look for JSON code block first
+      const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        workflowSpec = JSON.parse(jsonMatch[1]);
+      } else {
+        // Try to parse the entire response as JSON
+        workflowSpec = JSON.parse(response);
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, create a basic workflow structure
+      console.warn('Failed to parse AI response as JSON, creating basic workflow');
+      workflowSpec = this.createBasicWorkflow(requirements);
     }
+
+    // Validate and enhance the specification
+    const validatedSpec = await this.validateAndEnhanceN8nSpec(workflowSpec);
+    this.updateProgress(70);
+    
+    // Store in context
+    this.context.currentWorkflow = validatedSpec;
+    this.updateProgress(100);
+    
+    return validatedSpec;
+  }
+
+  // Create a basic fallback workflow structure
+  private createBasicWorkflow(requirements: any[]): any {
+    const workflowName = `${requirements[0]?.type || 'Custom'} Workflow`;
+    
+    return {
+      name: workflowName,
+      nodes: [
+        {
+          parameters: {
+            path: `/${workflowName.toLowerCase().replace(/\s+/g, '-')}`,
+            options: {}
+          },
+          id: 'webhook-trigger',
+          name: 'Webhook Trigger',
+          type: 'n8n-nodes-base.webhook',
+          typeVersion: 1,
+          position: [240, 300]
+        },
+        {
+          parameters: {
+            values: {
+              string: [
+                {
+                  name: 'message',
+                  value: 'Workflow executed successfully'
+                }
+              ]
+            }
+          },
+          id: 'response-data',
+          name: 'Response Data',
+          type: 'n8n-nodes-base.set',
+          typeVersion: 1,
+          position: [460, 300]
+        },
+        {
+          parameters: {},
+          id: 'respond-to-webhook',
+          name: 'Respond to Webhook',
+          type: 'n8n-nodes-base.respondToWebhook',
+          typeVersion: 1,
+          position: [680, 300]
+        }
+      ],
+      connections: {
+        'Webhook Trigger': {
+          main: [[{
+            node: 'Response Data',
+            type: 'main',
+            index: 0
+          }]]
+        },
+        'Response Data': {
+          main: [[{
+            node: 'Respond to Webhook',
+            type: 'main',
+            index: 0
+          }]]
+        }
+      },
+      active: false,
+      settings: {},
+      staticData: {}
+    };
+  }
+
+  // Enhanced validation for n8n workflows with automatic healing
+  private async validateAndEnhanceN8nSpec(spec: any): Promise<WorkflowSpec> {
+    // Apply automatic healing rules for n8n compatibility
+    spec = this.applyN8nCompatibilityFixes(spec);
+    
+    // Ensure basic structure exists
+    if (!spec.name) {
+      spec.name = `Workflow ${Date.now()}`;
+    }
+    
+    if (!spec.nodes || !Array.isArray(spec.nodes)) {
+      throw new Error('Workflow must have a nodes array');
+    }
+    
+    if (!spec.connections || typeof spec.connections !== 'object') {
+      spec.connections = {};
+    }
+    
+    // DO NOT set active field - it's read-only in n8n API
+    spec.settings = spec.settings || {};
+    spec.staticData = spec.staticData || {};
+    
+    // Remove any read-only fields that cause API errors
+    const readOnlyFields = ['active', 'id', 'createdAt', 'updatedAt', 'versionId', 'triggerCount'];
+    readOnlyFields.forEach(field => {
+      if (field in spec) {
+        delete spec[field];
+      }
+    });
+    
+    // Validate and fix node structure
+    spec.nodes = spec.nodes.map((node: any, index: number) => {
+      // Remove read-only fields from nodes
+      const nodeReadOnlyFields = ['createdAt', 'updatedAt', 'disabled'];
+      nodeReadOnlyFields.forEach(field => {
+        if (field in node) {
+          delete node[field];
+        }
+      });
+
+      // Ensure node has required fields
+      if (!node.id) {
+        node.id = `node-${index}-${Date.now()}`;
+      }
+      if (!node.name) {
+        node.name = `Node ${index + 1}`;
+      }
+      if (!node.type) {
+        node.type = 'n8n-nodes-base.set'; // Default safe node
+      }
+      if (!node.typeVersion) {
+        node.typeVersion = 1;
+      }
+      if (!node.position || !Array.isArray(node.position)) {
+        node.position = [240 + (index * 220), 300];
+      }
+      if (!node.parameters) {
+        node.parameters = {};
+      }
+      
+      return node;
+    });
+    
+    // Validate connections refer to actual nodes
+    const nodeNames = new Set(spec.nodes.map((n: any) => n.name));
+    const validConnections: any = {};
+    
+    for (const [sourceNode, connections] of Object.entries(spec.connections)) {
+      if (nodeNames.has(sourceNode) && connections && typeof connections === 'object') {
+        const conn = connections as any;
+        if (conn.main && Array.isArray(conn.main)) {
+          const validMainConnections = conn.main.map((outputGroup: any[]) => {
+            return outputGroup.filter((connection: any) => nodeNames.has(connection.node));
+          }).filter((group: any[]) => group.length > 0);
+          
+          if (validMainConnections.length > 0) {
+            validConnections[sourceNode] = { main: validMainConnections };
+          }
+        }
+      }
+    }
+    
+    spec.connections = validConnections;
+    
+    return spec as WorkflowSpec;
+  }
+
+  // Apply n8n-specific compatibility fixes
+  private applyN8nCompatibilityFixes(spec: any): any {
+    // Fix webhook paths to be valid
+    if (spec.nodes) {
+      spec.nodes = spec.nodes.map((node: any) => {
+        if (node.type === 'n8n-nodes-base.webhook' && node.parameters && node.parameters.path) {
+          let path = node.parameters.path;
+          
+          // Ensure path starts with /
+          if (!path.startsWith('/')) {
+            path = '/' + path;
+          }
+          
+          // Remove invalid characters and make lowercase
+          path = path.replace(/[^a-zA-Z0-9\-\_\/]/g, '-').toLowerCase();
+          
+          node.parameters.path = path;
+        }
+        return node;
+      });
+    }
+
+    // Ensure node names are unique
+    if (spec.nodes) {
+      const usedNames = new Set<string>();
+      const nameMap = new Map<string, string>();
+
+      spec.nodes = spec.nodes.map((node: any) => {
+        let originalName = node.name;
+        let uniqueName = originalName;
+        let counter = 1;
+
+        while (usedNames.has(uniqueName)) {
+          uniqueName = `${originalName} ${counter}`;
+          counter++;
+        }
+
+        usedNames.add(uniqueName);
+        
+        if (uniqueName !== originalName) {
+          nameMap.set(originalName, uniqueName);
+          node.name = uniqueName;
+        }
+        
+        return node;
+      });
+
+      // Update connections to use new names
+      if (spec.connections && nameMap.size > 0) {
+        const updatedConnections: any = {};
+        
+        for (const [sourceNode, connections] of Object.entries(spec.connections)) {
+          const newSourceName = nameMap.get(sourceNode) || sourceNode;
+          
+          if (connections && typeof connections === 'object') {
+            const conn = connections as any;
+            if (conn.main && Array.isArray(conn.main)) {
+              conn.main = conn.main.map((outputGroup: any[]) => {
+                return outputGroup.map((connection: any) => ({
+                  ...connection,
+                  node: nameMap.get(connection.node) || connection.node
+                }));
+              });
+            }
+          }
+          
+          updatedConnections[newSourceName] = connections;
+        }
+        
+        spec.connections = updatedConnections;
+      }
+    }
+
+    return spec;
   }
 
   async generateNodes(workflowSpec: WorkflowSpec): Promise<N8nNode[]> {

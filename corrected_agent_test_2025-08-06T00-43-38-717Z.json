@@ -1,0 +1,137 @@
+{
+  "timestamp": "2025-08-06T00:43:21.356Z",
+  "configuration": {
+    "supabase_url": "https://zfbgdixbzezpxllkoyfc.supabase.co",
+    "has_openai_key": true
+  },
+  "individual_agents": [
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 657,
+      "testName": "Orchestrator Agent"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 275,
+      "testName": "Workflow Designer Agent"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 232,
+      "testName": "Deployment Agent"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 272,
+      "testName": "System Agent"
+    }
+  ],
+  "conversation_flow": [
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 422,
+      "testName": "1. Greeting"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 370,
+      "testName": "2. Workflow Request"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 301,
+      "testName": "3. Technical Details"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 163,
+      "testName": "4. Deployment Request"
+    }
+  ],
+  "state_persistence": [
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 308,
+      "testName": "State Setup"
+    },
+    {
+      "success": false,
+      "error": {
+        "name": "FunctionsHttpError",
+        "context": {}
+      },
+      "responseTime": 289,
+      "testName": "State Continuation"
+    },
+    {
+      "stateAnalysis": {
+        "setup_success": false,
+        "continuation_success": false,
+        "session_maintained": null,
+        "context_maintained": false
+      }
+    }
+  ],
+  "error_handling": [
+    {
+      "name": "Missing Message",
+      "expected_error": true,
+      "got_error": true,
+      "error_message": "Edge Function returned a non-2xx status code",
+      "response_data": null,
+      "test_passed": true
+    },
+    {
+      "name": "Missing User ID",
+      "expected_error": true,
+      "got_error": true,
+      "error_message": "Edge Function returned a non-2xx status code",
+      "response_data": null,
+      "test_passed": true
+    },
+    {
+      "name": "Invalid Agent Type",
+      "expected_error": false,
+      "got_error": true,
+      "error_message": "Edge Function returned a non-2xx status code",
+      "response_data": null,
+      "test_passed": false
+    }
+  ]
+}

@@ -85,6 +85,157 @@ export class AgentCoordinator {
     };
   }
 
+  // Enhanced workflow progress tracking
+  async trackWorkflowProgress(conversationId: string, phase: WorkflowPhase, details: any = {}): Promise<void> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) return;
+
+    conversation.currentPhase = phase;
+    conversation.lastActivity = Date.now();
+
+    // Store workflow progress in shared memory
+    conversation.context.sharedMemory.workflow_progress = {
+      phase,
+      timestamp: Date.now(),
+      details,
+      status: details.status || 'in_progress'
+    };
+
+    // Emit progress event
+    this.emit('workflow_progress', {
+      conversationId,
+      phase,
+      details,
+      timestamp: Date.now()
+    });
+
+    // Update agent states based on phase
+    switch (phase) {
+      case 'understanding':
+        conversation.activeAgents = ['orchestrator'];
+        break;
+      case 'designing':
+        conversation.activeAgents = ['orchestrator', 'workflow_designer'];
+        break;
+      case 'building':
+        conversation.activeAgents = ['workflow_designer'];
+        if (details.workflow_id) {
+          conversation.context.sharedMemory.current_workflow_id = details.workflow_id;
+        }
+        break;
+      case 'deploying':
+        conversation.activeAgents = ['workflow_designer', 'deployment'];
+        break;
+      case 'testing':
+        conversation.activeAgents = ['deployment'];
+        break;
+      case 'completed':
+        conversation.activeAgents = [];
+        conversation.status = 'completed';
+        if (details.workflow_id && details.n8n_url) {
+          conversation.context.sharedMemory.deployed_workflow = {
+            id: details.workflow_id,
+            url: details.n8n_url,
+            status: details.status || 'active',
+            deployed_at: Date.now()
+          };
+        }
+        break;
+    }
+  }
+
+  // Get detailed workflow status
+  getWorkflowStatus(conversationId: string): {
+    phase: WorkflowPhase;
+    status: string;
+    progress: number;
+    workflow_id?: string;
+    n8n_url?: string;
+    agent_activities: any[];
+    next_steps: string[];
+    errors?: string[];
+  } {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      return {
+        phase: 'understanding',
+        status: 'not_found',
+        progress: 0,
+        agent_activities: [],
+        next_steps: ['Start a new conversation']
+      };
+    }
+
+    const workflowProgress = conversation.context.sharedMemory.workflow_progress;
+    const deployedWorkflow = conversation.context.sharedMemory.deployed_workflow;
+    const currentWorkflowId = conversation.context.sharedMemory.current_workflow_id;
+
+    // Calculate progress percentage
+    const phaseProgress = {
+      'understanding': 10,
+      'designing': 30,
+      'building': 60,
+      'deploying': 80,
+      'testing': 90,
+      'completed': 100
+    };
+
+    const progress = phaseProgress[conversation.currentPhase] || 0;
+
+    // Get agent activities
+    const agentActivities = conversation.activeAgents.map(agentId => {
+      const agentState = conversation.context.agentStates[agentId];
+      return {
+        agent: agentId,
+        status: agentState?.status || 'idle',
+        current_task: agentState?.currentTask,
+        progress: agentState?.progress || 0,
+        last_update: agentState?.lastUpdate
+      };
+    });
+
+    // Determine next steps
+    const nextSteps: string[] = [];
+    switch (conversation.currentPhase) {
+      case 'understanding':
+        nextSteps.push('Provide more details about your workflow requirements');
+        break;
+      case 'designing':
+        nextSteps.push('Review the proposed workflow design');
+        nextSteps.push('Provide feedback or approve the design');
+        break;
+      case 'building':
+        nextSteps.push('Workflow is being created in n8n');
+        if (currentWorkflowId) {
+          nextSteps.push(`View workflow: http://18.221.12.50:5678/workflow/${currentWorkflowId}`);
+        }
+        break;
+      case 'deploying':
+        nextSteps.push('Workflow deployment in progress');
+        break;
+      case 'testing':
+        nextSteps.push('Testing deployed workflow');
+        break;
+      case 'completed':
+        if (deployedWorkflow) {
+          nextSteps.push(`Workflow is live: ${deployedWorkflow.url}`);
+          nextSteps.push('Test your workflow or create a new one');
+        }
+        break;
+    }
+
+    return {
+      phase: conversation.currentPhase,
+      status: workflowProgress?.status || 'active',
+      progress,
+      workflow_id: deployedWorkflow?.id || currentWorkflowId,
+      n8n_url: deployedWorkflow?.url,
+      agent_activities: agentActivities,
+      next_steps: nextSteps,
+      errors: workflowProgress?.errors
+    };
+  }
+
   async handleNaturalConversation(message: string, conversationHistory: any[]): Promise<{
     response: string;
     questions: string[];

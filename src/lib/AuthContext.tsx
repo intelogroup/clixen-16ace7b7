@@ -58,13 +58,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
-      // Handle session persistence
-      if (event === 'SIGNED_IN' && session) {
-        // Ensure session is properly stored
-        localStorage.setItem('clixen-auth-token', JSON.stringify(session));
-      } else if (event === 'SIGNED_OUT') {
-        // Clear stored session
+      // Handle session persistence (Supabase already handles this internally)
+      if (event === 'SIGNED_OUT') {
+        // Clear any custom stored data
         localStorage.removeItem('clixen-auth-token');
+        localStorage.removeItem('clixen-user-preferences');
       }
       
       setLoading(false);
@@ -76,9 +74,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+    } catch (error) {
       console.error('Sign out error:', error);
+      // Clear local state even if network request fails
+      setSession(null);
+      setUser(null);
+      localStorage.removeItem('clixen-auth-token');
+      localStorage.removeItem('clixen-user-preferences');
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 
 export default function ProtectedRoute() {
-  const { session, loading } = useAuth();
+  const { session, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -15,8 +16,10 @@ export default function ProtectedRoute() {
     );
   }
 
-  if (!session) {
-    return <Navigate to="/auth" replace />;
+  // Check for both session and user to ensure complete authentication
+  if (!session || !user) {
+    // Preserve the intended destination
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   return <Outlet />;

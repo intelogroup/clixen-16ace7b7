@@ -1,4 +1,6 @@
 // Environment and API key debugging utility
+import { env } from '../config/environment';
+
 export class EnvironmentDebugger {
   static debugEnvironment() {
     const results = {

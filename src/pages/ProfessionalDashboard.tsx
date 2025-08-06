@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WorkflowCreationWizard } from '../components/WorkflowCreationWizard';
 import { supabase } from '../lib/supabase';
 import { n8nApi } from '../lib/n8n';
 import { 
@@ -48,6 +49,7 @@ export default function ProfessionalDashboard() {
     version?: string;
   } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -183,6 +185,22 @@ export default function ProfessionalDashboard() {
     : 0;
   const activeWorkflows = workflows.filter(w => w.status === 'active').length;
 
+  if (showCreateWizard) {
+    return (
+      <div className="h-screen bg-gray-50">
+        <WorkflowCreationWizard
+          onClose={() => setShowCreateWizard(false)}
+          onWorkflowCreated={(workflow) => {
+            // Add new workflow to list
+            setWorkflows(prev => [...prev, workflow]);
+            setShowCreateWizard(false);
+            toast.success('Workflow created successfully!');
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50/50">
       {/* Header */}
@@ -211,13 +229,13 @@ export default function ProfessionalDashboard() {
               >
                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
-              <Link
-                to="/chat"
+              <button
+                onClick={() => setShowCreateWizard(true)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
                 <Plus className="w-4 h-4" />
                 Create Workflow
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -392,13 +410,13 @@ export default function ProfessionalDashboard() {
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 Create your first AI-powered workflow to connect apps, automate tasks, and streamline your business processes.
               </p>
-              <Link
-                to="/chat"
+              <button
+                onClick={() => setShowCreateWizard(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 Create Your First Workflow
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-slate-200/60">
@@ -487,9 +505,9 @@ export default function ProfessionalDashboard() {
         >
           <h2 className="text-xl font-bold text-slate-900 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link
-              to="/chat"
-              className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-200 group"
+            <button
+              onClick={() => setShowCreateWizard(true)}
+              className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-200 group text-left w-full"
             >
               <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm">
                 <Plus className="w-5 h-5 text-white" />
@@ -499,7 +517,7 @@ export default function ProfessionalDashboard() {
                 <p className="text-sm text-slate-600">Create automation with AI assistance</p>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
-            </Link>
+            </button>
             
             <button className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 transition-all duration-200 group text-left">
               <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm">

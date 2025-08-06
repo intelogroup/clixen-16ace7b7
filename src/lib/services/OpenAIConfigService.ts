@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { openaiConfig } from '../config/environment';
 
 export interface OpenAIConfig {
   id: string;
@@ -137,7 +138,7 @@ class OpenAIConfigService {
    * Get fallback OpenAI key from environment if no Supabase config exists
    */
   getFallbackKey(): string | null {
-    const envKey = import.meta.env.VITE_OPENAI_API_KEY;
+    const envKey = openaiConfig.apiKey;
     if (envKey && envKey !== 'your-openai-api-key-here') {
       return envKey;
     }

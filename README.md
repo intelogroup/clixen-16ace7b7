@@ -1,231 +1,183 @@
-# Clixen - Enterprise AI Automation Platform ✅
+# Supabase CLI
 
-**Revolutionary Multi-Agent System for n8n Workflow Automation**
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-Transform natural language into production-ready n8n workflows using sophisticated AI agent coordination.
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-## 🤖 What is Clixen?
+This repository contains all the functionality for Supabase CLI.
 
-Clixen is a **next-generation AI automation platform** featuring a **sophisticated multi-agent system** that coordinates specialist AI agents to create, deploy, and manage n8n workflows from natural language descriptions. Built with 2025 AI agent best practices and enterprise-grade reliability.
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-## ✨ Revolutionary Features
+## Getting started
 
-- **🤖 Multi-Agent System**: Orchestrator-worker pattern with specialist AI agents
-- **🎭 Real-Time Agent UI**: Live monitoring of agent activity and progress
-- **🔄 Conversation Memory**: Context retention across user sessions  
-- **⚡ Parallel Processing**: Multiple agents working simultaneously
-- **🛡️ Error Recovery**: Comprehensive retry logic and rollback capabilities
-- **📊 Progress Tracking**: Phase-based workflow development monitoring
-- **🎯 Quality Assurance**: Multi-layer validation before deployment
-- **🔒 Enterprise Security**: OAuth integration with centralized API management
+### Install the CLI
 
-## 🏗️ Next-Generation Architecture
-
-```
-User → Multi-Agent Chat UI → AI Agent Coordination Hub
-                           ↓
-    OrchestratorAgent → WorkflowDesignerAgent → DeploymentAgent
-                           ↓                        ↓
-                    n8n API Integration    Production Deployment
-                           ↓
-                  Supabase + OpenAI GPT-4
-```
-
-## 🎯 Production Status ✅
-
-**Current Branch**: `main` (Complete Multi-Agent System)  
-**Status**: Production-deployed with enterprise AI coordination  
-**Live URL**: http://18.221.12.50 ✅
-
-### ✅ Multi-Agent System Features
-- [x] **BaseAgent Framework**: OpenAI GPT-4 integration with state management
-- [x] **OrchestratorAgent**: Lead conversation manager and task delegation
-- [x] **WorkflowDesignerAgent**: n8n workflow specialist with expert knowledge
-- [x] **DeploymentAgent**: Production deployment with rollback capabilities
-- [x] **AgentCoordinator**: Multi-agent orchestration and communication hub
-- [x] **Real-Time UI**: Live agent status and progress visualization
-- [x] **Conversation Memory**: Context retention across sessions
-- [x] **OAuth Integration**: Smart permission detection and management
-
-## 🛠️ Enterprise Tech Stack
-
-- **Frontend**: React 18 + Vite + TypeScript (Multi-Agent UI)
-- **AI Agents**: OpenAI GPT-4 with TypeScript framework
-- **Backend**: Supabase + n8n API Integration
-- **Authentication**: Supabase Auth with OAuth providers
-- **Database**: PostgreSQL with RLS + Advanced Extensions
-- **Automation**: n8n (self-hosted on AWS EC2)
-- **Infrastructure**: AWS EC2 + Production deployment ready
-
-## 📦 Modern Project Structure
-
-```
-/root/repo/
-├── src/                       # 🎯 MAIN APPLICATION
-│   ├── lib/agents/           # 🤖 MULTI-AGENT SYSTEM
-│   │   ├── BaseAgent.ts           # Core agent foundation
-│   │   ├── OrchestratorAgent.ts   # Lead conversation manager
-│   │   ├── WorkflowDesignerAgent.ts # n8n workflow specialist
-│   │   ├── DeploymentAgent.ts     # Production deployment agent
-│   │   └── AgentCoordinator.ts    # Multi-agent orchestration hub
-│   ├── lib/oauth/            # 🔐 OAUTH MANAGEMENT
-│   ├── lib/api/              # 🌐 CENTRALIZED API MANAGEMENT
-│   ├── components/           # UI Components + Permission Modal
-│   └── pages/Chat.tsx        # 🎭 MULTI-AGENT CHAT INTERFACE
-├── scripts/                  # Database migration scripts
-├── devhandoff.md            # 📋 COMPLETE PROJECT CONTEXT
-└── CLAUDE.md                # 📖 ARCHITECTURE DOCUMENTATION
-```
-
-## 🚀 Quick Start (Multi-Agent System)
-
-### Prerequisites
-- Node.js 20+
-- npm or pnpm
-- **OpenAI API Key** (for multi-agent system)
-- Supabase account (configured)
-- n8n instance (pre-configured)
-
-### Installation & Development
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/clixen.git
-cd clixen
-
-# Install dependencies
-npm install
-
-# Configure environment (CRITICAL for agents)
-cp .env.example .env
-# Edit .env with your OpenAI API key and Supabase credentials
-
-# Start multi-agent development server
-npm run dev
+npm i supabase --save-dev
 ```
 
-### Environment Configuration
+To install the beta release channel:
 
 ```bash
-# Required for Multi-Agent System
-VITE_OPENAI_API_KEY=your-openai-key-here
-VITE_SUPABASE_URL=https://zfbgdixbzezpxllkoyfc.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1
-VITE_N8N_API_KEY=your-n8n-api-key
+npm i supabase@beta --save-dev
 ```
 
-### Production Deployment
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
+
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+
+<details>
+  <summary><b>macOS</b></summary>
+
+  Available via [Homebrew](https://brew.sh). To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
 
 ```bash
-# Build with multi-agent system
-npm run build
-
-# Deploy to production (current: AWS EC2)
-# Access at: http://18.221.12.50
+supabase bootstrap
 ```
 
-## 📝 Multi-Agent Usage Example
+Or using npx:
 
-1. **User**: "Create a workflow that saves email attachments to Google Drive"
+```bash
+npx supabase bootstrap
+```
 
-2. **🎭 OrchestratorAgent**: 
-   - Analyzes requirements and detects needed OAuth permissions
-   - "I'll need access to Gmail for email reading and Google Drive for file storage"
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-3. **🔐 OAuth System**: 
-   - Shows permission modal with clear explanations
-   - Handles secure OAuth flow for Google services
+## Docs
 
-4. **⚙️ WorkflowDesignerAgent**: 
-   - Designs optimal n8n workflow architecture
-   - Configures Gmail trigger and Google Drive nodes
-   - Applies enterprise best practices
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
 
-5. **🚀 DeploymentAgent**: 
-   - Validates workflow before deployment
-   - Deploys safely with rollback capabilities
-   - Monitors health and performance
+## Breaking changes
 
-6. **Result**: Enterprise-grade automation deployed in under 60 seconds with AI coordination! ✅
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
 
-## 🔒 Enterprise Security
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
 
-- **Multi-Agent Validation**: Comprehensive input validation across agent network
-- **OAuth Integration**: Secure token management for Google, Microsoft, Dropbox
-- **Supabase RLS**: Row-level security with user isolation
-- **API Rate Limiting**: Intelligent quota management across services
-- **No Hardcoded Secrets**: Environment variables only
-- **Agent Communication**: Encrypted agent-to-agent messaging
-- **Audit Logging**: Complete activity tracking
+## Developing
 
-## 📊 Platform Capabilities
+To run from source:
 
-### Free Tier
-- 10 workflows per user with multi-agent assistance
-- Basic OAuth integrations
-- Community support
-
-### Pro Tier  
-- Unlimited workflows with advanced agents
-- Premium OAuth providers
-- Priority agent processing
-- Advanced analytics
-
-### Enterprise
-- Custom agent specializations
-- White-label multi-agent system
-- Dedicated agent instances
-- Enterprise OAuth management
-
-## 🗺️ Multi-Agent Evolution Roadmap
-
-### ✅ Phase 1 (COMPLETE - Enterprise Multi-Agent System)
-- **Multi-Agent Coordination**: Production-ready with 4 specialist agents
-- **Real-Time UI**: Live agent monitoring and progress tracking
-- **OAuth Integration**: Smart permission detection and management
-- **Conversation Memory**: Context retention across sessions
-
-### 🚧 Phase 2 (Agent Enhancement)
-- **Learning System**: Agents learn from successful workflow patterns  
-- **Testing Agent**: Specialist agent for workflow validation
-- **Integration Agent**: Complex API integration specialist
-- **Performance Analytics**: Agent-driven optimization insights
-
-### 🔮 Phase 3 (Enterprise Scale)
-- **Agent Marketplace**: Custom agent specializations
-- **Multi-Tenant Agents**: Isolated agent contexts per organization
-- **Horizontal Agent Scaling**: Distributed agent processing
-- **Advanced Security**: Enterprise-grade agent access controls
-
-## 🤝 Contributing
-
-The multi-agent system is in active development. Contributions welcome for:
-- New specialist agents
-- Agent communication improvements  
-- UI enhancements for agent monitoring
-- Testing and validation
-
-## 📄 License
-
-Proprietary - All rights reserved
-
-## 🆘 Support & Documentation
-
-- **Primary Documentation**: [`devhandoff.md`](devhandoff.md) - Complete project context
-- **Architecture Guide**: [`CLAUDE.md`](CLAUDE.md) - Technical architecture
-- **Live System**: http://18.221.12.50 (Production deployment)
-- **Multi-Agent System**: Full TypeScript implementation in `src/lib/agents/`
-
-## 🔗 Key Files for Developers
-
-- **Agent System**: `src/lib/agents/` - Complete multi-agent framework
-- **Chat Interface**: `src/pages/Chat.tsx` - Real-time agent monitoring UI
-- **OAuth Integration**: `src/lib/oauth/` - Smart permission management
-- **Database Scripts**: `scripts/` - Migration and setup utilities
-
----
-
-**🤖 Powered by Revolutionary Multi-Agent AI Architecture**
-
-*Built with Enterprise AI by Terragon Labs - Transforming automation through intelligent agent coordination.*
+```sh
+# Go >= 1.22
+go run . help
+```

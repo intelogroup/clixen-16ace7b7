@@ -1,0 +1,118 @@
+{
+  "timestamp": "2025-08-06T00:45:45.047Z",
+  "fix_applied": "UUID format for user_id",
+  "tests": {
+    "individual_agents": [
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 831,
+        "testName": "Orchestrator Agent"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 345,
+        "testName": "Workflow Designer Agent"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 277,
+        "testName": "Deployment Agent"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 217,
+        "testName": "System Agent"
+      }
+    ],
+    "orchestrator_flow": [
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 225,
+        "testName": "Greeting"
+      }
+    ],
+    "agent_detection": [
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 301,
+        "testName": "Workflow Creation Request"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 253,
+        "testName": "Deployment Request"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 355,
+        "testName": "Error/Debug Request"
+      },
+      {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 339,
+        "testName": "General Question"
+      }
+    ],
+    "conversation_memory": {
+      "setup": {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 311,
+        "testName": "Context Setup"
+      },
+      "contextTest": {
+        "success": false,
+        "error": {
+          "name": "FunctionsHttpError",
+          "context": {}
+        },
+        "responseTime": 418,
+        "testName": "Context Recall"
+      },
+      "analysis": {
+        "sessionMaintained": null,
+        "contextMaintained": false,
+        "sessionId": null
+      }
+    }
+  }
+}

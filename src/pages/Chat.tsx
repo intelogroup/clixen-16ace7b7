@@ -11,6 +11,11 @@ import PermissionModal from '../components/PermissionModal';
 import OAuthManager from '../lib/oauth/OAuthManager';
 import CentralizedAPIManager from '../lib/api/CentralizedAPIManager';
 import { ErrorLogger } from '../lib/logger/ErrorLogger';
+import OpenAIKeySetup from '../components/OpenAIKeySetup';
+import { openAIConfigService } from '../lib/services/OpenAIConfigService';
+import { ValidatedWorkflowDescription } from '../components/ValidatedTextarea';
+import WorkflowJourneyManager, { JourneyStage } from '../components/WorkflowJourneyManager';
+import AgentPerformanceDashboard from '../components/AgentPerformanceDashboard';
 
 interface Message {
   id: string;
@@ -79,6 +84,10 @@ export default function Chat() {
   const [centralizedAPIs, setCentralizedAPIs] = useState<string[]>([]);
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasOpenAIKey, setHasOpenAIKey] = useState<boolean | null>(null);
+  const [journeyStage, setJourneyStage] = useState<JourneyStage>('chat');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -90,16 +99,65 @@ export default function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  // Get current user ID
+  // Get current user ID with UUID validation
   useEffect(() => {
     const getUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Auth error getting user:', error);
+          // Create fallback UUID for anonymous users
+          const fallbackId = crypto.randomUUID();
+          console.warn('Using fallback UUID for anonymous user:', fallbackId);
+          setUserId(fallbackId);
+          return;
+        }
+        
+        if (user?.id) {
+          // Validate UUID format
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (uuidRegex.test(user.id)) {
+            setUserId(user.id);
+            console.log('Valid user UUID set:', user.id);
+          } else {
+            console.error('Invalid UUID format from auth:', user.id);
+            // Create fallback UUID
+            const fallbackId = crypto.randomUUID();
+            setUserId(fallbackId);
+            console.warn('Using fallback UUID for invalid format:', fallbackId);
+          }
+        } else {
+          // No user, create anonymous UUID
+          const fallbackId = crypto.randomUUID();
+          setUserId(fallbackId);
+          console.log('No authenticated user, using anonymous UUID:', fallbackId);
+        }
+      } catch (error) {
+        console.error('Error in getUserId:', error);
+        const fallbackId = crypto.randomUUID();
+        setUserId(fallbackId);
+        console.warn('Using fallback UUID due to error:', fallbackId);
       }
     };
     getUserId();
   }, []);
+
+  // Check OpenAI API key availability
+  useEffect(() => {
+    const checkOpenAIKey = async () => {
+      try {
+        const hasValidKey = await openAIConfigService.hasValidConfig();
+        setHasOpenAIKey(hasValidKey);
+      } catch (error) {
+        console.error('Error checking OpenAI key:', error);
+        setHasOpenAIKey(false);
+      }
+    };
+    
+    if (userId) {
+      checkOpenAIKey();
+    }
+  }, [userId]);
 
   // Handle OAuth callback if coming from OAuth flow
   useEffect(() => {
@@ -367,11 +425,23 @@ export default function Chat() {
     });
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        ErrorLogger.logError('User not authenticated');
+      // Get current user with better error handling
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        ErrorLogger.logError('Authentication error:', authError);
+        throw new Error('Authentication service unavailable - please refresh and try again');
+      }
+      
+      if (!user?.id) {
+        ErrorLogger.logError('User not authenticated - no user object or ID');
         throw new Error('Not authenticated - please log in to continue');
+      }
+      
+      // Validate user ID is proper UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.id)) {
+        ErrorLogger.logError('Invalid user ID format:', user.id);
+        throw new Error('Authentication error - invalid user ID format');
       }
       
       ErrorLogger.logInfo('User authenticated', { userId: user.id });
@@ -543,6 +613,17 @@ export default function Chat() {
     await processUserMessage(userMessage);
   };
 
+  const focusInput = (e?: React.MouseEvent) => {
+    // Don't focus if user is selecting text
+    if (e && window.getSelection()?.toString()) {
+      return;
+    }
+    
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
   const handleCreateWorkflow = async () => {
     // Check if we need permissions first
     const lastMessage = messages[messages.length - 1];
@@ -585,9 +666,21 @@ export default function Chat() {
     });
     
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Get current user with UUID validation
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        throw new Error('Authentication service error - please refresh and try again');
+      }
+      
+      if (!user?.id) {
+        throw new Error('Not authenticated - please log in to continue');
+      }
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(user.id)) {
+        throw new Error('Authentication error - invalid user session');
+      }
       
       // Create a temporary context for the orchestrator
       const tempContext = {
@@ -772,8 +865,21 @@ export default function Chat() {
           </div>
         )}
 
+        {/* OpenAI Key Setup */}
+        {hasOpenAIKey === false && (
+          <div className="px-6 py-4 border-b border-zinc-800">
+            <OpenAIKeySetup 
+              onKeyConfigured={() => setHasOpenAIKey(true)}
+              className="max-w-4xl mx-auto"
+            />
+          </div>
+        )}
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div 
+          className="flex-1 overflow-y-auto px-6 py-4 space-y-4 cursor-text"
+          onClick={(e) => focusInput(e)}
+        >
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <motion.div
@@ -888,15 +994,23 @@ export default function Chat() {
         {/* Input */}
         <form onSubmit={handleSubmit} className="p-6 border-t border-zinc-800">
           <div className="relative max-w-4xl mx-auto">
-            <textarea
+            <ValidatedWorkflowDescription
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onValidatedChange={(value, isValid, error) => {
+                // Additional validation handling if needed
+              }}
               placeholder="Describe your workflow... (e.g., 'Send me an email when someone fills out my form')"
-              className="w-full px-4 py-3 pr-12 bg-zinc-900 text-white placeholder-zinc-500 rounded-xl border border-zinc-800 focus:border-white/20 focus:outline-none resize-none font-mono text-sm"
+              className="bg-zinc-900 text-white placeholder-zinc-500 border-zinc-800 focus:border-white/20 font-mono"
+              containerClassName="flex-1"
               rows={3}
               disabled={isGenerating}
+              autoFocus={!isGenerating}
+              showValidation={false} // Hide validation UI for chat input
+              minHeight="80px"
+              maxLength={5000}
             />
             <button
               type="submit"
@@ -951,6 +1065,13 @@ export default function Chat() {
           // Continue with workflow creation after permissions are granted
           handleCreateWorkflow();
         }}
+      />
+
+      {/* Agent Performance Dashboard */}
+      <AgentPerformanceDashboard
+        conversationId={conversationId}
+        isVisible={showPerformanceDashboard}
+        onToggle={() => setShowPerformanceDashboard(!showPerformanceDashboard)}
       />
     </div>
   );
