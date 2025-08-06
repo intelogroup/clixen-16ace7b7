@@ -174,29 +174,46 @@ export default function Chat() {
     }
   }, [location]);
 
-  // Initialize with greeting on mount
+  // Initialize with enhanced greeting on mount
   useEffect(() => {
     const initChat = async () => {
-      ErrorLogger.logInfo('Initializing Chat component');
-      
+      ErrorLogger.logInfo('Initializing Chat component with enhanced conversation flow');
+
       // Check if returning user by looking at localStorage
       const isReturningUser = localStorage.getItem('hasVisitedBefore') === 'true';
       localStorage.setItem('hasVisitedBefore', 'true');
-      
-      // Call greet_user action on OrchestratorAgent
+
+      // Check OpenAI configuration status for better greeting
+      let openAIConfigured = false;
+      try {
+        const { openAIService } = await import('../lib/services/OpenAIService');
+        const configStatus = await openAIService.getConfigStatus();
+        openAIConfigured = configStatus.isConfigured;
+      } catch (error) {
+        console.warn('Could not check OpenAI status:', error);
+      }
+
+      // Enhanced greeting based on configuration and user status
       const greetingResponse = {
-        message: isReturningUser 
-          ? "Welcome back! Ready to create another automation?"
-          : "Hi! I'm your workflow automation assistant. I can help you connect apps and automate repetitive tasks. What would you like to automate today?",
+        message: isReturningUser
+          ? openAIConfigured
+            ? "Welcome back! I'm ready to help you create powerful workflow automations. What would you like to automate today?"
+            : "Welcome back! I can help you plan workflow automations. For full AI assistance, please configure your OpenAI API key in settings."
+          : openAIConfigured
+            ? "Hi! I'm your AI-powered workflow automation assistant. I can help you connect apps, automate repetitive tasks, and build custom workflows using n8n. What process would you like to automate?"
+            : "Hi! I'm your workflow automation assistant. I can help you plan and design automations. For full AI assistance, please configure your OpenAI API key.",
         suggestions: [
-          "Send Slack notifications for new form submissions",
-          "Sync Google Sheets with a database", 
-          "Process emails automatically",
-          "Generate reports from multiple sources"
+          "Send notifications when forms are submitted",
+          "Automatically sync data between Google Sheets and databases",
+          "Process and categorize incoming emails",
+          "Generate scheduled reports from multiple sources",
+          "Create customer onboarding workflows",
+          "Set up inventory monitoring alerts"
         ],
-        mode: 'greeting'
+        mode: 'greeting',
+        openAIConfigured
       };
-      
+
       setMessages([{
         id: '1',
         type: 'assistant',
@@ -207,11 +224,11 @@ export default function Chat() {
         conversationMode: 'greeting'
       }]);
     };
-    
+
     if (messages.length === 0) {
       initChat();
     }
-  }, []);
+  }, [hasOpenAIKey]);
 
   useEffect(() => {
     // Set up agent coordinator event listeners
@@ -413,17 +430,20 @@ export default function Chat() {
   };
 
   const processUserMessage = async (message: string) => {
-    ErrorLogger.logInfo('Processing user message', { messageLength: message.length });
-    
+    ErrorLogger.logInfo('Processing user message with enhanced flow', { messageLength: message.length, mode: conversationMode });
+
     setIsGenerating(true);
-    
-    // Add loading message immediately
+
+    // Add loading message immediately with better context
     const loadingMessageId = addMessage({
       type: 'system',
-      content: '🤖 Processing your request...',
+      content: conversationMode === 'greeting' ? '🤖 Understanding your automation needs...' :
+              conversationMode === 'scoping' ? '📋 Analyzing workflow requirements...' :
+              conversationMode === 'creating' ? '⚙️ Building your workflow...' :
+              '🤖 Processing your request...',
       status: 'generating'
     });
-    
+
     try {
       // Get current user with better error handling
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -431,101 +451,145 @@ export default function Chat() {
         ErrorLogger.logError('Authentication error:', authError);
         throw new Error('Authentication service unavailable - please refresh and try again');
       }
-      
+
       if (!user?.id) {
         ErrorLogger.logError('User not authenticated - no user object or ID');
         throw new Error('Not authenticated - please log in to continue');
       }
-      
+
       // Validate user ID is proper UUID format
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(user.id)) {
         ErrorLogger.logError('Invalid user ID format:', user.id);
         throw new Error('Authentication error - invalid user ID format');
       }
-      
+
       ErrorLogger.logInfo('User authenticated', { userId: user.id });
 
       let response;
-      
+
       // Remove loading message
       updateMessage(loadingMessageId, { content: '', status: undefined });
-      
-      // Handle conversation based on current mode
+
+      // Enhanced conversation flow with better state management
       if (conversationMode === 'greeting' || conversationMode === 'scoping') {
-        ErrorLogger.logInfo('Using natural conversation handler', { mode: conversationMode });
-        
+        ErrorLogger.logInfo('Using enhanced natural conversation handler', { mode: conversationMode });
+
         try {
-          // Use the natural conversation handler
-          response = await agentCoordinator.handleNaturalConversation(message, messages);
-          ErrorLogger.logInfo('Agent response received', { mode: response.mode, canProceed: response.canProceed });
-          
-          // Update conversation state
+          // Use the natural conversation handler with enhanced context
+          response = await agentCoordinator.handleNaturalConversation(message, {
+            messages: messages.slice(-10), // Last 10 messages for context
+            currentMode: conversationMode,
+            scopeData: scopeData,
+            hasOpenAIKey: hasOpenAIKey
+          });
+
+          ErrorLogger.logInfo('Enhanced agent response received', {
+            mode: response.mode,
+            canProceed: response.canProceed,
+            needsMoreInfo: response.needsMoreInfo,
+            questions: response.questions?.length || 0
+          });
+
+          // Update conversation state with better tracking
           setConversationMode(response.mode);
           setScopeData(response.scopeStatus || scopeData);
           setCanCreateWorkflow(response.canProceed);
-          
-          // Add assistant response
+
+          // Add assistant response with enhanced metadata
           addMessage({
             type: 'assistant',
             content: response.response,
             agentId: 'orchestrator',
             conversationMode: response.mode,
             scopeStatus: response.scopeStatus,
-            canProceed: response.canProceed
+            canProceed: response.canProceed,
+            suggestions: response.questions || []
           });
-          
-          // If we have all info and can proceed, show the create button
+
+          // Enhanced workflow readiness detection
           if (response.canProceed && response.mode === 'validating') {
             setShowAgentPanel(true);
-            ErrorLogger.logInfo('Ready to create workflow');
+            ErrorLogger.logInfo('Workflow specification complete - ready to create');
+
+            // Add helpful guidance message
+            setTimeout(() => {
+              addMessage({
+                type: 'system',
+                content: '✅ Great! I have enough information to create your workflow. Click "Create Workflow" when you\'re ready to proceed.',
+                status: 'complete'
+              });
+            }, 500);
+          } else if (response.needsMoreInfo && response.questions) {
+            // Add guidance for next steps
+            setTimeout(() => {
+              addMessage({
+                type: 'system',
+                content: '💡 Please provide more details about your automation requirements so I can design the perfect workflow for you.',
+                suggestions: response.questions
+              });
+            }, 300);
           }
         } catch (agentError) {
           ErrorLogger.logAgentError('orchestrator', 'handleNaturalConversation', agentError);
           throw new Error(`Agent processing failed: ${agentError.message}`);
         }
       } else if (conversationMode === 'creating') {
-        ErrorLogger.logInfo('Creating workflow', { conversationId });
-        
-        // Actually create the workflow
+        ErrorLogger.logInfo('Creating workflow with agent coordination', { conversationId });
+
+        // Enhanced workflow creation with agent coordination
         if (!conversationId) {
-          response = await agentCoordinator.startConversation(user.id, JSON.stringify(scopeData));
+          response = await agentCoordinator.startConversation(user.id, JSON.stringify({
+            ...scopeData,
+            userMessage: message,
+            timestamp: Date.now()
+          }));
           setConversationId(response.conversationId);
           ErrorLogger.logInfo('Started new conversation', { conversationId: response.conversationId });
         } else {
           response = await agentCoordinator.continueConversation(conversationId, message);
           ErrorLogger.logInfo('Continued conversation', { conversationId });
         }
+
+        // Add workflow creation progress message
+        addMessage({
+          type: 'assistant',
+          content: response.response,
+          agentId: 'orchestrator',
+          phase: response.phase,
+          progress: 'progress' in response ? response.progress : 0,
+          status: response.phase === 'completed' ? 'complete' : 'generating',
+          permissionStatus: response.permissionStatus,
+          scopeStatus: response.scopeStatus,
+          canProceed: response.canProceed
+        });
+
+        // Update UI state
+        setCurrentPhase(response.phase);
+        setOverallProgress('progress' in response ? response.progress : 0);
+        setAgentStatus(response.agentStatus);
+
+        if (response.phase === 'completed') {
+          toast.success('Workflow created successfully!');
+          setConversationMode('completed');
+
+          // Add completion message with details
+          setTimeout(() => {
+            addMessage({
+              type: 'system',
+              content: '🎉 Workflow deployment completed! Your automation is now live and ready to use.',
+              status: 'complete'
+            });
+          }, 1000);
+        }
+
+        return; // Exit early for creating mode
       }
 
-      // Add assistant response
-      addMessage({
-        type: 'assistant',
-        content: response.response,
-        agentId: 'orchestrator',
-        phase: response.phase,
-        progress: 'progress' in response ? response.progress : 0,
-        status: response.phase === 'completed' ? 'complete' : 'generating',
-        permissionStatus: response.permissionStatus,
-        scopeStatus: response.scopeStatus,
-        canProceed: response.canProceed
-      });
-
-      // Update UI state
-      setCurrentPhase(response.phase);
-      setOverallProgress('progress' in response ? response.progress : 0);
-      setAgentStatus(response.agentStatus);
-
-      if (response.phase === 'completed') {
-        toast.success('Workflow created successfully!');
-        
-        // Add completion message with details
+      // Update conversation history and auto-save
+      if (messages.length > 1) {
         setTimeout(() => {
-          addMessage({
-            type: 'system',
-            content: '🎉 Workflow deployment completed! Your automation is now live and ready to use.',
-            status: 'complete'
-          });
+          saveConversationToSupabase(messages, activeSessionId);
         }, 1000);
       }
 
