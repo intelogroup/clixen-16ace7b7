@@ -1,10 +1,9 @@
-// Enhanced Base agent class with improved OpenAI integration and conversation flow
+// Base agent class with Supabase Edge Function integration and enhanced context management
 import { AgentConfig, AgentContext, AgentMessage, AgentState, ExecutionStep } from './types';
 import { errorHandler, ErrorCategory, ErrorSeverity } from './ErrorHandler';
 import { performanceOptimizer } from './PerformanceOptimizer';
 import { contextManager } from './ContextManager';
 import { supabase } from '../supabase';
-import { openAIService } from '../services/OpenAIService';
 
 // Enhanced Supabase integration detection
 function checkSupabaseConnection(): { isConnected: boolean; source: string } {
@@ -19,12 +18,12 @@ function checkSupabaseConnection(): { isConnected: boolean; source: string } {
   
   const isConnected = !!(supabaseUrl && supabaseKey);
   
-  console.log('[BaseAgent] Using enhanced OpenAI integration with fallbacks:', {
+  console.log('[BaseAgent] Using Supabase Edge Functions for AI processing:', {
     isConnected,
-    integrationMode: 'openai-direct-with-supabase-fallback'
+    edgeFunctionMode: true
   });
   
-  return { isConnected, source: 'openai-with-supabase-fallback' };
+  return { isConnected, source: 'supabase-edge-functions' };
 }
 
 const { isConnected: IS_SUPABASE_CONNECTED, source: CONNECTION_SOURCE } = checkSupabaseConnection();
@@ -37,11 +36,17 @@ export abstract class BaseAgent {
   protected subscribers: Set<(message: AgentMessage) => void> = new Set();
 
   constructor(config: AgentConfig, context: AgentContext) {
-    console.log(`[${config.id}] Initializing enhanced agent:`, {
+    console.log(`[${config.id}] Initializing agent:`, {
       supabaseConnected: IS_SUPABASE_CONNECTED,
       connectionSource: CONNECTION_SOURCE,
       environment: import.meta.env.MODE || 'unknown'
     });
+    
+    if (IS_SUPABASE_CONNECTED) {
+      console.log(`[${config.id}] ✅ Using Supabase Edge Functions for AI processing`);
+    } else {
+      console.warn(`[${config.id}] ⚠️  Supabase connection not available - may fall back to demo mode`);
+    }
     
     this.config = config;
     this.context = context;
@@ -64,30 +69,30 @@ export abstract class BaseAgent {
   abstract validateInput(input: any): boolean;
   abstract getCapabilities(): string[];
 
-  // Core agent thinking functionality with improved OpenAI integration
+  // Core agent functionality using Supabase Edge Functions with context management
   async think(prompt: string, context?: any): Promise<string> {
     const taskId = `think-${this.config.id}-${Date.now()}`;
     
-    try {
-      // Acquire task lock to prevent duplicate work
-      const lockAcquired = await contextManager.acquireTaskLock(
-        this.context.conversationId, 
-        taskId, 
-        this.config.id,
-        { action: 'think', prompt: prompt.substring(0, 50) }
-      );
+    // Acquire task lock to prevent duplicate work
+    const lockAcquired = await contextManager.acquireTaskLock(
+      this.context.conversationId, 
+      taskId, 
+      this.config.id,
+      { action: 'think', prompt: prompt.substring(0, 50) }
+    );
 
-      if (!lockAcquired) {
-        console.log(`[${this.config.id}] ⏸️ Task already being processed by another agent`);
-        // Wait a bit and check if task is completed by other agent
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const result = contextManager.getFromGlobalMemory(this.context.conversationId, taskId);
-        if (result) {
-          console.log(`[${this.config.id}] ✨ Using result from other agent`);
-          return result;
-        }
+    if (!lockAcquired) {
+      console.log(`[${this.config.id}] ⏸️ Task already being processed by another agent`);
+      // Wait a bit and check if task is completed by other agent
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const result = contextManager.getFromGlobalMemory(this.context.conversationId, taskId);
+      if (result) {
+        console.log(`[${this.config.id}] ✨ Using result from other agent`);
+        return result;
       }
+    }
 
+    try {
       // Create cache key from prompt and context
       const cacheKey = `think-${this.config.id}-${JSON.stringify({ prompt, context })}`;
       
@@ -100,93 +105,105 @@ export abstract class BaseAgent {
       
       // Use memoization for repeated queries
       const result = await performanceOptimizer.memoize(cacheKey, async () => {
-        return await this.performThinking(prompt, context, relevantContext);
-      }, 60000); // Cache for 1 minute
-      
-      // Store result in global memory and return
-      contextManager.updateGlobalMemory(this.context.conversationId, taskId, result);
-      return result;
-      
-    } finally {
-      // Always release the task lock
-      contextManager.releaseTaskLock(this.context.conversationId, taskId, this.config.id);
-    }
-  }
+        this.updateState({ status: 'thinking' });
 
-  // Separate method for the actual thinking logic to simplify error handling
-  private async performThinking(prompt: string, context?: any, relevantContext?: any): Promise<string> {
-    this.updateState({ status: 'thinking' });
-
-    try {
-      console.log(`[${this.config.id}] 🚀 Processing prompt:`, prompt.substring(0, 50) + '...');
-      console.log(`[${this.config.id}] 📋 Using relevant context:`, Object.keys(relevantContext?.globalMemory || {}));
-      
-      // Check if OpenAI is configured
-      const configStatus = await openAIService.getConfigStatus();
-      console.log(`[${this.config.id}] 🔧 OpenAI config status:`, configStatus);
-      
-      if (!configStatus.isConfigured) {
-        console.warn(`[${this.config.id}] ⚠️ OpenAI not configured, using demo mode`);
-        const demoResponse = this.generateDemoResponse(prompt, context);
-        this.updateState({ status: 'idle' });
-        return demoResponse;
-      }
-      
-      try {
-        // Use direct OpenAI integration for better control
-        const agentResponse = await openAIService.agentThink(
-          this.config.id,
-          prompt,
-          {
-            conversationHistory: context?.conversationHistory,
-            systemPrompt: this.buildSystemPrompt(context),
-            capabilities: this.getCapabilities()
+        try {
+          console.log(`[${this.config.id}] 🚀 Using Supabase Edge Function for prompt:`, prompt.substring(0, 50) + '...');
+          console.log(`[${this.config.id}] 📋 Using relevant context:`, Object.keys(relevantContext.globalMemory || {}));
+          
+          // Get current user for the edge function call with validation
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (authError) {
+            console.error(`[${this.config.id}] ❌ Auth error:`, authError);
+            throw new Error('Authentication service unavailable');
           }
-        );
-        
-        console.log(`[${this.config.id}] ✅ OpenAI response received:`, {
-          length: agentResponse.response.length,
-          preview: agentResponse.response.substring(0, 100) + '...',
-          tokensUsed: agentResponse.tokensUsed,
-          processingTime: agentResponse.processingTime,
-          source: configStatus.source
-        });
-        
-        this.updateState({ status: 'idle' });
-        
-        // Update agent state in shared context
-        contextManager.updateAgentState(
-          this.context.conversationId,
-          this.config.id,
-          {
-            ...this.state,
-            lastThought: agentResponse.response.substring(0, 100),
-            tokensUsed: agentResponse.tokensUsed,
-            processingTime: agentResponse.processingTime
+          
+          if (!user?.id) {
+            console.warn(`[${this.config.id}] ⚠️  No authenticated user - using anonymous UUID`);
           }
-        );
+          
+          // Validate or create UUID
+          let validUserId = user?.id || crypto.randomUUID();
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(validUserId)) {
+            console.warn(`[${this.config.id}] ⚠️  Invalid UUID format, generating new one:`, validUserId);
+            validUserId = crypto.randomUUID();
+          }
         
-        return agentResponse.response;
+        console.log(`[${this.config.id}] 🔍 Using user ID:`, validUserId);
         
-      } catch (openaiError) {
-        console.error(`[${this.config.id}] ❌ OpenAI error:`, openaiError);
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.warn(`[${this.config.id}] ⏰ Edge function call timed out after 30s`);
+        }, 30000); // 30 second timeout
         
-        // If OpenAI fails, try Supabase Edge Function as fallback
-        if (IS_SUPABASE_CONNECTED) {
-          console.log(`[${this.config.id}] 🔄 Falling back to Supabase Edge Function`);
-          return await this.fallbackToSupabaseEdgeFunction(prompt);
-        } else {
-          // No Supabase connection, use demo mode
-          console.log(`[${this.config.id}] 🎭 Using demo mode (no Supabase connection)`);
+        try {
+          // Call the ai-chat-system edge function with timeout
+          const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+            body: {
+              message: prompt,
+              agent_type: this.config.id.split('-')[0], // Extract agent type from ID
+              user_id: validUserId,
+              stream: false
+            },
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (error) {
+            console.error(`[${this.config.id}] ❌ Edge function error:`, error);
+            throw new Error(`Edge function error: ${error.message}`);
+          }
+          
+          const result = data?.response || '';
+          console.log(`[${this.config.id}] ✅ Edge function response received:`, {
+            length: result.length,
+            preview: result.substring(0, 100) + '...',
+            tokensUsed: data?.tokens_used || 0,
+            agentType: data?.agent_type,
+            processingTime: data?.processing_time
+          });
+          
           this.updateState({ status: 'idle' });
-          return this.generateDemoResponse(prompt, context);
+          
+          // Store result in shared context for other agents
+          contextManager.updateGlobalMemory(
+            this.context.conversationId,
+            taskId,
+            result
+          );
+          
+          // Update agent state in shared context
+          contextManager.updateAgentState(
+            this.context.conversationId,
+            this.config.id,
+            {
+              ...this.state,
+              lastThought: result.substring(0, 100),
+              tokensUsed: data?.tokens_used || 0,
+              processingTime: data?.processing_time
+            }
+          );
+          
+          return result;
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Request timed out - please try again');
+          }
+          
+          throw fetchError;
         }
-      }
-      
     } catch (error) {
-      console.error(`[${this.config.id}] ❌ Error in thinking:`, {
+      console.error(`[${this.config.id}] ❌ Error in think():`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
+        supabaseConnected: IS_SUPABASE_CONNECTED,
+        connectionSource: CONNECTION_SOURCE,
         prompt: prompt.substring(0, 50) + '...'
       });
       
@@ -206,7 +223,7 @@ export abstract class BaseAgent {
       if (agentError.recoverable && agentError.retryCount < agentError.maxRetries) {
         try {
           return await errorHandler.retry(
-            () => this.performThinking(prompt, context),
+            () => this.think(prompt, context),
             agentError
           );
         } catch (retryError) {
@@ -215,155 +232,16 @@ export abstract class BaseAgent {
       }
       
       throw new Error(`Agent thinking failed: ${agentError.userMessage || agentError.message}`);
-    }
-  }
-
-  // Fallback to Supabase Edge Function when OpenAI fails
-  private async fallbackToSupabaseEdgeFunction(prompt: string): Promise<string> {
-    try {
-      // Get current user for the edge function call with validation
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        console.error(`[${this.config.id}] ❌ Auth error:`, authError);
-        throw new Error('Authentication service unavailable');
       }
-      
-      // Validate or create UUID
-      let validUserId = user?.id || crypto.randomUUID();
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(validUserId)) {
-        console.warn(`[${this.config.id}] ⚠️ Invalid UUID format, generating new one:`, validUserId);
-        validUserId = crypto.randomUUID();
-      }
+    }, 60000); // Cache for 1 minute
     
-      console.log(`[${this.config.id}] 🔍 Using user ID:`, validUserId);
-      
-      // Create abort controller for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.warn(`[${this.config.id}] ⏰ Edge function call timed out after 30s`);
-      }, 30000); // 30 second timeout
-      
-      try {
-        // Call the ai-chat-system edge function with timeout
-        const { data, error } = await supabase.functions.invoke('ai-chat-system', {
-          body: {
-            message: prompt,
-            agent_type: this.config.id.split('-')[0], // Extract agent type from ID
-            user_id: validUserId,
-            stream: false
-          },
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (error) {
-          console.error(`[${this.config.id}] ❌ Edge function error:`, error);
-          throw new Error(`Edge function error: ${error.message}`);
-        }
-        
-        const result = data?.response || '';
-        console.log(`[${this.config.id}] ✅ Edge function response received (fallback):`, {
-          length: result.length,
-          preview: result.substring(0, 100) + '...',
-          tokensUsed: data?.tokens_used || 0,
-          agentType: data?.agent_type,
-          processingTime: data?.processing_time
-        });
-        
-        this.updateState({ status: 'idle' });
-        return result;
-        
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          throw new Error('Request timed out - please try again');
-        }
-        
-        throw fetchError;
-      }
-    } catch (edgeFunctionError) {
-      console.error(`[${this.config.id}] ❌ Edge function fallback also failed:`, edgeFunctionError);
-      // Fall back to demo mode as last resort
-      console.log(`[${this.config.id}] 🎭 Using demo mode as final fallback`);
-      this.updateState({ status: 'idle' });
-      return this.generateDemoResponse(prompt, {});
-    }
-  }
-
-  // Enhanced demo mode response generator for better automation guidance
-  protected generateDemoResponse(prompt: string, context?: any): string {
-    // Generate contextual demo responses based on agent type
-    const agentName = this.config.name.toLowerCase();
+    // Store result in global memory and return
+    contextManager.updateGlobalMemory(this.context.conversationId, taskId, result);
+    return result;
     
-    if (agentName.includes('orchestrator')) {
-      if (prompt.toLowerCase().includes('automat') || prompt.toLowerCase().includes('workflow')) {
-        return `I understand you want to create an automation workflow: "${prompt.substring(0, 100)}..."
-
-To help you build the perfect automation, I need to understand:
-
-**What triggers your workflow?** (e.g., new email, form submission, schedule)
-**What actions should happen?** (e.g., send notification, update database, create task)
-**What's your desired outcome?** (e.g., save time, reduce errors, improve efficiency)
-
-Once I have these details, I'll coordinate with my specialist agents to design and deploy your workflow.
-
-💡 *Configure your OpenAI API key for full AI-powered assistance.*`;
-      } else {
-        return `I'm your workflow orchestrator. I coordinate specialist agents to help you build automations.
-
-Let me guide you through creating a workflow. What process would you like to automate?
-
-Some popular automations:
-• Email notifications for form submissions
-• Data sync between apps
-• Scheduled reports and updates
-• Customer onboarding workflows
-
-💡 *Configure your OpenAI API key for full AI-powered assistance.*`;
-      }
-    } else if (agentName.includes('workflow')) {
-      return `I'll design an n8n workflow for your automation needs.
-
-Based on your request: "${prompt.substring(0, 100)}..."
-
-I'll create a workflow with:
-• Appropriate trigger nodes (HTTP, schedule, email, etc.)
-• Processing nodes for data transformation
-• Action nodes for your desired outcomes
-• Error handling and retry logic
-
-The workflow will be optimized for reliability and performance.
-
-💡 *Configure your OpenAI API key for full workflow generation.*`;
-    } else if (agentName.includes('deployment')) {
-      return `I'll handle the secure deployment of your workflow.
-
-For your request: "${prompt.substring(0, 100)}..."
-
-My deployment process includes:
-• Pre-deployment validation and testing
-• Safe deployment to your n8n instance
-• Post-deployment health monitoring
-• Rollback capabilities if issues arise
-
-Once validated, your workflow will be live and ready to use.
-
-💡 *Configure your OpenAI API key for full deployment assistance.*`;
-    } else {
-      return `Processing your automation request: "${prompt.substring(0, 100)}..."
-
-I'm here to help you build efficient workflow automations. Please describe what you'd like to automate, and I'll guide you through the process.
-
-Focus on:
-• What triggers the automation
-• What steps should happen
-• What the end result should be
-
-💡 *Configure your OpenAI API key for full AI assistance.*`;
+    } finally {
+      // Always release the task lock
+      contextManager.releaseTaskLock(this.context.conversationId, taskId, this.config.id);
     }
   }
 
@@ -614,6 +492,22 @@ Focus on:
 
   protected isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Demo mode response generator
+  protected generateDemoResponse(prompt: string, context?: any): string {
+    // Generate contextual demo responses based on agent type
+    const agentName = this.config.name.toLowerCase();
+    
+    if (agentName.includes('orchestrator')) {
+      return `I understand you want to: ${prompt}\n\nLet me coordinate with the other agents to help you build this workflow. I'll break this down into manageable tasks and delegate them to the appropriate specialists.`;
+    } else if (agentName.includes('workflow')) {
+      return `I'll design an n8n workflow for: ${prompt}\n\nThe workflow will include appropriate nodes and connections to handle your requirements efficiently.`;
+    } else if (agentName.includes('deployment')) {
+      return `I'll handle the deployment of your workflow. Once validated, I'll ensure it's properly deployed to your n8n instance.`;
+    } else {
+      return `Processing your request: ${prompt}\n\nNote: This is a demo response. Configure your OpenAI API key for full functionality.`;
+    }
   }
 
   // Cleanup
