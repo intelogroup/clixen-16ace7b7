@@ -94,11 +94,13 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
 
     try {
       // FIXED: Proper response handling to prevent body stream already read error
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system`, {
+      // Add timestamp to prevent caching issues
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
           message,
@@ -107,7 +109,8 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
             mode: 'workflow_creation',
             conversation_history: conversation.slice(-5), // Last 5 messages for context
             current_step: currentStep
-          }
+          },
+          timestamp: Date.now() // Force unique request
         })
       });
 
