@@ -109,11 +109,20 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+      // Read the response body first
+      const responseText = await response.text();
+      
+      // Try to parse as JSON, but handle errors gracefully
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        data = { error: 'Invalid response format', raw: responseText };
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${data.error || responseText}`);
+      }
       
       // Add AI response to conversation
       setConversation(prev => [...prev, {
