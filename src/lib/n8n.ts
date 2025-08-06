@@ -7,7 +7,7 @@ const N8N_API_KEY = n8nConfig.apiKey;
 // Use direct n8n API URL - no proxy needed with database-driven approach
 const N8N_API_URL = N8N_API_URL_ENV;
 // Enable demo mode in production environments to avoid CORS issues until proxy is set up
-const IS_DEMO_MODE = isProduction; // Use demo mode in production, real API in development
+const IS_DEMO_MODE = env.get().isProduction; // Use demo mode in production, real API in development
 
 export interface N8nWorkflow {
   id: string;
@@ -44,7 +44,7 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
   }
 
   // Use Supabase Edge Function proxy in production to avoid CORS
-  if (isProduction) {
+  if (env.get().isProduction) {
     try {
       const { supabase } = await import('./supabase');
       const response = await supabase.functions.invoke('api-operations', {
@@ -215,7 +215,7 @@ export const n8nApi = {
 
     try {
       // Use proxy in production environments
-      if (isProduction) {
+      if (env.get().isProduction) {
         try {
           await n8nRequest('/workflows');
           return {
