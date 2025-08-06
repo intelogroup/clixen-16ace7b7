@@ -2,9 +2,15 @@
 > clixen@0.1.0 dev
 > vite
 
-Port 8080 is in use, trying another one...
 
-  VITE v5.4.19  ready in 484 ms
+  VITE v5.4.19  ready in 392 ms
 
-  ➜  Local:   http://localhost:8081/
-  ➜  Network: http://169.254.0.21:8081/
+  ➜  Local:   http://localhost:8080/
+  ➜  Network: http://169.254.0.21:8080/
+[vite:css] @import must precede all other statements (besides @charset or empty @layer)
+3  |  @tailwind utilities;
+4  |  
+5  |  @import './styles/professional.css';
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+6  |  
+7  |  :root {

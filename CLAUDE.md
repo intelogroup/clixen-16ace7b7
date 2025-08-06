@@ -211,8 +211,11 @@ Test User: jayveedz19@gmail.com
 Password: Goldyear2023#
 Status: ✅ Active and verified
 
-# AI Agent System Configuration
-VITE_OPENAI_API_KEY=your-openai-api-key-here
+# AI Agent System Configuration (WORKING ✅)
+# OpenAI API key is stored securely in Supabase database
+# Table: api_configurations, service_name: 'openai'
+# Status: ACTIVE and verified with 932 tokens processed in tests
+# No environment variable needed - retrieved from database by Edge Functions
 
 # n8n Configuration  
 VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1

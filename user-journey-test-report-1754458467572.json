@@ -1,0 +1,346 @@
+{
+  "test_session": {
+    "user": {
+      "id": "050d649c-7cca-4335-9508-c394836783f9",
+      "aud": "authenticated",
+      "role": "authenticated",
+      "email": "jayveedz19@gmail.com",
+      "email_confirmed_at": "2025-07-24T15:30:31.209729Z",
+      "phone": "",
+      "confirmed_at": "2025-07-24T15:30:31.209729Z",
+      "recovery_sent_at": "2025-08-05T17:18:18.214245Z",
+      "last_sign_in_at": "2025-08-06T05:34:14.93312482Z",
+      "app_metadata": {
+        "provider": "email",
+        "providers": [
+          "email"
+        ]
+      },
+      "user_metadata": {
+        "email": "jayveedz19@gmail.com",
+        "email_verified": true,
+        "phone_verified": false,
+        "sub": "050d649c-7cca-4335-9508-c394836783f9"
+      },
+      "identities": [
+        {
+          "identity_id": "dc9fde1e-70a1-45bb-9b83-64026f154d5a",
+          "id": "050d649c-7cca-4335-9508-c394836783f9",
+          "user_id": "050d649c-7cca-4335-9508-c394836783f9",
+          "identity_data": {
+            "email": "jayveedz19@gmail.com",
+            "email_verified": false,
+            "phone_verified": false,
+            "sub": "050d649c-7cca-4335-9508-c394836783f9"
+          },
+          "provider": "email",
+          "last_sign_in_at": "2025-07-24T15:30:31.205341Z",
+          "created_at": "2025-07-24T15:30:31.2054Z",
+          "updated_at": "2025-07-24T15:30:31.2054Z",
+          "email": "jayveedz19@gmail.com"
+        }
+      ],
+      "created_at": "2025-07-24T15:30:31.195681Z",
+      "updated_at": "2025-08-06T05:34:14.942166Z",
+      "is_anonymous": false
+    },
+    "sessionToken": "eyJhbGciOiJIUzI1NiIsImtpZCI6InVBWXpuNkZ5Z0xVeHJwczYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3pmYmdkaXhiemV6cHhsbGtveWZjLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIwNTBkNjQ5Yy03Y2NhLTQzMzUtOTUwOC1jMzk0ODM2NzgzZjkiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzU0NDYyMDU0LCJpYXQiOjE3NTQ0NTg0NTQsImVtYWlsIjoiamF5dmVlZHoxOUBnbWFpbC5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoiamF5dmVlZHoxOUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiIwNTBkNjQ5Yy03Y2NhLTQzMzUtOTUwOC1jMzk0ODM2NzgzZjkifSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc1NDQ1ODQ1NH1dLCJzZXNzaW9uX2lkIjoiMTgzNzhlNTgtOGUzNy00ODc3LWFiODItOWQwYzY3NDhmNjljIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.vqPuIhqCja1ytbhR5IRGZFhRqBiiGGIMVp8u7rPHj2w",
+    "conversationId": null,
+    "workflowId": null,
+    "n8nWorkflowId": null,
+    "startTime": 1754458454429,
+    "steps": [
+      {
+        "phase": "Auth",
+        "step": "Attempting user login",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:14.455Z",
+        "duration": 26,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "Auth",
+        "step": "Login successful",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:15.011Z",
+        "duration": 582,
+        "details": "User ID: 050d649c-7cca-4335-9508-c394836783f9",
+        "error": null
+      },
+      {
+        "phase": "Auth",
+        "step": "Session token obtained",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:15.012Z",
+        "duration": 583,
+        "details": "Token length: 862",
+        "error": null
+      },
+      {
+        "phase": "Auth",
+        "step": "Session validation",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:15.012Z",
+        "duration": 583,
+        "details": "Expires: 8/6/2025, 6:34:14 AM",
+        "error": null
+      },
+      {
+        "phase": "AI",
+        "step": "Testing AI chat system endpoint",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:16.014Z",
+        "duration": 1585,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "AI",
+        "step": "AI response received",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:19.287Z",
+        "duration": 4858,
+        "details": "Agent: unknown, Tokens: 0",
+        "error": null
+      },
+      {
+        "phase": "AI",
+        "step": "Response content validation",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:19.287Z",
+        "duration": 4858,
+        "details": "Length: 78 chars",
+        "error": null
+      },
+      {
+        "phase": "AI",
+        "step": "Workflow progress tracking",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:19.287Z",
+        "duration": 4858,
+        "details": "Steps: 3",
+        "error": null
+      },
+      {
+        "phase": "Workflow",
+        "step": "Requesting workflow design",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:20.290Z",
+        "duration": 5861,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "Workflow",
+        "step": "Workflow design received",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:22.541Z",
+        "duration": 8112,
+        "details": "Agent: undefined",
+        "error": null
+      },
+      {
+        "phase": "Workflow",
+        "step": "Requesting workflow deployment",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:22.541Z",
+        "duration": 8112,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "Workflow",
+        "step": "Deployment response received",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:23.971Z",
+        "duration": 9542,
+        "details": "Agent: undefined",
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "Testing n8n API connection",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:24.974Z",
+        "duration": 10545,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "n8n service health check",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:25.090Z",
+        "duration": 10661,
+        "details": "Service is running",
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "Fetching workflows from n8n",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:25.090Z",
+        "duration": 10661,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "Workflows retrieved",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:25.161Z",
+        "duration": 10732,
+        "details": "Count: 6",
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "Testing api-operations integration",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:25.161Z",
+        "duration": 10732,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "n8n",
+        "step": "API operations health check",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:25.567Z",
+        "duration": 11138,
+        "details": "Status: healthy",
+        "error": null
+      },
+      {
+        "phase": "E2E",
+        "step": "Simulating complete user flow",
+        "status": "progress",
+        "timestamp": "2025-08-06T05:34:26.570Z",
+        "duration": 12141,
+        "details": null,
+        "error": null
+      },
+      {
+        "phase": "E2E",
+        "step": "Flow component validation",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:26.570Z",
+        "duration": 12141,
+        "details": "Score: 4/5",
+        "error": null
+      },
+      {
+        "phase": "E2E",
+        "step": "Performance check",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:26.570Z",
+        "duration": 12141,
+        "details": "Total time: 12s",
+        "error": null
+      },
+      {
+        "phase": "E2E",
+        "step": "Error rate analysis",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:26.570Z",
+        "duration": 12141,
+        "details": "Error rate: 0.0%",
+        "error": null
+      },
+      {
+        "phase": "E2E",
+        "step": "Overall test result",
+        "status": "success",
+        "timestamp": "2025-08-06T05:34:26.570Z",
+        "duration": 12141,
+        "details": "All critical systems operational",
+        "error": null
+      }
+    ]
+  },
+  "results": {
+    "timestamp": "2025-08-06T05:34:14.429Z",
+    "phases": [
+      {
+        "name": "Authentication",
+        "status": "starting",
+        "duration": 26,
+        "summary": null
+      },
+      {
+        "name": "Authentication",
+        "status": "completed",
+        "duration": 583,
+        "summary": "User authenticated successfully"
+      },
+      {
+        "name": "Multi-Agent System",
+        "status": "starting",
+        "duration": 1585,
+        "summary": null
+      },
+      {
+        "name": "Multi-Agent System",
+        "status": "completed",
+        "duration": 4858,
+        "summary": "AI agents responding correctly"
+      },
+      {
+        "name": "Workflow Creation",
+        "status": "starting",
+        "duration": 5860,
+        "summary": null
+      },
+      {
+        "name": "Workflow Creation",
+        "status": "completed",
+        "duration": 9542,
+        "summary": "Workflow designed and deployed"
+      },
+      {
+        "name": "n8n Integration",
+        "status": "starting",
+        "duration": 10544,
+        "summary": null
+      },
+      {
+        "name": "n8n Integration",
+        "status": "completed",
+        "duration": 11138,
+        "summary": "n8n API integration verified"
+      },
+      {
+        "name": "End-to-End Validation",
+        "status": "starting",
+        "duration": 12140,
+        "summary": null
+      },
+      {
+        "name": "End-to-End Validation",
+        "status": "completed",
+        "duration": 12141,
+        "summary": "Complete user journey validated successfully"
+      }
+    ],
+    "totalDuration": 12141,
+    "success": true,
+    "errors": []
+  },
+  "system_health": {
+    "authentication": "starting",
+    "ai_agents": "starting",
+    "workflow_creation": "starting",
+    "n8n_integration": "starting",
+    "e2e_validation": "starting"
+  },
+  "performance_metrics": {
+    "total_duration_ms": 12141,
+    "total_duration_seconds": 12,
+    "error_count": 0,
+    "success_rate": 100
+  },
+  "recommendations": [
+    "Verify n8n workflow deployment process"
+  ]
+}
