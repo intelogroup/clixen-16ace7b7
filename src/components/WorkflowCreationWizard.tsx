@@ -114,30 +114,34 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
         })
       });
 
-      // Safe response handling - read body only once
+      // COMPLETELY NEW: Clone response to avoid body stream issues
+      const responseClone = response.clone();
       let data;
-      let responseText = '';
 
       try {
-        // Always try JSON first if response is ok
         if (response.ok) {
+          // For successful responses, try JSON parsing
           data = await response.json();
         } else {
-          // For error responses, read as text and try to parse
-          responseText = await response.text();
+          // For error responses, use the cloned response
+          const errorText = await responseClone.text();
+          let errorData;
           try {
-            data = JSON.parse(responseText);
+            errorData = JSON.parse(errorText);
           } catch (parseError) {
-            data = { error: 'Invalid response format', raw: responseText };
+            errorData = { error: 'Invalid response format', raw: errorText };
           }
-          throw new Error(`HTTP ${response.status}: ${data.error || responseText || 'Request failed'}`);
+          throw new Error(`Request failed with status ${response.status}: ${errorData.error || errorText || 'Unknown error'}`);
         }
-      } catch (jsonError) {
-        // If JSON parsing fails on success response, treat as error
+      } catch (fetchError) {
+        // Handle any parsing or network errors
         if (response.ok) {
+          // If response was ok but JSON parsing failed
           throw new Error('Server returned invalid JSON response');
+        } else {
+          // Re-throw network or HTTP errors
+          throw fetchError;
         }
-        throw jsonError; // Re-throw the original error
       }
       
       // Add AI response to conversation
