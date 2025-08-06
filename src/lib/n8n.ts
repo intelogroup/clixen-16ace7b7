@@ -38,6 +38,12 @@ class N8nApiError extends Error {
 }
 
 async function n8nRequest(endpoint: string, options: RequestInit = {}) {
+  // Always use demo mode in browser environment to avoid CORS issues
+  if (typeof window !== 'undefined') {
+    console.log('[N8N] Browser environment detected - using demo mode to avoid CORS');
+    return getMockResponse(endpoint, options);
+  }
+
   // If in demo mode, return mock data
   if (IS_DEMO_MODE) {
     return getMockResponse(endpoint, options);
@@ -67,7 +73,7 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
     }
   }
 
-  // Direct connection for localhost development
+  // Direct connection for server-side development only
   try {
     const url = `${N8N_API_URL}${endpoint}`;
     const headers = {
