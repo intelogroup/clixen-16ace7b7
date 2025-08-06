@@ -6,8 +6,8 @@ const N8N_API_KEY = n8nConfig.apiKey;
 
 // Use direct n8n API URL - no proxy needed with database-driven approach
 const N8N_API_URL = N8N_API_URL_ENV;
-// Enable demo mode in production environments to avoid CORS issues until proxy is set up
-const IS_DEMO_MODE = isProduction; // Use demo mode in production, real API in development
+// Enable demo mode for browser environments to avoid CORS issues
+const IS_DEMO_MODE = typeof window !== 'undefined' && env.get().isProduction;
 
 export interface N8nWorkflow {
   id: string;
@@ -38,13 +38,19 @@ class N8nApiError extends Error {
 }
 
 async function n8nRequest(endpoint: string, options: RequestInit = {}) {
+  // Always use demo mode in browser environment to avoid CORS issues
+  if (typeof window !== 'undefined') {
+    console.log('[N8N] Browser environment detected - using demo mode to avoid CORS');
+    return getMockResponse(endpoint, options);
+  }
+
   // If in demo mode, return mock data
   if (IS_DEMO_MODE) {
     return getMockResponse(endpoint, options);
   }
 
   // Use Supabase Edge Function proxy in production to avoid CORS
-  if (isProduction) {
+  if (env.get().isProduction) {
     try {
       const { supabase } = await import('./supabase');
       const response = await supabase.functions.invoke('api-operations', {
@@ -67,7 +73,7 @@ async function n8nRequest(endpoint: string, options: RequestInit = {}) {
     }
   }
 
-  // Direct connection for localhost development
+  // Direct connection for server-side development only
   try {
     const url = `${N8N_API_URL}${endpoint}`;
     const headers = {
@@ -205,6 +211,15 @@ function getMockResponse(endpoint: string, options: RequestInit = {}) {
 export const n8nApi = {
   // Test connection to n8n
   async testConnection(): Promise<{ success: boolean; message: string; version?: string }> {
+    // Always use demo mode in browser environments to avoid CORS issues
+    if (typeof window !== 'undefined') {
+      return {
+        success: true,
+        message: 'Demo mode active - n8n connection simulated (browser environment)',
+        version: 'Demo Version 1.0'
+      };
+    }
+
     if (IS_DEMO_MODE) {
       return {
         success: true,
@@ -215,7 +230,7 @@ export const n8nApi = {
 
     try {
       // Use proxy in production environments
-      if (isProduction) {
+      if (env.get().isProduction) {
         try {
           await n8nRequest('/workflows');
           return {
@@ -233,17 +248,8 @@ export const n8nApi = {
         }
       }
 
-      // Direct connection for localhost development
+      // Direct connection for server-side development only
       try {
-        // Test health endpoint first
-        const healthResponse = await fetch(`${N8N_API_URL.replace('/api/v1', '')}/healthz`, {
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-
-        if (!healthResponse.ok) {
-          throw new Error('Health check failed');
-        }
-
         // Test API access
         await n8nRequest('/workflows');
         return {

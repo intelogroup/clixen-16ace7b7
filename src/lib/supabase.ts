@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabaseConfig } from './config/environment';
+import { supabaseConfig, env } from './config/environment';
 
 // Use centralized environment configuration
 const supabaseUrl = supabaseConfig.url;
@@ -48,7 +48,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Initialize auth monitoring in development
-if (isDev && typeof window !== 'undefined') {
+if (env.get().isDevelopment && typeof window !== 'undefined') {
   console.log('🔧 [SUPABASE] Development mode - enabling auth monitoring');
   monitorAuthState();
   
@@ -111,4 +111,3 @@ export const getErrorMessage = (error: any): string => {
       return error.message || 'Authentication failed. Please try again.';
   }
 };
-

@@ -1,3 +1,4 @@
+// Fixed body stream already read error - Updated at 1754500093249
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -92,11 +93,14 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
     }]);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system`, {
+      // FIXED: Proper response handling to prevent body stream already read error
+      // Add timestamp to prevent caching issues
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat-system?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user?.access_token}`,
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
           message,
@@ -105,15 +109,40 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
             mode: 'workflow_creation',
             conversation_history: conversation.slice(-5), // Last 5 messages for context
             current_step: currentStep
-          }
+          },
+          timestamp: Date.now() // Force unique request
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
+      // COMPLETELY NEW: Clone response to avoid body stream issues
+      const responseClone = response.clone();
+      let data;
 
-      const data = await response.json();
+      try {
+        if (response.ok) {
+          // For successful responses, try JSON parsing
+          data = await response.json();
+        } else {
+          // For error responses, use the cloned response
+          const errorText = await responseClone.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (parseError) {
+            errorData = { error: 'Invalid response format', raw: errorText };
+          }
+          throw new Error(`Request failed with status ${response.status}: ${errorData.error || errorText || 'Unknown error'}`);
+        }
+      } catch (fetchError) {
+        // Handle any parsing or network errors
+        if (response.ok) {
+          // If response was ok but JSON parsing failed
+          throw new Error('Server returned invalid JSON response');
+        } else {
+          // Re-throw network or HTTP errors
+          throw fetchError;
+        }
+      }
       
       // Add AI response to conversation
       setConversation(prev => [...prev, {
