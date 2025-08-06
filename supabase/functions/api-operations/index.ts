@@ -499,6 +499,8 @@ serve(async (req) => {
       }
     }
 
+    let response: any;
+
     // Handle special n8n-request action (for direct API proxying)
     if (body.action === 'n8n-request') {
       try {
