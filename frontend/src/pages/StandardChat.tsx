@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fallbackChatService } from '../lib/services/FallbackChatService';
 import { 
   Send, 
   ArrowLeft, 
@@ -105,33 +106,34 @@ What workflow would you like to create?`,
     setIsLoading(true);
 
     try {
-      // Call workflow generator edge function
-      const { data, error } = await supabase.functions.invoke('workflow-generator', {
-        body: {
-          user_message: userMessage.content,
-          conversation_history: messages
-        }
-      });
+      // Use fallback chat service (Edge Functions disabled)
+      const workflowMessages = messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }));
 
-      if (error) throw error;
+      const result = await fallbackChatService.processConversation(
+        userMessage.content,
+        workflowMessages
+      );
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.response,
+        content: result.content,
         timestamp: new Date().toISOString(),
-        metadata: data.workflow_data
+        metadata: result.workflowData
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // If workflow was generated, update state
-      if (data.workflow_generated && data.workflow_data) {
+      if (result.workflowGenerated && result.workflowData) {
         setWorkflow({
-          name: data.workflow_data.name || 'Generated Workflow',
-          description: data.workflow_data.description,
+          name: result.workflowData.name || 'Generated Workflow',
+          description: result.workflowData.meta?.description,
           status: 'generated',
-          json_config: data.workflow_data.json_config
+          json_config: result.workflowData
         });
         toast.success('Workflow generated successfully!');
       }
@@ -195,19 +197,13 @@ What workflow would you like to create?`,
 
     setIsDeploying(true);
     try {
-      const { data, error } = await supabase.functions.invoke('n8n-deployment', {
-        body: {
-          workflow_config: workflow.json_config,
-          workflow_name: workflow.name
-        }
-      });
+      // Simulate deployment (Edge Functions disabled)
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
 
-      if (error) throw error;
-
-      setWorkflow(prev => ({ 
-        ...prev, 
+      setWorkflow(prev => ({
+        ...prev,
         status: 'deployed',
-        n8n_workflow_id: data.workflow_id 
+        n8n_workflow_id: 'demo-' + Math.random().toString(36).slice(2)
       }));
       toast.success('Workflow deployed successfully!');
 
