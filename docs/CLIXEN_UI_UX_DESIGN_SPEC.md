@@ -11,9 +11,9 @@
  ## 2. Market & User Personas
  | Persona        | Goals                                         | UI/UX Implications                               |
  |----------------|-----------------------------------------------|--------------------------------------------------|
-| New User       | Quick start, minimal setup                    | Onboarding flows, clear primary actions|
- | Power User     | Workflow management and monitoring            | Dashboard summaries, filtering, status badges     |
- | Mobile Operator| Monitor and trigger flows on the go           | Responsive layout, touch targets, performance    |
+| New User       | Quick start, minimal setup                    | Onboarding flows, clear primary actions           |
+| Power User     | Workflow management and monitoring            | Dashboard summaries, filtering, status badges     |
+| Mobile Operator| Monitor and trigger flows on the go           | Responsive layout, touch targets, performance     |
 
  ## 3. Architecture & Key Features (Design Principles)
  ### 3.1 Design Principles
