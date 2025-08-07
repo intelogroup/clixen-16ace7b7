@@ -31,5 +31,39 @@
  - **Supabase migrations**: Manage schema changes using Supabase Migrations; include rollback scripts for each change.
 
  ## 8. Security and Input Sanitization
- - **User input sanitization**: Validate and escape all user prompts and JSON before forwarding to backend services; enforce CSP and secure headers in frontend.
- - **CORS policy**: Restrict API endpoints to allowed origins and enforce secure transport (HTTPS).
+- **User input sanitization**: Validate and escape all user prompts and JSON before forwarding to backend services; enforce CSP and secure headers in frontend.
+- **CORS policy**: Restrict API endpoints to allowed origins and enforce secure transport (HTTPS).
+
+## 9. CI/CD & Environments
+- **Branch workflow**: Use Git flow or trunk-based workflow for feature branches, with pull requests targeting `staging` and promotion to `main` for production.
+- **Deployment pipeline**: Configure Netlify (or GitHub Actions) to deploy `main` to production and `staging` to a staging environment.
+- **Environment variables**: Document all required env vars (`.env.example`) for DEV, STAGING, and PROD in `docs/ENVIRONMENT.md`.
+
+## 10. Logging & Observability
+- **Backend logging**: Tag all requests with a unique request ID; log OpenAI, MCP, and n8n API call latencies and errors.
+- **Frontend monitoring**: Capture uncaught exceptions and performance metrics via Sentry (integrate Sentry JS SDK).
+- **Alerts**: Define Sentry alert rules for error rates and latency thresholds; integrate with Slack or email.
+
+## 11. Feature Flags
+- **Runtime toggles**: Control experimental features (e.g. JSON self-healing, version rollback) via environment-driven flags in Edge Functions or Supabase config.
+- **Rollout strategy**: Enable features for internal users before broader release.
+
+## 12. Data Retention & Cleanup
+- **Retention policy**: Archive or delete workflow versions and execution records older than 30 days via a scheduled Edge Function or Supabase scheduled trigger.
+- **Cleanup jobs**: Automate pruning of stale records to maintain database performance.
+
+## 13. API Schema Contracts & Versioning
+- **OpenAPI spec**: Define and maintain API schemas for all backend endpoints in `docs/api/openapi.yaml`.
+- **Runtime validation**: Use Zod or AJV to validate request and response payloads against schemas at runtime.
+
+## 14. Authorization & RLS Policies
+- **Supabase RLS**: Enforce Row-Level Security for `projects`, `workflows`, and `executions` tables to ensure users only access their own data.
+- **Frontend guards**: Implement route-level checks and token verification in Edge Functions.
+
+## 15. Accessibility & Internationalization
+- **WCAG 2.1 AA**: Design and test UI components for color contrast, keyboard navigation, and ARIA roles.
+- **i18n readiness**: Use a translation framework (e.g. react-i18next) and externalize all user-facing strings for future localization.
+
+## 16. Performance Budgets
+- **Bundle size**: Limit initial JS bundle to ≤200 KB gzipped; implement code-splitting for heavy modules.
+- **Load metrics**: Monitor Lighthouse scores (FCP, TTI) and enforce budgets in CI via Lighthouse CI.

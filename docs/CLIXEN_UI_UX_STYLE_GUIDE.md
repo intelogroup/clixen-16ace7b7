@@ -39,4 +39,10 @@ This document defines the core design tokens for color, typography, spacing, and
 | Compact Logo    | 40×40px  | Header and nav bars               |
 
 ---
-_Keep these tokens in a shared design tokens file (e.g., tokens.json or Figma Styles) for engineering handoff._
+## 6. Accessibility & Internationalization
+- **WCAG 2.1 AA compliance**: Ensure color contrast, keyboard navigation, and ARIA roles are implemented for all interactive components.
+- **Screen readers**: Include semantic markup and live-region announcements for dynamic chat updates.
+- **i18n readiness**: Externalize all text strings and use a translation library (e.g., react-i18next) with locale fallbacks.
+
+---
+_Keep these tokens and guidelines in a shared design tokens file (e.g., tokens.json or Figma Styles) for engineering handoff._
