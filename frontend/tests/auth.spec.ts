@@ -149,10 +149,23 @@ test.describe('Authentication Flow', () => {
     // Wait for either successful login or error
     await page.waitForTimeout(3000);
     
-    await page.screenshot({ 
-      path: 'test-results/04-after-login-attempt.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-04-after-login-attempt.png',
+      fullPage: true
     });
+
+    // Test mobile responsiveness after login
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(1000);
+
+    await page.screenshot({
+      path: 'test-results/modern-04-mobile-after-login.png',
+      fullPage: true
+    });
+
+    // Reset to desktop view
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.waitForTimeout(1000);
     
     // Check for successful authentication
     const isAuthenticated = await page.waitForFunction(() => {
