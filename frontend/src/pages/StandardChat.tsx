@@ -50,6 +50,7 @@ export default function StandardChat() {
   const [user, setUser] = useState<any>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get current user
@@ -69,25 +70,69 @@ export default function StandardChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize chat with welcome message
+  // Initialize chat session and welcome message
   useEffect(() => {
-    if (messages.length === 0) {
-      const welcomeMessage: Message = {
-        id: '1',
-        role: 'assistant',
-        content: `Hi! I'm here to help you create n8n workflows using natural language. 
+    const initializeSession = async () => {
+      if (user && !sessionId) {
+        try {
+          // Create new chat session
+          const { data, error } = await supabase
+            .from('ai_chat_sessions')
+            .insert({
+              user_id: user.id,
+              title: 'New Workflow Chat',
+              is_active: true
+            })
+            .select()
+            .single();
 
-Simply describe what automation you'd like to build. For example:
-• "Send me a daily email with the latest news from an RSS feed"
-• "Post new GitHub issues to our Slack channel"
-• "Backup database data to Google Drive every week"
+          if (error) throw error;
+          setSessionId(data.id);
 
-What workflow would you like to create?`,
-        timestamp: new Date().toISOString()
-      };
-      setMessages([welcomeMessage]);
-    }
-  }, [messages.length]);
+          // Add welcome message if no messages exist
+          if (messages.length === 0) {
+            const welcomeMessage: Message = {
+              id: '1',
+              role: 'assistant',
+              content: `👋 **Welcome to Clixen!**
+
+I'm your AI workflow automation assistant. I help you create n8n workflows using simple, natural language.
+
+**What I can help you with:**
+- Automate repetitive tasks
+- Connect different services and APIs
+- Create scheduled workflows
+- Set up webhooks and triggers
+- Build data processing pipelines
+
+**To get started**, just tell me what you'd like to automate! For example:
+- "Send me a Slack message every morning at 9 AM"
+- "When I receive an email, save the attachment to Google Drive"
+- "Create a webhook that processes form submissions"
+
+What would you like to automate today?`,
+              timestamp: new Date().toISOString()
+            };
+            setMessages([welcomeMessage]);
+
+            // Save welcome message to database
+            await supabase
+              .from('ai_chat_messages')
+              .insert({
+                session_id: data.id,
+                user_id: user.id,
+                role: 'assistant',
+                content: welcomeMessage.content
+              });
+          }
+        } catch (error) {
+          console.error('Error initializing session:', error);
+        }
+      }
+    };
+
+    initializeSession();
+  }, [user, messages.length, sessionId]);
 
   // Handle sending messages
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -127,6 +172,34 @@ What workflow would you like to create?`,
 
       setMessages(prev => [...prev, assistantMessage]);
 
+      // Save messages to database
+      if (sessionId && user) {
+        try {
+          // Save user message
+          await supabase
+            .from('ai_chat_messages')
+            .insert({
+              session_id: sessionId,
+              user_id: user.id,
+              role: 'user',
+              content: userMessage.content
+            });
+
+          // Save assistant message
+          await supabase
+            .from('ai_chat_messages')
+            .insert({
+              session_id: sessionId,
+              user_id: user.id,
+              role: 'assistant',
+              content: result.content,
+              metadata: result.workflowData ? { workflow_generated: true } : null
+            });
+        } catch (dbError) {
+          console.error('Error saving messages:', dbError);
+        }
+      }
+
       // If workflow was generated, update state
       if (result.workflowGenerated && result.workflowData) {
         setWorkflow({
@@ -136,6 +209,17 @@ What workflow would you like to create?`,
           json_config: result.workflowData
         });
         toast.success('Workflow generated successfully!');
+
+        // Update session title with workflow name
+        if (sessionId) {
+          await supabase
+            .from('ai_chat_sessions')
+            .update({
+              title: result.workflowData.name || 'Generated Workflow',
+              metadata: { workflow_generated: true }
+            })
+            .eq('id', sessionId);
+        }
       }
 
     } catch (error: any) {
@@ -162,6 +246,26 @@ What workflow would you like to create?`,
 
     setIsSaving(true);
     try {
+      // Create conversation first if it doesn't exist
+      let conversationId: string;
+
+      const { data: convData, error: convError } = await supabase
+        .from('conversations')
+        .insert({
+          user_id: user.id,
+          title: workflow.name || 'Untitled Workflow',
+          status: 'completed',
+          workflow_confirmed: true,
+          workflow_summary: workflow.description,
+          messages: messages
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+      conversationId = convData.id;
+
+      // Save the workflow
       const { data, error } = await supabase
         .from('workflows')
         .insert({
@@ -177,8 +281,29 @@ What workflow would you like to create?`,
 
       if (error) throw error;
 
+      // Also save to user_workflows for n8n tracking
+      await supabase
+        .from('user_workflows')
+        .insert({
+          user_id: user.id,
+          workflow_name: workflow.name,
+          n8n_workflow_id: workflow.n8n_workflow_id || data.id.toString(),
+          status: 'saved',
+          workflow_type: 'generated'
+        });
+
       setWorkflow(prev => ({ ...prev, id: data.id, status: 'saved' }));
       toast.success('Workflow saved successfully!');
+
+      // Track usage
+      await supabase
+        .from('usage_tracking')
+        .insert({
+          user_id: user.id,
+          event_type: 'workflow_saved',
+          workflow_id: data.id.toString(),
+          metadata: { conversation_id: conversationId }
+        });
 
     } catch (error: any) {
       console.error('Error saving workflow:', error);
@@ -217,10 +342,30 @@ What workflow would you like to create?`,
   };
 
   // Handle starting new chat
-  const handleNewChat = () => {
-    setMessages([]);
-    setWorkflow({ name: '', status: 'draft' });
-    toast.success('New chat started');
+  const handleNewChat = async () => {
+    try {
+      // Mark current session as inactive
+      if (sessionId) {
+        await supabase
+          .from('ai_chat_sessions')
+          .update({ is_active: false })
+          .eq('id', sessionId);
+      }
+
+      // Reset state
+      setMessages([]);
+      setWorkflow({ name: '', status: 'draft' });
+      setSessionId('');
+
+      toast.success('New chat started');
+    } catch (error) {
+      console.error('Error starting new chat:', error);
+      // Still allow UI reset even if DB update fails
+      setMessages([]);
+      setWorkflow({ name: '', status: 'draft' });
+      setSessionId('');
+      toast.success('New chat started');
+    }
   };
 
   // Get status icon and color
