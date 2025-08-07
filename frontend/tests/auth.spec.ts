@@ -131,9 +131,15 @@ test.describe('Authentication Flow', () => {
     await expect(passwordField).toBeVisible();
     await passwordField.fill('Goldyear2023#');
     
-    await page.screenshot({ 
-      path: 'test-results/03-credentials-filled.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-03-credentials-filled.png',
+      fullPage: true
+    });
+
+    // Also capture just the form area
+    await page.screenshot({
+      path: 'test-results/modern-03-form-viewport.png',
+      fullPage: false
     });
     
     // Submit the form
