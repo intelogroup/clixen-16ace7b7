@@ -19,6 +19,7 @@ import {
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { simpleChatService } from '../lib/services/SimpleChatService';
+import { Button, Textarea, Stack, designTokens } from '../components/ui';
 
 interface Message {
   id: string;
@@ -387,31 +388,33 @@ export default function ProfessionalChat() {
                 </div>
               </div>
               
-              <button
+              <Button
                 onClick={createNewChat}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md group"
+                variant="primary"
+                size="md"
+                fullWidth
+                leftIcon={<Plus className="w-4 h-4" />}
               >
-                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-200" />
-                <span className="font-medium">New conversation</span>
-              </button>
+                New conversation
+              </Button>
               
               {sessions.length > 0 && (
-                <button
+                <Button
                   onClick={() => {
                     if (window.confirm('Clear all conversation history? This action cannot be undone.')) {
                       clearAllHistory();
                     }
                   }}
                   disabled={clearingHistory}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 mt-3 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 text-sm disabled:opacity-50"
+                  variant="ghost"
+                  size="sm"
+                  fullWidth
+                  isLoading={clearingHistory}
+                  leftIcon={!clearingHistory ? <Trash2 className="w-4 h-4" /> : undefined}
+                  className="mt-3 text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
-                  {clearingHistory ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                  <span>{clearingHistory ? 'Clearing...' : 'Clear all history'}</span>
-                </button>
+                  {clearingHistory ? 'Clearing...' : 'Clear all history'}
+                </Button>
               )}
             </div>
 
@@ -591,38 +594,45 @@ export default function ProfessionalChat() {
         </div>
 
         {/* Input Area */}
-        <div className="bg-white/80 backdrop-blur-xl border-t border-slate-200/60 p-6">
+        <div 
+          className="backdrop-blur-xl border-t p-6"
+          style={{ 
+            backgroundColor: `${designTokens.colors.white}/80`,
+            borderColor: designTokens.colors.gray[200]
+          }}
+        >
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit}>
-              <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/30 transition-all duration-200">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Describe the workflow you'd like to create..."
-                  className="w-full px-5 py-4 pr-14 bg-transparent border-none resize-none focus:outline-none text-slate-900 placeholder-slate-500 text-sm leading-relaxed"
-                  rows={1}
-                  disabled={isGenerating}
-                  style={{ minHeight: '56px', maxHeight: '160px' }}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = 'auto';
-                    target.style.height = Math.min(target.scrollHeight, 160) + 'px';
-                  }}
-                />
-                <button
+              <Stack direction="row" spacing="3" align="end">
+                <div className="flex-1">
+                  <Textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Describe the workflow you'd like to create..."
+                    disabled={isGenerating}
+                    resize="none"
+                    rows={1}
+                    style={{ minHeight: '56px', maxHeight: '160px' }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = Math.min(target.scrollHeight, 160) + 'px';
+                    }}
+                  />
+                </div>
+                <Button
                   type="submit"
                   disabled={!input.trim() || isGenerating}
-                  className="absolute right-2 bottom-2 p-3 text-slate-400 hover:text-white hover:bg-slate-900 disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+                  variant="primary"
+                  size="lg"
+                  isLoading={isGenerating}
+                  style={{ minHeight: '56px' }}
                 >
-                  {isGenerating ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <ArrowUp className={`w-5 h-5 transition-colors ${input.trim() ? 'text-slate-900' : ''}`} />
-                  )}
-                </button>
-              </div>
+                  {isGenerating ? undefined : <ArrowUp className="w-5 h-5" />}
+                </Button>
+              </Stack>
             </form>
             
             <div className="mt-3 text-center">

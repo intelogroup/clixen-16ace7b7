@@ -14,6 +14,7 @@ import {
   CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../lib/AuthContext';
+import { Button, Textarea, Stack, designTokens } from './ui';
 
 interface WorkflowStep {
   id: string;
@@ -338,12 +339,13 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
             </div>
           </div>
           {onClose && (
-            <button
+            <Button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              variant="ghost"
+              size="sm"
             >
               ×
-            </button>
+            </Button>
           )}
         </div>
 
@@ -402,38 +404,42 @@ export const WorkflowCreationWizard: React.FC<WorkflowCreationWizardProps> = ({
 
         {/* Chat Input */}
         <div className="border-t border-gray-200 p-6 bg-white">
-          <div className="flex space-x-4">
+          <Stack direction="row" spacing="4" align="end">
             <div className="flex-1">
-              <textarea
+              <Textarea
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Describe the workflow you want to create..."
-                className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                 rows={3}
                 disabled={isProcessing}
+                resize="none"
               />
             </div>
-            <button
+            <Button
               onClick={handleSendMessage}
               disabled={!userInput.trim() || isProcessing}
-              className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2"
+              variant="primary"
+              size="lg"
+              isLoading={isProcessing}
+              rightIcon={<ArrowRightIcon className="w-4 h-4" />}
             >
-              <span>Send</span>
-              <ArrowRightIcon className="w-4 h-4" />
-            </button>
-          </div>
+              Send
+            </Button>
+          </Stack>
           
           {/* Quick suggestions */}
           <div className="mt-3 flex flex-wrap gap-2">
             {['Email automation', 'Data sync workflow', 'Social media scheduler', 'File processing'].map((suggestion) => (
-              <button
+              <Button
                 key={suggestion}
                 onClick={() => setUserInput(suggestion)}
-                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors"
+                variant="ghost"
+                size="sm"
+                className="rounded-full"
               >
                 {suggestion}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
