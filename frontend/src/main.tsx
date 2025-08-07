@@ -1,10 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import ModernChat from './pages/ModernChat.tsx'
-// import ModernDashboard from './pages/ModernDashboard.tsx'
-// import ModernAuth from './pages/ModernAuth.tsx'
-// import MinimalApp from './MinimalApp.tsx'
-// import App from './App.tsx'
+import App from './App.tsx'
 import './index.css'
 import './styles/responsive.css'
 
