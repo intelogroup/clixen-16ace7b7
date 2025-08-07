@@ -114,3 +114,13 @@ This document provides low-fidelity ASCII wireframes aligned with the UI/UX desi
 ---
 
 _End of ASCII wireframes for Clixen MVP UI._
+
+## Next Steps: Digital Mockups & Interactive Prototype
+
+Designers should now proceed with:
+- Creating low-fidelity digital wireframes in Figma or Sketch for Auth, Dashboard, Chat, and Deployment screens (greyscale, annotated interactions).
+- Developing high-fidelity mockups using the color palette, logo, typography scale, and iconography for both desktop and mobile layouts.
+- Building a clickable prototype that demonstrates the core user flows (Sign Up → Dashboard → Chat → Deploy).
+- Generating a design token library (colors, fonts, spacing, icons) and exporting necessary assets for engineering handoff.
+
+Once the digital mockups and prototype are approved, share them with the Senior Developer Engineer for a technical feasibility review and final adjustments before implementation.
