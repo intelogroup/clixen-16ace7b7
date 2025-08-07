@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import TestApp from './TestApp.tsx'
-// import App from './App.tsx'
+import App from './App.tsx'
 import './index.css'
 import './styles/responsive.css'
 
