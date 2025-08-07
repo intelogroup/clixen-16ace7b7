@@ -10,10 +10,16 @@ test.describe('Authentication Flow', () => {
   test('should load landing page successfully', async ({ page }) => {
     await page.goto('/');
     
-    // Take screenshot for documentation
-    await page.screenshot({ 
-      path: 'test-results/01-landing-page.png',
-      fullPage: true 
+    // Take screenshot for documentation - Modern UI
+    await page.screenshot({
+      path: 'test-results/modern-01-landing-page.png',
+      fullPage: true
+    });
+
+    // Also capture viewport only
+    await page.screenshot({
+      path: 'test-results/modern-01-landing-viewport.png',
+      fullPage: false
     });
     
     // Check if page loads with expected content
