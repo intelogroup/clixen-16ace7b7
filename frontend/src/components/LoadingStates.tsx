@@ -1,148 +1,159 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-// Skeleton components for loading states
-export const SkeletonCard = ({ className = "" }: { className?: string }) => (
-  <div className={`animate-pulse ${className}`}>
-    <div className="bg-zinc-800 rounded-lg h-6 w-3/4 mb-2"></div>
-    <div className="bg-zinc-800 rounded h-4 w-full mb-2"></div>
-    <div className="bg-zinc-800 rounded h-4 w-2/3"></div>
-  </div>
-);
-
-export const SkeletonWorkflowCard = () => (
-  <div className="animate-pulse border border-zinc-800 rounded-lg p-6">
-    <div className="flex items-center justify-between">
-      <div className="flex-1">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="bg-zinc-800 rounded h-4 w-1/3"></div>
-          <div className="bg-zinc-800 rounded-full h-5 w-12"></div>
-        </div>
-        <div className="bg-zinc-800 rounded h-3 w-full mb-2"></div>
-        <div className="flex space-x-4">
-          <div className="bg-zinc-800 rounded h-3 w-16"></div>
-          <div className="bg-zinc-800 rounded h-3 w-20"></div>
-          <div className="bg-zinc-800 rounded h-3 w-24"></div>
-        </div>
-      </div>
-      <div className="flex space-x-2 ml-4">
-        <div className="bg-zinc-800 rounded h-8 w-8"></div>
-        <div className="bg-zinc-800 rounded h-8 w-8"></div>
-      </div>
-    </div>
-  </div>
-);
-
-export const SkeletonStatCard = () => (
-  <div className="animate-pulse bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
-    <div className="flex items-center justify-between">
-      <div className="flex-1">
-        <div className="bg-zinc-800 rounded h-4 w-20 mb-2"></div>
-        <div className="bg-zinc-800 rounded h-8 w-12"></div>
-      </div>
-      <div className="bg-zinc-800 rounded-lg h-12 w-12"></div>
-    </div>
-  </div>
-);
-
-// Enhanced loading spinner with multiple variants
-export const LoadingSpinner = ({ 
-  size = 'md', 
-  variant = 'default',
-  className = ''
-}: { 
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'default' | 'pulse' | 'dots' | 'bars';
-  className?: string;
-}) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-    xl: 'w-12 h-12'
-  };
-
-  if (variant === 'pulse') {
-    return (
-      <motion.div
-        className={`rounded-full bg-white/20 ${sizeClasses[size]} ${className}`}
-        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-      />
-    );
-  }
-
-  if (variant === 'dots') {
-    return (
-      <div className={`flex space-x-1 ${className}`}>
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="w-2 h-2 bg-white/60 rounded-full"
-            animate={{ y: [0, -8, 0] }}
-            transition={{
-              duration: 0.6,
-              repeat: Infinity,
-              delay: i * 0.1
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === 'bars') {
-    return (
-      <div className={`flex space-x-1 ${className}`}>
-        {[0, 1, 2, 3].map((i) => (
-          <motion.div
-            key={i}
-            className="w-1 bg-white/60 rounded-full"
-            animate={{ height: [4, 16, 4] }}
-            transition={{
-              duration: 0.8,
-              repeat: Infinity,
-              delay: i * 0.1
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  // Default spinner
-  return (
-    <div
-      className={`border-2 border-white/20 border-t-white rounded-full animate-spin ${sizeClasses[size]} ${className}`}
+// Main app loading screen
+export const AppLoading = () => (
+  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
+    {/* Animated background orbs */}
+    <motion.div 
+      className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
+      animate={{
+        x: [0, 100, 0],
+        y: [0, -50, 0],
+        scale: [1, 1.1, 1],
+      }}
+      transition={{
+        duration: 8,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
     />
-  );
-};
-
-// Page-level loading component
-export const PageLoading = ({ message = "Loading..." }: { message?: string }) => (
-  <div className="flex flex-col items-center justify-center h-64 space-y-4">
-    <LoadingSpinner size="lg" variant="pulse" />
-    <p className="text-zinc-400 text-sm font-medium">{message}</p>
+    <motion.div 
+      className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl"
+      animate={{
+        x: [0, -100, 0],
+        y: [0, 50, 0],
+        scale: [1, 0.8, 1],
+      }}
+      transition={{
+        duration: 10,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    />
+    
+    {/* Main loading content */}
+    <motion.div 
+      className="text-center z-10"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      <motion.div
+        className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
+        animate={{ 
+          scale: [1, 1.1, 1],
+          rotate: [0, 5, -5, 0]
+        }}
+        transition={{ 
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      >
+        <span className="text-3xl">⚡</span>
+      </motion.div>
+      
+      <motion.div
+        className="flex justify-center mb-4"
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <div className="flex space-x-2">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={i}
+              className="w-3 h-3 bg-purple-500 rounded-full"
+              animate={{
+                scale: [0.8, 1.2, 0.8],
+                opacity: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                delay: i * 0.2,
+                ease: "easeInOut"
+              }}
+            />
+          ))}
+        </div>
+      </motion.div>
+      
+      <motion.h2 
+        className="text-2xl font-bold text-white mb-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.6 }}
+      >
+        Loading Clixen
+      </motion.h2>
+      
+      <motion.p 
+        className="text-gray-400"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.6 }}
+      >
+        Preparing your AI workspace...
+      </motion.p>
+    </motion.div>
   </div>
+);
+
+// Page transition loading
+export const PageLoading = ({ message = "Loading..." }: { message?: string }) => (
+  <motion.div 
+    className="flex items-center justify-center p-8"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <div className="text-center">
+      <motion.div
+        className="w-12 h-12 border-3 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-4"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+      />
+      <p className="text-gray-400 text-sm">{message}</p>
+    </div>
+  </motion.div>
+);
+
+// Component loading skeleton
+export const ComponentSkeleton = ({ className = "" }: { className?: string }) => (
+  <motion.div 
+    className={`animate-pulse bg-white/5 rounded-xl border border-white/10 ${className}`}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.3 }}
+  >
+    <div className="p-6 space-y-4">
+      <div className="h-4 bg-white/10 rounded w-1/4"></div>
+      <div className="space-y-2">
+        <div className="h-3 bg-white/10 rounded"></div>
+        <div className="h-3 bg-white/10 rounded w-5/6"></div>
+      </div>
+    </div>
+  </motion.div>
 );
 
 // Button loading state
-export const ButtonLoading = ({ 
-  children, 
-  loading = false, 
-  loadingText = "Loading...",
-  ...props 
-}: {
+export const ButtonLoading = ({ children, loading, ...props }: { 
   children: React.ReactNode;
-  loading?: boolean;
-  loadingText?: string;
+  loading: boolean;
   [key: string]: any;
 }) => (
   <button {...props} disabled={loading || props.disabled}>
     {loading ? (
-      <div className="flex items-center space-x-2">
-        <LoadingSpinner size="sm" />
-        <span>{loadingText}</span>
+      <div className="flex items-center justify-center gap-2">
+        <motion.div
+          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
+        <span>Loading...</span>
       </div>
     ) : (
       children
@@ -150,32 +161,54 @@ export const ButtonLoading = ({
   </button>
 );
 
-// Smart loading overlay for existing content
-export const LoadingOverlay = ({ 
-  loading, 
-  children,
-  blur = true
-}: { 
-  loading: boolean; 
-  children: React.ReactNode;
-  blur?: boolean;
-}) => (
-  <div className="relative">
-    {children}
-    {loading && (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg ${
-          blur ? 'backdrop-blur-sm' : ''
-        }`}
-      >
-        <div className="bg-zinc-900 rounded-lg p-4 flex items-center space-x-3">
-          <LoadingSpinner size="md" />
-          <span className="text-white text-sm font-medium">Processing...</span>
-        </div>
-      </motion.div>
-    )}
+// Form field loading
+export const FieldLoading = () => (
+  <div className="animate-pulse">
+    <div className="h-4 bg-white/10 rounded w-24 mb-2"></div>
+    <div className="h-12 bg-white/10 rounded-lg"></div>
   </div>
 );
+
+// Chat message loading
+export const MessageLoading = () => (
+  <motion.div 
+    className="flex gap-3 items-start"
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <div className="w-9 h-9 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+      <span className="text-sm">🤖</span>
+    </div>
+    <div className="flex-1 bg-white/10 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-2">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="w-2 h-2 bg-purple-500 rounded-full"
+            animate={{
+              scale: [0.8, 1.2, 0.8],
+              opacity: [0.5, 1, 0.5],
+            }}
+            transition={{
+              duration: 1.4,
+              repeat: Infinity,
+              delay: i * 0.2,
+              ease: "easeInOut"
+            }}
+          />
+        ))}
+        <span className="text-gray-400 text-sm ml-2">AI is thinking...</span>
+      </div>
+    </div>
+  </motion.div>
+);
+
+export default {
+  AppLoading,
+  PageLoading,
+  ComponentSkeleton,
+  ButtonLoading,
+  FieldLoading,
+  MessageLoading
+};
