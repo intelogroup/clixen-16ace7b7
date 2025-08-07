@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '../supabase';
+import { handleEdgeFunctionError, createFallbackResponse } from '../edgeFunctionErrorHandler';
 
 export interface WorkflowMessage {
   role: 'user' | 'assistant' | 'system';
@@ -67,7 +68,8 @@ Current conversation context: This is a workflow creation session.`
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to process request');
+        const errorInfo = handleEdgeFunctionError(error, 'ai-chat-simple');
+        throw new Error(errorInfo.message);
       }
 
       // Parse response from ai-chat-simple
@@ -84,11 +86,10 @@ Current conversation context: This is a workflow creation session.`
 
       return response;
     } catch (error) {
-      console.error('SimpleWorkflowService error:', error);
-      return {
-        content: 'I apologize, but I encountered an error processing your request. Please try again or rephrase your question.',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      const errorInfo = handleEdgeFunctionError(error, 'ai-chat-simple');
+      console.error('SimpleWorkflowService error:', errorInfo);
+      return createFallbackResponse('AI Chat',
+        'I encountered an issue connecting to the chat service. This might be a temporary problem - please try again in a moment.');
     }
   }
 
@@ -171,7 +172,8 @@ Current conversation context: This is a workflow creation session.`
       });
 
       if (error) {
-        throw new Error(error.message || 'Deployment failed');
+        const errorInfo = handleEdgeFunctionError(error, 'workflows-api');
+        throw new Error(errorInfo.message);
       }
 
       return {
@@ -179,10 +181,11 @@ Current conversation context: This is a workflow creation session.`
         workflowId: data.workflowId
       };
     } catch (error) {
-      console.error('Workflow deployment error:', error);
+      const errorInfo = handleEdgeFunctionError(error, 'workflows-api');
+      console.error('Workflow deployment error:', errorInfo);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Deployment failed'
+        error: errorInfo.message
       };
     }
   }
