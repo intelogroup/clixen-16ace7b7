@@ -38,22 +38,9 @@ export class SimpleChatService {
           content: msg.content
         }));
 
-      let result;
-
-      try {
-        // Try the full workflow service first
-        result = await workflowService.processConversation(
-          message,
-          workflowMessages,
-          'current-user', // TODO: Get actual user ID from context
-          undefined // TODO: Add session ID support
-        );
-      } catch (edgeFunctionError) {
-        console.warn('🔄 [CHAT] Edge Functions unavailable, using fallback service');
-
-        // Use fallback service when Edge Functions fail
-        result = await fallbackChatService.processConversation(message, workflowMessages);
-      }
+      // Use fallback service directly until Edge Functions are deployed
+      console.log('🔄 [CHAT] Using fallback service (Edge Functions disabled)');
+      const result = await fallbackChatService.processConversation(message, workflowMessages);
 
       // Determine conversation mode based on content and history
       const mode = this.determineConversationMode(message, conversationHistory, result);
@@ -143,25 +130,13 @@ export class SimpleChatService {
    * Deploy workflow - simplified interface
    */
   async deployWorkflow(workflowData: any): Promise<{ success: boolean; error?: string }> {
-    try {
-      const result = await workflowService.deployWorkflow(
-        workflowData,
-        undefined, // projectId
-        'current-user' // TODO: Get actual user ID
-      );
-      return {
-        success: result.success,
-        error: result.error
-      };
-    } catch (error) {
-      console.warn('🔄 [DEPLOY] Edge Functions unavailable for deployment');
+    console.log('🔄 [DEPLOY] Using simulated deployment (Edge Functions disabled)');
 
-      // Return a simulated success for demo purposes
-      return {
-        success: true,
-        error: undefined
-      };
-    }
+    // Simulate successful deployment without calling Edge Functions
+    return {
+      success: true,
+      error: undefined
+    };
   }
 }
 
