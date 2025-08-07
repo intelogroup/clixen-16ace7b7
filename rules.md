@@ -19,7 +19,7 @@ The **Visual Claude Toolkit (VCT)** is a strategic developer framework optimized
 2. Follow specifications in `/docs` directory religiously - no feature creep
 3. Implement exactly what's specified - nothing more, nothing less
 4. Use feature flags for experimental features outside MVP scope
-5. Measure complexity - reject solutions with >200 lines per component
+5. Measure complexity - reject solutions with >600 lines per component
 6. Validate every addition against MVP success metrics
 
 ### 2. **Agent Coordination & Standards**
