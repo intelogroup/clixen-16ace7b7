@@ -506,6 +506,11 @@ body {
   100% { transform: rotate(360deg); }
 }
 
+/* Ensure Tailwind animations work */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Responsive design helpers */
 @media (max-width: 768px) {
   .glass {
