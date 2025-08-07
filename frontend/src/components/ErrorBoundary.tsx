@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+// Temporarily remove framer-motion to avoid blocking startup
+// import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCw, Home, Bug, Copy, Check } from 'lucide-react';
 
 interface Props {
@@ -160,20 +161,11 @@ User Agent: ${navigator.userAgent}
 
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8"
-          >
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8">
             <div className="text-center">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.1 }}
-                className="mx-auto flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4"
-              >
+              <div className="mx-auto flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
                 <AlertTriangle className="w-8 h-8 text-red-600" />
-              </motion.div>
+              </div>
 
               <h1 className="text-xl font-semibold text-gray-900 mb-2">
                 Something went wrong
@@ -184,42 +176,35 @@ User Agent: ${navigator.userAgent}
               </p>
 
               <div className="space-y-3">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={this.handleRetry}
                   className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Try Again
-                </motion.button>
+                </button>
 
                 <div className="flex gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={this.handleGoHome}
                     className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     <Home className="w-4 h-4" />
                     Go Home
-                  </motion.button>
+                  </button>
 
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={this.handleReload}
                     className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     <RefreshCw className="w-4 h-4" />
                     Reload
-                  </motion.button>
+                  </button>
                 </div>
               </div>
 
               {this.props.showDetails && this.state.error && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-6 text-left"
-                >
+                <div className="mt-6 text-left">
                   <details className="bg-gray-50 rounded-lg p-4">
                     <summary className="cursor-pointer text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
                       <Bug className="w-4 h-4" />
@@ -243,8 +228,7 @@ User Agent: ${navigator.userAgent}
                       )}
                     </div>
 
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
+                    <button
                       onClick={this.copyErrorInfo}
                       className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors"
                     >
@@ -259,16 +243,16 @@ User Agent: ${navigator.userAgent}
                           Copy Error Info
                         </>
                       )}
-                    </motion.button>
+                    </button>
                   </details>
-                </motion.div>
+                </div>
               )}
 
               <p className="text-xs text-gray-500 mt-6">
                 If this problem persists, please contact support with Error ID: {this.state.errorId}
               </p>
             </div>
-          </motion.div>
+          </div>
         </div>
       );
     }

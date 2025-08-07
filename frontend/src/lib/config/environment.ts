@@ -125,7 +125,7 @@ class EnvironmentService {
       console.warn('VITE_N8N_API_KEY is not set - n8n integration may not work');
     }
 
-    if (!this.config.openai.apiKey || this.config.openai.apiKey === 'your-openai-api-key-here') {
+    if (!this.config.openai.apiKey || this.config.openai.apiKey === 'your-openai-api-key-here' || this.config.openai.apiKey.includes('placeholder')) {
       console.warn('VITE_OPENAI_API_KEY is not properly configured - AI features will be limited');
     }
 

@@ -47,17 +47,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Initialize auth monitoring in development
+// Initialize auth monitoring in development (non-blocking)
 if (env.get().isDevelopment && typeof window !== 'undefined') {
   console.log('🔧 [SUPABASE] Development mode - enabling auth monitoring');
-  monitorAuthState();
   
-  // Test connection on initialization
-  checkSupabaseConnection().then(connected => {
-    if (!connected) {
-      console.warn('⚠️ [SUPABASE] Initial connection test failed - authentication may not work properly');
+  // Defer monitoring setup to avoid blocking app startup
+  setTimeout(() => {
+    try {
+      monitorAuthState();
+      
+      // Test connection after app has started
+      checkSupabaseConnection().then(connected => {
+        if (!connected) {
+          console.warn('⚠️ [SUPABASE] Initial connection test failed - authentication may not work properly');
+        }
+      }).catch(error => {
+        console.warn('⚠️ [SUPABASE] Connection test error:', error);
+      });
+    } catch (error) {
+      console.warn('⚠️ [SUPABASE] Failed to initialize development monitoring:', error);
     }
-  });
+  }, 1500); // Defer longer than logger initialization
 }
 
 // Enhanced error handling for authentication
