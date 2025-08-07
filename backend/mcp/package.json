@@ -1,17 +1,30 @@
 {
-  "name": "mcp",
+  "name": "@clixen/mcp-servers",
   "version": "1.0.0",
   "type": "module",
   "main": "supabase-mcp-server.js",
   "scripts": {
+    "start:supabase": "node supabase-mcp-server.js",
+    "start:n8n": "node n8n-integration-server.js",
+    "dev:supabase": "node --inspect supabase-mcp-server.js",
+    "dev:n8n": "node --inspect n8n-integration-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "mcp",
+    "supabase",
+    "n8n",
+    "workflow",
+    "clixen"
+  ],
+  "author": "Clixen Platform",
+  "license": "MIT",
+  "description": "MCP servers for Clixen platform - Supabase integration and n8n workflow management",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.1",
     "@supabase/supabase-js": "^2.53.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

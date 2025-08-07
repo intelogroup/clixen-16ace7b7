@@ -1,11 +1,11 @@
 /**
- * Simple Chat Service - MVP Bridge
+ * Simple Chat Service - MVP Bridge (Enhanced)
  * 
- * This service bridges the existing chat interface with the simplified workflow service.
- * It maintains the same interface as the complex agent system but uses simple GPT calls.
+ * This service bridges the existing chat interface with the enhanced workflow service.
+ * It maintains the same interface as the complex agent system but uses AI-integrated processing.
  */
 
-import { simpleWorkflowService, WorkflowMessage } from './SimpleWorkflowService';
+import { enhancedSimpleWorkflowService as workflowService, WorkflowMessage } from './EnhancedSimpleWorkflowService';
 
 interface ChatResponse {
   response: string;
@@ -37,8 +37,13 @@ export class SimpleChatService {
           content: msg.content
         }));
 
-      // Process with simple workflow service
-      const result = await simpleWorkflowService.processConversation(message, workflowMessages);
+      // Process with enhanced AI-integrated workflow service
+      const result = await workflowService.processConversation(
+        message, 
+        workflowMessages,
+        'current-user', // TODO: Get actual user ID from context
+        undefined // TODO: Add session ID support
+      );
 
       // Determine conversation mode based on content and history
       const mode = this.determineConversationMode(message, conversationHistory, result);
@@ -129,7 +134,11 @@ export class SimpleChatService {
    */
   async deployWorkflow(workflowData: any): Promise<{ success: boolean; error?: string }> {
     try {
-      const result = await simpleWorkflowService.deployWorkflow(workflowData);
+      const result = await workflowService.deployWorkflow(
+        workflowData,
+        undefined, // projectId
+        'current-user' // TODO: Get actual user ID
+      );
       return {
         success: result.success,
         error: result.error
