@@ -17,7 +17,20 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  AlertCircle 
+  AlertCircle,
+  Sparkles,
+  Wand2,
+  Zap,
+  MessageSquare,
+  Clock,
+  Star,
+  Workflow,
+  Play,
+  Copy,
+  Download,
+  ChevronDown,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { designTokens } from '../styles/design-tokens';
 
@@ -29,7 +42,7 @@ interface Message {
   metadata?: any;
 }
 
-interface Workflow {
+interface WorkflowState {
   id?: string;
   name: string;
   description?: string;
@@ -38,12 +51,219 @@ interface Workflow {
   n8n_workflow_id?: string;
 }
 
+const MessageBubble: React.FC<{ 
+  message: Message; 
+  index: number;
+  isTyping?: boolean;
+}> = ({ message, index, isTyping = false }) => {
+  const isUser = message.role === 'user';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Copied to clipboard');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
+      className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} group`}
+    >
+      {!isUser && (
+        <motion.div 
+          className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg"
+          whileHover={{ scale: 1.1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Bot className="w-5 h-5 text-white" />
+        </motion.div>
+      )}
+      
+      <div className={`max-w-[80%] ${isUser ? 'order-1' : 'order-2'}`}>
+        <motion.div 
+          className={`relative p-4 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 group-hover:shadow-xl ${
+            isUser 
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500/30 rounded-br-sm' 
+              : 'bg-white/10 text-white border-white/20 rounded-bl-sm'
+          }`}
+          whileHover={{ scale: 1.02 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* Copy button */}
+          <motion.button
+            onClick={handleCopy}
+            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg ${
+              isUser ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'
+            }`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {copied ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          </motion.button>
+
+          <div className="pr-8">
+            {isTyping ? (
+              <motion.div 
+                className="flex items-center gap-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="w-2 h-2 bg-gray-400 rounded-full"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-gray-400">AI is thinking...</span>
+              </motion.div>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+            )}
+          </div>
+        </motion.div>
+        
+        <div className={`mt-2 text-xs text-gray-400 ${isUser ? 'text-right' : 'text-left'}`}>
+          {new Date(message.timestamp).toLocaleTimeString()}
+        </div>
+      </div>
+
+      {isUser && (
+        <motion.div 
+          className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg"
+          whileHover={{ scale: 1.1 }}
+          transition={{ duration: 0.2 }}
+        >
+          <User className="w-5 h-5 text-white" />
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
+const WorkflowActionCard: React.FC<{
+  workflow: WorkflowState;
+  onSave: () => void;
+  onDeploy: () => void;
+  isSaving: boolean;
+  isDeploying: boolean;
+}> = ({ workflow, onSave, onDeploy, isSaving, isDeploying }) => {
+  const getStatusIcon = () => {
+    switch (workflow.status) {
+      case 'generated':
+        return <CheckCircle className="w-5 h-5 text-green-400" />;
+      case 'saved':
+        return <Save className="w-5 h-5 text-blue-400" />;
+      case 'deployed':
+        return <Upload className="w-5 h-5 text-purple-400" />;
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-400" />;
+      default:
+        return <AlertCircle className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (workflow.status) {
+      case 'generated':
+        return 'from-green-500/20 to-emerald-500/20 border-green-500/30';
+      case 'saved':
+        return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
+      case 'deployed':
+        return 'from-purple-500/20 to-pink-500/20 border-purple-500/30';
+      case 'error':
+        return 'from-red-500/20 to-rose-500/20 border-red-500/30';
+      default:
+        return 'from-gray-500/20 to-slate-500/20 border-gray-500/30';
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+          <Workflow className="w-6 h-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-white text-lg">Workflow Actions</h3>
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-gradient-to-r ${getStatusColor()} mt-1`}>
+            {getStatusIcon()}
+            <span className="capitalize">{workflow.status}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="space-y-3">
+        <motion.button
+          onClick={onSave}
+          disabled={workflow.status === 'draft' || workflow.status === 'saved' || isSaving}
+          className="w-full p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 disabled:from-gray-500/20 disabled:to-gray-600/20 border border-blue-500/30 disabled:border-gray-500/30 text-white rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'saved' && !isSaving ? 1.02 : 1 }}
+          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'saved' && !isSaving ? 0.98 : 1 }}
+        >
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          {workflow.status === 'saved' ? 'Saved' : 'Save Workflow'}
+        </motion.button>
+        
+        <motion.button
+          onClick={onDeploy}
+          disabled={workflow.status === 'draft' || workflow.status === 'deployed' || isDeploying}
+          className="w-full p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 disabled:from-gray-500/20 disabled:to-gray-600/20 border border-purple-500/30 disabled:border-gray-500/30 text-white rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying ? 1.02 : 1 }}
+          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying ? 0.98 : 1 }}
+        >
+          {isDeploying ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Upload className="w-4 h-4" />
+          )}
+          {workflow.status === 'deployed' ? 'Deployed' : 'Deploy to n8n'}
+        </motion.button>
+      </div>
+
+      {workflow.name && (
+        <motion.div 
+          className="mt-6 pt-4 border-t border-white/10"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+            <Star className="w-4 h-4 text-yellow-400" />
+            Current Workflow
+          </h4>
+          <p className="text-sm text-white font-medium">{workflow.name}</p>
+          {workflow.description && (
+            <p className="text-xs text-gray-400 mt-1">{workflow.description}</p>
+          )}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
 export default function StandardChat() {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [workflow, setWorkflow] = useState<Workflow>({
+  const [workflow, setWorkflow] = useState<WorkflowState>({
     name: '',
     status: 'draft'
   });
@@ -51,7 +271,9 @@ export default function StandardChat() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get current user
   useEffect(() => {
@@ -75,7 +297,6 @@ export default function StandardChat() {
     const initializeSession = async () => {
       if (user && !sessionId) {
         try {
-          // Create new chat session
           const { data, error } = await supabase
             .from('ai_chat_sessions')
             .insert({
@@ -89,21 +310,20 @@ export default function StandardChat() {
           if (error) throw error;
           setSessionId(data.id);
 
-          // Add welcome message if no messages exist
           if (messages.length === 0) {
             const welcomeMessage: Message = {
               id: '1',
               role: 'assistant',
-              content: `👋 **Welcome to Clixen!**
+              content: `👋 **Welcome to Clixen AI!**
 
-I'm your AI workflow automation assistant. I help you create n8n workflows using simple, natural language.
+I'm your intelligent workflow automation assistant. I help you create powerful n8n workflows using simple, natural language.
 
 **What I can help you with:**
-- Automate repetitive tasks
-- Connect different services and APIs
-- Create scheduled workflows
-- Set up webhooks and triggers
-- Build data processing pipelines
+🔄 Automate repetitive tasks
+🔗 Connect different services and APIs
+⏰ Create scheduled workflows
+🪝 Set up webhooks and triggers
+📊 Build data processing pipelines
 
 **To get started**, just tell me what you'd like to automate! For example:
 - "Send me a Slack message every morning at 9 AM"
@@ -115,7 +335,6 @@ What would you like to automate today?`,
             };
             setMessages([welcomeMessage]);
 
-            // Save welcome message to database
             await supabase
               .from('ai_chat_messages')
               .insert({
@@ -151,7 +370,6 @@ What would you like to automate today?`,
     setIsLoading(true);
 
     try {
-      // Use fallback chat service (Edge Functions disabled)
       const workflowMessages = messages.map(msg => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content
@@ -175,26 +393,23 @@ What would you like to automate today?`,
       // Save messages to database
       if (sessionId && user) {
         try {
-          // Save user message
           await supabase
             .from('ai_chat_messages')
-            .insert({
-              session_id: sessionId,
-              user_id: user.id,
-              role: 'user',
-              content: userMessage.content
-            });
-
-          // Save assistant message
-          await supabase
-            .from('ai_chat_messages')
-            .insert({
-              session_id: sessionId,
-              user_id: user.id,
-              role: 'assistant',
-              content: result.content,
-              metadata: result.workflowData ? { workflow_generated: true } : null
-            });
+            .insert([
+              {
+                session_id: sessionId,
+                user_id: user.id,
+                role: 'user',
+                content: userMessage.content
+              },
+              {
+                session_id: sessionId,
+                user_id: user.id,
+                role: 'assistant',
+                content: result.content,
+                metadata: result.workflowData ? { workflow_generated: true } : null
+              }
+            ]);
         } catch (dbError) {
           console.error('Error saving messages:', dbError);
         }
@@ -246,7 +461,6 @@ What would you like to automate today?`,
 
     setIsSaving(true);
     try {
-      // Create conversation first if it doesn't exist
       let conversationId: string;
 
       const { data: convData, error: convError } = await supabase
@@ -265,7 +479,6 @@ What would you like to automate today?`,
       if (convError) throw convError;
       conversationId = convData.id;
 
-      // Save the workflow
       const { data, error } = await supabase
         .from('workflows')
         .insert({
@@ -281,7 +494,6 @@ What would you like to automate today?`,
 
       if (error) throw error;
 
-      // Also save to user_workflows for n8n tracking
       await supabase
         .from('user_workflows')
         .insert({
@@ -295,7 +507,6 @@ What would you like to automate today?`,
       setWorkflow(prev => ({ ...prev, id: data.id, status: 'saved' }));
       toast.success('Workflow saved successfully!');
 
-      // Track usage
       await supabase
         .from('usage_tracking')
         .insert({
@@ -322,8 +533,7 @@ What would you like to automate today?`,
 
     setIsDeploying(true);
     try {
-      // Simulate deployment (Edge Functions disabled)
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       setWorkflow(prev => ({
         ...prev,
@@ -344,7 +554,6 @@ What would you like to automate today?`,
   // Handle starting new chat
   const handleNewChat = async () => {
     try {
-      // Mark current session as inactive
       if (sessionId) {
         await supabase
           .from('ai_chat_sessions')
@@ -352,15 +561,12 @@ What would you like to automate today?`,
           .eq('id', sessionId);
       }
 
-      // Reset state
       setMessages([]);
       setWorkflow({ name: '', status: 'draft' });
       setSessionId('');
-
       toast.success('New chat started');
     } catch (error) {
       console.error('Error starting new chat:', error);
-      // Still allow UI reset even if DB update fails
       setMessages([]);
       setWorkflow({ name: '', status: 'draft' });
       setSessionId('');
@@ -368,236 +574,196 @@ What would you like to automate today?`,
     }
   };
 
-  // Get status icon and color
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'generated':
-        return { icon: <CheckCircle size={16} />, color: designTokens.colors.success[500], text: 'Generated' };
-      case 'saved':
-        return { icon: <Save size={16} />, color: designTokens.colors.primary[500], text: 'Saved' };
-      case 'deployed':
-        return { icon: <Upload size={16} />, color: designTokens.colors.success[600], text: 'Deployed' };
-      case 'error':
-        return { icon: <XCircle size={16} />, color: designTokens.colors.error[500], text: 'Error' };
-      default:
-        return { icon: <AlertCircle size={16} />, color: designTokens.colors.gray[400], text: 'Draft' };
-    }
-  };
-
-  const statusDisplay = getStatusDisplay(workflow.status);
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: designTokens.colors.gray[50] }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent"></div>
+      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]"></div>
+      
+      {/* Floating Orbs */}
+      <motion.div 
+        className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, -50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 15,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+
       {/* Header */}
-      <header className="border-b" style={{ 
-        backgroundColor: designTokens.colors.white,
-        borderColor: designTokens.colors.gray[200]
-      }}>
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <motion.header 
+        className="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10 shadow-2xl"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
+            <motion.button
               onClick={() => navigate('/dashboard')}
-              leftIcon={<ArrowLeft size={16} />}
+              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 flex items-center gap-2 text-gray-300 hover:text-white"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              Back to Dashboard
-            </Button>
-            <div className="h-6 w-px" style={{ backgroundColor: designTokens.colors.gray[200] }} />
-            <h1 className="text-xl font-semibold" style={{ color: designTokens.colors.gray[900] }}>
-              Create Workflow
-            </h1>
+              <ArrowLeft className="w-5 h-5" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </motion.button>
+            
+            <div className="h-6 w-px bg-white/20" />
+            
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                <MessageSquare className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-white">AI Workflow Chat</h1>
+                <p className="text-sm text-gray-400">Create workflows with natural language</p>
+              </div>
+            </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            {workflow.status !== 'draft' && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm" 
-                   style={{ 
-                     backgroundColor: `${statusDisplay.color}10`,
-                     color: statusDisplay.color 
-                   }}>
-                {statusDisplay.icon}
-                {statusDisplay.text}
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNewChat}
-              leftIcon={<RotateCcw size={16} />}
-            >
-              New Chat
-            </Button>
-          </div>
+          <motion.button
+            onClick={handleNewChat}
+            className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 flex items-center gap-2 text-gray-300 hover:text-white"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <RotateCcw className="w-5 h-5" />
+            <span className="hidden sm:inline">New Chat</span>
+          </motion.button>
         </div>
-      </header>
+      </motion.header>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
           {/* Chat Area */}
-          <div className="lg:col-span-2">
-            <div className="rounded-lg border" style={{ 
-              backgroundColor: designTokens.colors.white,
-              borderColor: designTokens.colors.gray[200]
-            }}>
+          <div className="lg:col-span-3 flex flex-col">
+            <motion.div 
+              className="flex-1 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
               {/* Messages */}
-              <div className="h-96 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <AnimatePresence>
-                  {messages.map((message) => (
-                    <motion.div
+                  {messages.map((message, index) => (
+                    <MessageBubble
                       key={message.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                             style={{ backgroundColor: designTokens.colors.primary[100] }}>
-                          <Bot size={16} style={{ color: designTokens.colors.primary[600] }} />
-                        </div>
-                      )}
-                      
-                      <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                        message.role === 'user' 
-                          ? 'rounded-br-sm' 
-                          : 'rounded-bl-sm'
-                      }`} style={{
-                        backgroundColor: message.role === 'user' 
-                          ? designTokens.colors.primary[500]
-                          : designTokens.colors.gray[100],
-                        color: message.role === 'user' 
-                          ? designTokens.colors.white 
-                          : designTokens.colors.gray[800]
-                      }}>
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      </div>
-
-                      {message.role === 'user' && (
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                             style={{ backgroundColor: designTokens.colors.gray[100] }}>
-                          <User size={16} style={{ color: designTokens.colors.gray[600] }} />
-                        </div>
-                      )}
-                    </motion.div>
+                      message={message}
+                      index={index}
+                    />
                   ))}
                 </AnimatePresence>
                 
                 {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex gap-3 justify-start"
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
-                         style={{ backgroundColor: designTokens.colors.primary[100] }}>
-                      <Bot size={16} style={{ color: designTokens.colors.primary[600] }} />
-                    </div>
-                    <div className="px-4 py-3 rounded-lg rounded-bl-sm flex items-center gap-2"
-                         style={{ backgroundColor: designTokens.colors.gray[100] }}>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span className="text-sm" style={{ color: designTokens.colors.gray[600] }}>
-                        Thinking...
-                      </span>
-                    </div>
-                  </motion.div>
+                  <MessageBubble
+                    message={{
+                      id: 'typing',
+                      role: 'assistant',
+                      content: '',
+                      timestamp: new Date().toISOString()
+                    }}
+                    index={messages.length}
+                    isTyping={true}
+                  />
                 )}
                 
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Input Form */}
-              <form onSubmit={handleSendMessage} className="border-t p-4" style={{ 
-                borderColor: designTokens.colors.gray[200] 
-              }}>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Input
+              <div className="border-t border-white/10 p-6 bg-white/5">
+                <form onSubmit={handleSendMessage} className="flex gap-3">
+                  <div className="flex-1 relative">
+                    <input
+                      ref={inputRef}
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder="Describe the workflow you want to create..."
                       disabled={isLoading}
-                      fullWidth
+                      className="w-full pl-4 pr-12 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 backdrop-blur-sm transition-all duration-300"
                     />
+                    <motion.button
+                      type="button"
+                      onClick={() => setIsListening(!isListening)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all duration-300 ${
+                        isListening ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-gray-400 hover:text-white'
+                      }`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </motion.button>
                   </div>
-                  <Button
+                  
+                  <motion.button
                     type="submit"
                     disabled={!inputValue.trim() || isLoading}
-                    isLoading={isLoading}
-                    rightIcon={!isLoading ? <Send size={16} /> : undefined}
+                    className="px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-2xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-2"
+                    whileHover={{ scale: !inputValue.trim() || isLoading ? 1 : 1.05 }}
+                    whileTap={{ scale: !inputValue.trim() || isLoading ? 1 : 0.95 }}
                   >
-                    Send
-                  </Button>
-                </div>
-              </form>
-            </div>
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                    <span className="hidden sm:inline">Send</span>
+                  </motion.button>
+                </form>
+              </div>
+            </motion.div>
           </div>
 
           {/* Workflow Actions Sidebar */}
-          <div className="space-y-4">
-            <div className="rounded-lg border p-4" style={{ 
-              backgroundColor: designTokens.colors.white,
-              borderColor: designTokens.colors.gray[200]
-            }}>
-              <h3 className="font-semibold mb-4" style={{ color: designTokens.colors.gray[900] }}>
-                Workflow Actions
-              </h3>
-              
-              <div className="space-y-3">
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  onClick={handleSaveWorkflow}
-                  disabled={workflow.status === 'draft' || workflow.status === 'saved'}
-                  isLoading={isSaving}
-                  leftIcon={<Save size={16} />}
-                >
-                  {workflow.status === 'saved' ? 'Saved' : 'Save Workflow'}
-                </Button>
-                
-                <Button
-                  fullWidth
-                  onClick={handleDeployWorkflow}
-                  disabled={workflow.status === 'draft' || workflow.status === 'deployed'}
-                  isLoading={isDeploying}
-                  leftIcon={<Upload size={16} />}
-                >
-                  {workflow.status === 'deployed' ? 'Deployed' : 'Deploy to n8n'}
-                </Button>
-              </div>
-
-              {workflow.name && (
-                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${designTokens.colors.gray[200]}` }}>
-                  <h4 className="text-sm font-medium mb-2" style={{ color: designTokens.colors.gray[700] }}>
-                    Current Workflow
-                  </h4>
-                  <p className="text-sm" style={{ color: designTokens.colors.gray[600] }}>
-                    {workflow.name}
-                  </p>
-                  {workflow.description && (
-                    <p className="text-xs mt-1" style={{ color: designTokens.colors.gray[500] }}>
-                      {workflow.description}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+          <div className="space-y-6">
+            <WorkflowActionCard
+              workflow={workflow}
+              onSave={handleSaveWorkflow}
+              onDeploy={handleDeployWorkflow}
+              isSaving={isSaving}
+              isDeploying={isDeploying}
+            />
 
             {/* Tips */}
-            <div className="rounded-lg border p-4" style={{ 
-              backgroundColor: designTokens.colors.primary[50],
-              borderColor: designTokens.colors.primary[200]
-            }}>
-              <h4 className="font-medium mb-2" style={{ color: designTokens.colors.primary[700] }}>
-                Tips for Better Results
-              </h4>
-              <ul className="text-sm space-y-1" style={{ color: designTokens.colors.primary[600] }}>
-                <li>• Be specific about data sources</li>
-                <li>• Mention timing requirements</li>
-                <li>• Include desired output format</li>
-                <li>• Specify any conditions or filters</li>
+            <motion.div 
+              className="p-6 rounded-2xl backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 shadow-xl"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                  <Wand2 className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-medium text-white">Pro Tips</h4>
+              </div>
+              
+              <ul className="text-sm space-y-2 text-gray-300">
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
+                  Be specific about data sources and formats
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-2 flex-shrink-0" />
+                  Mention timing and scheduling requirements
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0" />
+                  Include conditions and error handling
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-pink-400 rounded-full mt-2 flex-shrink-0" />
+                  Specify desired output destinations
+                </li>
               </ul>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
