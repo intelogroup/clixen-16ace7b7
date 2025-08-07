@@ -79,9 +79,14 @@ test.describe('Authentication Flow', () => {
       }
     }
     
-    await page.screenshot({ 
-      path: 'test-results/02-auth-page.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-02-auth-page-full.png',
+      fullPage: true
+    });
+
+    await page.screenshot({
+      path: 'test-results/modern-02-auth-page-viewport.png',
+      fullPage: false
     });
     
     // Wait for auth form to appear
