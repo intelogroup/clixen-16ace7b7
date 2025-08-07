@@ -24,10 +24,12 @@ This MVP comprises three layers:
 
 1. **Chat Interface (Frontend)**
    - Single-page React app with text prompt, persistent chat history per project/workflow, and a "New Chat" button to start fresh conversations.
+   - Natural-language guidance: proactively ask clarifying questions to perform feasibility checks, refine requirements, and guide the user through workflow definition.
    - Minimalistic interactive feedback: loading spinners and concise status messages (no JSON or diagram display).
 2. **Workflow Engine (Backend)**
    - GPT-based processing: parse natural-language into intermediate spec.
    - n8n JSON generator: map spec to n8n-compatible workflow object.
+   - n8n MCP integration: use the Model Context Protocol to validate workflow feasibility, test connectivity against the target n8n instance, and manage workflow lifecycle states.
 3. **Deployment Service**
    - n8n REST API integration: deploy or update workflows on a target n8n instance.
 4. **Persistence & Project Management**
@@ -49,7 +51,7 @@ This MVP comprises three layers:
 - Users can sign up and sign in via email/password.
 - Users can create and select a project in a dashboard view.
 - Within a project, enter a prompt describing an automation (e.g., “daily Slack reminder from RSS feed”).
-- System generates a valid n8n workflow behind the scenes and saves it to the project.
+- System engages in a feasibility-check dialogue, asking clarifying questions to refine requirements and obtain user confirmation before generating a valid n8n workflow behind the scenes and saving it to the project.
 - Users can click “Deploy” to publish the workflow to a connected n8n instance, with loading spinners and deployment status indicators.
 - Users can view created workflows in the project dashboard, displaying workflow name, status, and creation date. Selecting a workflow shows its chat history and details.
 - Users can view and reset chat history within a project/workflow using the "New Chat" button.
