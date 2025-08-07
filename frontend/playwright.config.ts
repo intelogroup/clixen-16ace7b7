@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright Configuration for Clixen E2E Testing
- * Tests the live production app at clixen.netlify.app
+ * Playwright Configuration for Modern Clixen UI Testing
+ * Tests the local development server with authentication flows
  */
 export default defineConfig({
   testDir: './tests',
@@ -23,7 +23,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'https://clixen.netlify.app',
+    baseURL: 'http://localhost:8081',
     
     /* Collect trace when retrying the failed test. */
     trace: 'on-first-retry',
@@ -39,6 +39,9 @@ export default defineConfig({
     
     /* Timeout for each navigation */
     navigationTimeout: 30000,
+    
+    /* Ignore HTTPS errors for local development */
+    ignoreHTTPSErrors: true,
   },
 
   /* Global test timeout */
@@ -90,6 +93,11 @@ export default defineConfig({
   /* Folder for test artifacts */
   outputDir: 'test-results/',
   
-  /* Global setup and teardown */
-  globalSetup: './tests/global-setup.ts',
+  /* Web server configuration for local development */
+  webServer: {
+    command: 'npm run dev',
+    port: 8081,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 });
