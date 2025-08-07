@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+// Temporarily disable framer-motion to prevent blocking startup
+// import { motion } from 'framer-motion';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -157,16 +158,9 @@ export class AsyncErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="flex items-center justify-center p-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md text-center bg-white rounded-lg shadow-lg border p-6"
-          >
+          <div className="max-w-md text-center bg-white rounded-lg shadow-lg border p-6">
             {/* Icon */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.1 }}
+            <div
               className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4"
               style={{
                 backgroundColor: isNetworkErr ? (isOnline ? '#fef3c7' : '#fee2e2') : '#fee2e2'
@@ -181,7 +175,7 @@ export class AsyncErrorBoundary extends Component<Props, State> {
               ) : (
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               )}
-            </motion.div>
+            </div>
 
             {/* Title */}
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
@@ -213,34 +207,29 @@ export class AsyncErrorBoundary extends Component<Props, State> {
             <div className="space-y-3">
               {isRetrying ? (
                 <div className="flex items-center justify-center gap-2 text-blue-600">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
+                  <div className="animate-spin">
                     <RefreshCw className="w-4 h-4" />
-                  </motion.div>
+                  </div>
                   <span className="text-sm">Retrying...</span>
                 </div>
               ) : (
                 <>
                   {canRetry && (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
+                    <button
                       onClick={this.handleRetry}
                       className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <RefreshCw className="w-4 h-4" />
                       {retryText}
-                    </motion.button>
+                    </button>
                   )}
 
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={this.resetError}
                     className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     Dismiss
-                  </motion.button>
+                  </button>
                 </>
               )}
             </div>
@@ -261,7 +250,7 @@ export class AsyncErrorBoundary extends Component<Props, State> {
                 )}
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       );
     }

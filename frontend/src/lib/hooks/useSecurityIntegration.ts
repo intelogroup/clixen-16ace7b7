@@ -3,7 +3,7 @@
  * Provides a unified interface to all security systems
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useAuth } from '../AuthContext';
 import { securityManager } from '../security/SecurityManager';
 import { authorizationManager } from '../security/AuthorizationManager';

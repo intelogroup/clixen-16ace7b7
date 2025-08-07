@@ -56,27 +56,39 @@ class Logger {
     if (this.isInitialized) return;
 
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        this.userId = user.id;
-      }
-
-      // Set up global error handlers
+      // Set up global error handlers immediately (no async dependency)
       this.setupGlobalErrorHandlers();
 
-      // Set up performance monitoring
+      // Set up performance monitoring immediately (no async dependency)
       this.setupPerformanceMonitoring();
 
-      // Set up log flushing
+      // Set up log flushing immediately (no async dependency)
       this.setupLogFlushing();
 
-      // Log session start
-      this.info('Session started', {
-        sessionId: this.sessionId,
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString()
-      });
+      // Get current user asynchronously without blocking initialization
+      setTimeout(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            this.userId = user.id;
+          }
+          
+          // Log session start after user is available
+          this.info('Session started', {
+            sessionId: this.sessionId,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString()
+          });
+        } catch (error) {
+          console.warn('Failed to get user for logger:', error);
+          // Log session start even without user
+          this.info('Session started', {
+            sessionId: this.sessionId,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }, 500); // Give the app time to initialize first
 
       this.isInitialized = true;
     } catch (error) {

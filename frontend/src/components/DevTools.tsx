@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// Temporarily disable framer-motion to prevent blocking startup
+// import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Monitor, Bug, Zap } from 'lucide-react';
-import MonitoringDashboard from './MonitoringDashboard';
-import { logger } from '../lib/monitoring/Logger';
+// import MonitoringDashboard from './MonitoringDashboard';
+// import { logger } from '../lib/monitoring/Logger';
 
 export const DevTools: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,11 +39,12 @@ export const DevTools: React.FC = () => {
   };
 
   const testLogger = () => {
-    logger.debug('Debug test message', { test: 'data' });
-    logger.info('Info test message', { test: 'data' });
-    logger.warn('Warning test message', { test: 'data' });
-    logger.error('Error test message', { test: 'data' });
-    logger.critical('Critical test message', { test: 'data' });
+    console.log('Test logger disabled during startup optimization');
+    // logger.debug('Debug test message', { test: 'data' });
+    // logger.info('Info test message', { test: 'data' });
+    // logger.warn('Warning test message', { test: 'data' });
+    // logger.error('Error test message', { test: 'data' });
+    // logger.critical('Critical test message', { test: 'data' });
   };
 
   const triggerError = () => {
@@ -51,9 +53,7 @@ export const DevTools: React.FC = () => {
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
+      <div
         style={{
           position: 'fixed',
           left: position.x,
@@ -75,14 +75,8 @@ export const DevTools: React.FC = () => {
           </button>
         </div>
 
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="border-t border-gray-700"
-            >
+        {isOpen && (
+          <div className="border-t border-gray-700">
               <div className="p-2 space-y-1">
                 <button
                   onClick={() => setShowMonitoring(true)}
@@ -110,22 +104,22 @@ export const DevTools: React.FC = () => {
 
                 <div className="pt-2 border-t border-gray-700">
                   <div className="text-xs text-gray-400 px-3 py-1">
-                    Session: {logger.sessionId?.substring(0, 8)}...
+                    Session: Loading...
                   </div>
                   <div className="text-xs text-gray-400 px-3 py-1">
-                    Logs: {logger.getLogs().length}
+                    Logs: Loading...
                   </div>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+          </div>
+        )}
+      </div>
 
-      <MonitoringDashboard
+      {/* MonitoringDashboard disabled during startup optimization */}
+      {/* <MonitoringDashboard
         isOpen={showMonitoring}
         onClose={() => setShowMonitoring(false)}
-      />
+      /> */}
     </>
   );
 };

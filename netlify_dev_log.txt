@@ -1,0 +1,2 @@
+ ›   Error: unknown option '--timeout'
+ ›   See more help with --help
