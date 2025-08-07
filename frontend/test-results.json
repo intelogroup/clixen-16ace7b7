@@ -137,6 +137,16 @@
   "errors": [
     {
       "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/app-functionality.spec.ts:3:6",
+      "location": {
+        "file": "/app/code/frontend/tests/app-functionality.spec.ts",
+        "column": 6,
+        "line": 3
+      },
+      "snippet": "   at app-functionality.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Application Functionality', () => {\n    |      ^\n  4 |   // Helper function to login\n  5 |   async function login(page) {\n  6 |     await page.goto('/');"
+    },
+    {
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
       "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/auth.spec.ts:3:6",
       "location": {
         "file": "/app/code/frontend/tests/auth.spec.ts",
@@ -144,6 +154,16 @@
         "line": 3
       },
       "snippet": "   at auth.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Authentication Flow', () => {\n    |      ^\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Clear any existing auth state\n  6 |     await page.context().clearCookies();"
+    },
+    {
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/comprehensive.spec.ts:4:6",
+      "location": {
+        "file": "/app/code/frontend/tests/comprehensive.spec.ts",
+        "column": 6,
+        "line": 4
+      },
+      "snippet": "   at comprehensive.spec.ts:4\n\n  2 | import { TestHelpers } from './utils/test-helpers';\n  3 |\n> 4 | test.describe('Comprehensive Application Test', () => {\n    |      ^\n  5 |   let helpers: TestHelpers;\n  6 |\n  7 |   test.beforeEach(async ({ page }) => {"
     },
     {
       "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
@@ -156,13 +176,53 @@
       "snippet": "   at modern-ui-auth.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Modern UI Authentication Flow with Screenshots', () => {\n    |      ^\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Clear any existing auth state\n  6 |     await page.context().clearCookies();"
     },
     {
-      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
-      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/password-reset.spec.ts:3:6",
+      "location": {
+        "file": "/app/code/frontend/tests/password-reset.spec.ts",
+        "column": 6,
+        "line": 3
+      },
+      "snippet": "   at password-reset.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Password Reset Functionality Tests', () => {\n    |      ^\n  4 |   const AUTH_URL = 'http://localhost:8081/auth';\n  5 |   const TEST_EMAIL = 'jayveedz19@gmail.com';\n  6 |"
+    },
+    {
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/performance.spec.ts:3:6",
+      "location": {
+        "file": "/app/code/frontend/tests/performance.spec.ts",
+        "column": 6,
+        "line": 3
+      },
+      "snippet": "   at performance.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Performance and Visual Tests', () => {\n    |      ^\n  4 |   test('should load pages within performance budgets', async ({ page }) => {\n  5 |     // Track performance metrics\n  6 |     const performanceMetrics = [];"
+    },
+    {
+      "message": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test() to be called here.\nMost common reasons include:\n- You are calling test() in a configuration file.\n- You are calling test() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._createTest (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:87:24)\n    at test (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/simple-auth-screenshot.spec.ts:3:1",
+      "location": {
+        "file": "/app/code/frontend/tests/simple-auth-screenshot.spec.ts",
+        "column": 1,
+        "line": 3
+      },
+      "snippet": "   at simple-auth-screenshot.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test('capture modern UI screenshots with authentication', async ({ page }) => {\n    | ^\n  4 |   // Clear any existing auth state\n  5 |   await page.context().clearCookies();\n  6 |   await page.evaluate(() => {"
+    },
+    {
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/ui-components.spec.ts:3:6",
+      "location": {
+        "file": "/app/code/frontend/tests/ui-components.spec.ts",
+        "column": 6,
+        "line": 3
+      },
+      "snippet": "   at ui-components.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Modern UI Components and Navigation', () => {\n    |      ^\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     await page.context().clearCookies();\n  6 |     await page.evaluate(() => {"
+    },
+    {
+      "message": "Error: No tests found",
+      "stack": "Error: No tests found"
     }
   ],
   "stats": {
-    "startTime": "2025-08-07T23:37:04.211Z",
-    "duration": 4080.670000000002,
+    "startTime": "2025-08-07T23:38:07.387Z",
+    "duration": 152.02199999999993,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,
