@@ -32,6 +32,6 @@ if (import.meta.env.DEV) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ModernDashboard />
+    <ModernChat />
   </React.StrictMode>,
 )
