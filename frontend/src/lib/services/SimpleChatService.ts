@@ -5,7 +5,7 @@
  * It maintains the same interface as the complex agent system but uses AI-integrated processing.
  */
 
-import { enhancedSimpleWorkflowService as workflowService, WorkflowMessage } from './EnhancedSimpleWorkflowService';
+import { simpleWorkflowService as workflowService, WorkflowMessage } from './SimpleWorkflowService';
 
 interface ChatResponse {
   response: string;
