@@ -3,8 +3,9 @@
 ## Sprint 1: Authentication, Project Management & Core Chat UI (2 weeks)
 - Initialize project scaffolding: React frontend and backend service template.
 - Implement Supabase Auth (email/password): sign up, sign in, session management.
-- Build project dashboard: create/select projects and list saved workflows.
-- Develop basic chat UI: prompt input, chat history, loading spinners.
+- Build project dashboard: create/select projects and list saved workflows with name, status, and creation date.
+- Develop interactive chat UI: text prompt input, persistent chat history per project/workflow, "New Chat" button, and loading spinners.
+- Reference existing UI screenshot assets (screenshots/ui-improvements and ui-test-results) for chat and dashboard design inspiration.
 - Unit tests for auth flows, project API, and chat UI components.
 
 ## Sprint 2: Workflow Generation & Persistence (2 weeks)

@@ -23,8 +23,8 @@
 This MVP comprises three layers:
 
 1. **Chat Interface (Frontend)**
-   - Single-page React app with text prompt and chat history.
-   - Minimalistic feedback: loading spinners and concise status messages (no JSON or diagram display).
+   - Single-page React app with text prompt, persistent chat history per project/workflow, and a "New Chat" button to start fresh conversations.
+   - Minimalistic interactive feedback: loading spinners and concise status messages (no JSON or diagram display).
 2. **Workflow Engine (Backend)**
    - GPT-based processing: parse natural-language into intermediate spec.
    - n8n JSON generator: map spec to n8n-compatible workflow object.
@@ -51,7 +51,8 @@ This MVP comprises three layers:
 - Within a project, enter a prompt describing an automation (e.g., “daily Slack reminder from RSS feed”).
 - System generates a valid n8n workflow behind the scenes and saves it to the project.
 - Users can click “Deploy” to publish the workflow to a connected n8n instance, with loading spinners and deployment status indicators.
-- Workflows and their statuses are listed in the project dashboard.
+- Users can view created workflows in the project dashboard, displaying workflow name, status, and creation date. Selecting a workflow shows its chat history and details.
+- Users can view and reset chat history within a project/workflow using the "New Chat" button.
 - Clear error messages are displayed for prompt processing or deployment failures.
 
 ## 4. Success Metrics
