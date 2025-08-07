@@ -6,6 +6,9 @@ import './styles/responsive.css'
 
 // Initialize monitoring in development (non-blocking)
 if (import.meta.env.DEV) {
+  // Import function test
+  import('./lib/testSupabaseFunctions');
+
   // Use setTimeout to defer non-critical initialization
   setTimeout(() => {
     import('./lib/utils/bundleAnalyzer').then(({ bundleAnalyzer }) => {
