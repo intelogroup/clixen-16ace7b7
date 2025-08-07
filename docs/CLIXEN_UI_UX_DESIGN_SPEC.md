@@ -11,7 +11,7 @@
  ## 2. Market & User Personas
  | Persona        | Goals                                         | UI/UX Implications                               |
  |----------------|-----------------------------------------------|--------------------------------------------------|
- | New User       | Quick start, minimal setup                    | Onboarding flows, clear primary actions, tooltips|
+| New User       | Quick start, minimal setup                    | Onboarding flows, clear primary actions|
  | Power User     | Workflow management and monitoring            | Dashboard summaries, filtering, status badges     |
  | Mobile Operator| Monitor and trigger flows on the go           | Responsive layout, touch targets, performance    |
 
@@ -25,9 +25,9 @@
  ### 3.2 Core Screens & Components
  | Screen / Component    | Purpose                                         | Requirements                                       |
  |-----------------------|-------------------------------------------------|----------------------------------------------------|
- | **Auth Page**         | Sign up / Sign in                                | Email/password fields, error validation, swift feedback |
- | **Project Dashboard** | List and select workflows                        | Card or table view with name, status, created date; pagination or infinite scroll |
- | **Chat Interface**    | Define workflows via natural language            | Chat bubbles, timestamped history, "New Chat" button, loading spinner |
+| **Auth Page**         | Sign up / Sign in                                | Email/password fields, inline error validation styling, swift feedback |
+| **Project Dashboard** | List and select workflows and projects           | Card or table view with 'Create New Project' entry; project/workflow name, status, creation date; empty-state placeholder when no items; pagination or infinite scroll |
+| **Chat Interface**    | Define workflows via natural language            | Chat bubbles, timestamped history, "New Chat" button, loading spinner; empty-state placeholder prompting to start a new conversation |
  | **Deployment Status** | Monitor workflow deployment                      | Inline status badges (pending, success, failure), retry action |
  | **Global Header**     | Navigation and user menu                         | Logo, project selector, profile menu, logout       |
 
