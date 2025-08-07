@@ -34,7 +34,8 @@
  ### 3.3 Visual Style & Assets
  - **Screenshot References**: Leverage existing UI assets in `ui-test-results/` and `screenshots/` for spacing, typography, and component placement.
  - **Color Palette**: Align with brand; primary accent for actions (e.g., Chat "Send" button, Deploy), neutral backgrounds.
- - **Iconography**: Use consistent icon set (e.g., Status: ✔️ ❌ ⏳) for deployment feedback.
+- **Logo**: Use the primary vector logo (`docs/clixen_logo.svg`) reflecting the node-graph motif.
+- **Iconography**: Use consistent icon set (e.g., Status: ✔️ ❌ ⏳) for deployment feedback.
 
  ## 4. Delivery Plan (Design Roadmap)
  | Phase         | Deliverables                                            | Timeline  |
