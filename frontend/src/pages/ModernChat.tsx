@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageLoading } from '../components/LoadingStates';
 
 export default function ModernChat() {
   const [messages, setMessages] = useState([
@@ -73,420 +75,236 @@ What would you like to automate today?`,
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'generated': return '#10b981';
-      case 'saved': return '#3b82f6';
-      case 'deployed': return '#8b5cf6';
-      default: return '#6b7280';
+      case 'generated': return 'text-green-500 bg-green-500/10 border-green-500/20';
+      case 'saved': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+      case 'deployed': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
+      default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 25%, #2d1b69 50%, #1a1a3e 75%, #0f0f23 100%)',
-      fontFamily: 'Inter, sans-serif',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header */}
-      <header style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '15px 0'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '10px',
-              padding: '10px',
-              color: 'white',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px'
-            }}>
-              ← Dashboard
-            </button>
-            
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '18px'
-            }}>
-              💬
+    <div className="h-full flex flex-col lg:flex-row gap-6">
+      {/* Main Chat Area */}
+      <motion.div 
+        className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        {/* Chat Header */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+              <span className="text-xl">💬</span>
             </div>
-            
             <div>
-              <h1 style={{ margin: '0', fontSize: '18px' }}>AI Workflow Chat</h1>
-              <p style={{ margin: '0', color: '#a0a0a0', fontSize: '12px' }}>
-                Create workflows with natural language
-              </p>
+              <h1 className="text-xl font-semibold text-white">AI Workflow Chat</h1>
+              <p className="text-gray-400 text-sm">Create workflows with natural language</p>
             </div>
           </div>
-          
-          <button style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '10px',
-            padding: '10px 15px',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}>
-            🔄 New Chat
-          </button>
         </div>
-      </header>
 
-      <div style={{
-        flex: 1,
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-        width: '100%',
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: '20px'
-      }}>
-        {/* Chat Area */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'calc(100vh - 140px)'
-        }}>
-          {/* Messages */}
-          <div style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px'
-          }}>
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <AnimatePresence>
             {messages.map((message) => (
-              <div
+              <motion.div
                 key={message.id}
-                style={{
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'flex-start',
-                  alignSelf: message.role === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '80%'
-                }}
+                className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
               >
                 {message.role === 'assistant' && (
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    flexShrink: 0
-                  }}>
-                    🤖
-                  </div>
+                  <motion.div 
+                    className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", duration: 0.3 }}
+                  >
+                    <span className="text-lg">🤖</span>
+                  </motion.div>
                 )}
                 
-                <div style={{
-                  background: message.role === 'user' 
-                    ? 'linear-gradient(135deg, #8b5cf6, #ec4899)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: message.role === 'user' 
-                    ? 'none'
-                    : '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  color: 'white',
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  whiteSpace: 'pre-wrap',
-                  order: message.role === 'user' ? -1 : 1
-                }}>
-                  {message.content}
-                </div>
+                <motion.div 
+                  className={`max-w-[80%] p-4 rounded-2xl ${
+                    message.role === 'user' 
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : 'bg-white/10 border border-white/20 text-white'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {message.content}
+                  </div>
+                  <div className="text-xs opacity-60 mt-2">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </div>
+                </motion.div>
 
                 {message.role === 'user' && (
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    flexShrink: 0
-                  }}>
-                    👤
-                  </div>
+                  <motion.div 
+                    className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center flex-shrink-0"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", duration: 0.3 }}
+                  >
+                    <span className="text-lg">👤</span>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             ))}
+          </AnimatePresence>
 
-            {isLoading && (
-              <div style={{
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'flex-start',
-                maxWidth: '80%'
-              }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px'
-                }}>
-                  🤖
+          {isLoading && <MessageLoading />}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Form */}
+        <motion.form 
+          onSubmit={handleSendMessage}
+          className="p-6 border-t border-white/10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="flex gap-3">
+            <input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Describe the workflow you want to create..."
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+            />
+            <motion.button
+              type="submit"
+              disabled={!inputValue.trim() || isLoading}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+                !inputValue.trim() || isLoading
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-purple-500/25'
+              }`}
+              whileHover={!inputValue.trim() && !isLoading ? {} : { scale: 1.05 }}
+              whileTap={!inputValue.trim() && !isLoading ? {} : { scale: 0.95 }}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Sending</span>
                 </div>
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    gap: '4px'
-                  }}>
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        style={{
-                          width: '8px',
-                          height: '8px',
-                          background: '#8b5cf6',
-                          borderRadius: '50%',
-                          animation: `bounce 1.4s infinite ${i * 0.2}s`
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <span style={{ color: '#a0a0a0', fontSize: '14px' }}>
-                    AI is thinking...
-                  </span>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>Send</span>
+                  <span>📤</span>
                 </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} />
+              )}
+            </motion.button>
+          </div>
+        </motion.form>
+      </motion.div>
+
+      {/* Sidebar */}
+      <motion.div 
+        className="w-full lg:w-80 space-y-6"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
+        {/* Workflow Status */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+              <span className="text-lg">🔄</span>
+            </div>
+            <h3 className="text-lg font-semibold text-white">Workflow Actions</h3>
+          </div>
+          
+          <div className={`flex items-center gap-2 p-3 rounded-lg border mb-4 ${getStatusColor(workflowStatus)}`}>
+            <div className="w-2 h-2 rounded-full bg-current" />
+            <span className="text-sm font-semibold capitalize">{workflowStatus}</span>
           </div>
 
-          {/* Input Form */}
-          <form onSubmit={handleSendMessage} style={{
-            padding: '20px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            background: 'rgba(255, 255, 255, 0.05)'
-          }}>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Describe the workflow you want to create..."
-                disabled={isLoading}
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || isLoading}
-                style={{
-                  background: !inputValue.trim() || isLoading
-                    ? 'rgba(107, 114, 128, 0.5)'
-                    : 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '16px 24px',
-                  color: 'white',
-                  cursor: !inputValue.trim() || isLoading ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
+          <div className="space-y-3">
+            <motion.button 
+              className={`w-full p-3 rounded-xl border font-semibold transition-all duration-300 ${
+                workflowStatus === 'draft' 
+                  ? 'bg-gray-600/20 border-gray-600/30 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30 hover:border-blue-500/50'
+              }`}
+              disabled={workflowStatus === 'draft'}
+              whileHover={workflowStatus !== 'draft' ? { scale: 1.02 } : {}}
+              whileTap={workflowStatus !== 'draft' ? { scale: 0.98 } : {}}
+            >
+              💾 Save Workflow
+            </motion.button>
+            
+            <motion.button 
+              className={`w-full p-3 rounded-xl border font-semibold transition-all duration-300 ${
+                workflowStatus === 'draft' 
+                  ? 'bg-gray-600/20 border-gray-600/30 text-gray-400 cursor-not-allowed' 
+                  : 'bg-purple-500/20 border-purple-500/30 text-purple-400 hover:bg-purple-500/30 hover:border-purple-500/50'
+              }`}
+              disabled={workflowStatus === 'draft'}
+              whileHover={workflowStatus !== 'draft' ? { scale: 1.02 } : {}}
+              whileTap={workflowStatus !== 'draft' ? { scale: 0.98 } : {}}
+            >
+              🚀 Deploy to n8n
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Pro Tips */}
+        <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+              <span className="text-lg">💡</span>
+            </div>
+            <h4 className="text-lg font-semibold text-white">Pro Tips</h4>
+          </div>
+          
+          <ul className="space-y-3 text-sm text-gray-300">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5">🎯</span>
+              <span>Be specific about data sources and formats</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-purple-400 mt-0.5">⏰</span>
+              <span>Mention timing and scheduling requirements</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">🔧</span>
+              <span>Include conditions and error handling</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-yellow-400 mt-0.5">📤</span>
+              <span>Specify desired output destinations</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Quick Templates */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+          <h4 className="text-lg font-semibold text-white mb-4">Quick Templates</h4>
+          <div className="space-y-2">
+            {[
+              'Email to Slack notification',
+              'Schedule daily reports',
+              'Form to spreadsheet',
+              'File backup automation'
+            ].map((template, index) => (
+              <motion.button
+                key={index}
+                onClick={() => setInputValue(template)}
+                className="w-full text-left p-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-300"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {isLoading ? '⏳' : '📤'} Send
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Workflow Actions Sidebar */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          {/* Workflow Status */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '20px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '15px'
-            }}>
-              <span style={{ fontSize: '20px' }}>🔄</span>
-              <h3 style={{ margin: '0', fontSize: '16px' }}>Workflow Actions</h3>
-            </div>
-            
-            <div style={{
-              background: `${getStatusColor(workflowStatus)}20`,
-              border: `1px solid ${getStatusColor(workflowStatus)}40`,
-              borderRadius: '10px',
-              padding: '12px',
-              marginBottom: '15px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <div style={{
-                width: '8px',
-                height: '8px',
-                background: getStatusColor(workflowStatus),
-                borderRadius: '50%'
-              }} />
-              <span style={{
-                fontSize: '12px',
-                color: getStatusColor(workflowStatus),
-                textTransform: 'capitalize',
-                fontWeight: '600'
-              }}>
-                {workflowStatus}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button style={{
-                background: workflowStatus === 'draft' 
-                  ? 'rgba(107, 114, 128, 0.3)' 
-                  : 'rgba(59, 130, 246, 0.2)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '10px',
-                padding: '12px',
-                color: workflowStatus === 'draft' ? '#9ca3af' : '#3b82f6',
-                cursor: workflowStatus === 'draft' ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                width: '100%'
-              }}>
-                💾 Save Workflow
-              </button>
-              
-              <button style={{
-                background: workflowStatus === 'draft' 
-                  ? 'rgba(107, 114, 128, 0.3)' 
-                  : 'rgba(139, 92, 246, 0.2)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-                borderRadius: '10px',
-                padding: '12px',
-                color: workflowStatus === 'draft' ? '#9ca3af' : '#8b5cf6',
-                cursor: workflowStatus === 'draft' ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                width: '100%'
-              }}>
-                🚀 Deploy to n8n
-              </button>
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
-            borderRadius: '16px',
-            padding: '20px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '15px'
-            }}>
-              <span style={{ fontSize: '20px' }}>💡</span>
-              <h4 style={{ margin: '0', fontSize: '16px' }}>Pro Tips</h4>
-            </div>
-            
-            <ul style={{
-              margin: '0',
-              padding: '0',
-              listStyle: 'none',
-              fontSize: '12px',
-              color: '#a0a0a0',
-              lineHeight: '1.6'
-            }}>
-              <li style={{ marginBottom: '8px' }}>
-                🎯 Be specific about data sources and formats
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                ⏰ Mention timing and scheduling requirements
-              </li>
-              <li style={{ marginBottom: '8px' }}>
-                🔧 Include conditions and error handling
-              </li>
-              <li>
-                📤 Specify desired output destinations
-              </li>
-            </ul>
+                {template}
+              </motion.button>
+            ))}
           </div>
         </div>
-      </div>
-
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% {
-            transform: scale(0);
-          }
-          40% {
-            transform: scale(1);
-          }
-        }
-      `}</style>
+      </motion.div>
     </div>
   );
 }
