@@ -13,7 +13,7 @@
     "build": "cd frontend && npm run build",
     "preview": "cd frontend && npm run preview",
     "lint": "cd frontend && npm run lint",
-    "test": "cd frontend && npm run test",
+    "test": "npm run test:all",
     "test:headed": "cd frontend && npm run test:headed",
     "test:debug": "cd frontend && npm run test:debug",
     "test:ui": "cd frontend && npm run test:ui",
@@ -28,7 +28,19 @@
     "backend:migrate": "cd backend && npm run migrate",
     "backend:deploy-functions": "cd backend && npm run deploy-functions",
     "backend:setup": "cd backend && npm run setup",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:security && npm run test:e2e && npm run test:mvp-validation",
+    "test:unit": "jest --config tests/config/jest.config.js --testPathPattern=tests/unit",
+    "test:integration": "jest --config tests/config/jest.integration.config.js --testPathPattern=tests/integration",
+    "test:security": "jest --config tests/config/jest.config.js --testPathPattern=tests/security",
+    "test:e2e": "cd frontend && playwright test",
+    "test:e2e:ci": "cd frontend && playwright test --reporter=html,junit,json",
+    "test:performance:full": "jest --config tests/config/jest.config.js --testPathPattern=tests/performance --testTimeout=300000",
+    "test:mvp-validation": "jest --config tests/config/jest.config.js --testPathPattern=tests/mvp-acceptance-validation.test.ts --testTimeout=600000",
+    "test:cleanup": "jest --config tests/config/jest.config.js --testPathPattern=cleanup --testTimeout=60000",
+    "test:ci": "npm run test:unit && npm run test:integration && npm run test:security && npm run test:e2e:ci",
+    "test:quick": "npm run test:unit && npm run test:integration",
+    "test:full": "npm run test:all && npm run test:performance:full"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"

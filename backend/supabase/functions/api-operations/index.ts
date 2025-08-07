@@ -1,6 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
+import { authenticate, AuthUser } from '../_shared/auth.ts';
+import { 
+  applyMiddleware, 
+  createSuccessResponse, 
+  createErrorResponse,
+  extractClientInfo,
+  RATE_LIMITS
+} from '../_shared/middleware.ts';
+import { validate, validateUUID } from '../_shared/validation.ts';
 
 // Types for API operations
 interface N8nWorkflow {
@@ -412,6 +421,11 @@ const healthCheck = async (): Promise<{ status: string; n8n: boolean; database: 
 
 // Main request handler
 serve(async (req) => {
+  const requestStart = Date.now();
+  const requestId = crypto.randomUUID().substring(0, 8);
+  
+  console.log(`🚀 [API-OPS-${requestId}] ${req.method} ${req.url}`);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -434,54 +448,24 @@ serve(async (req) => {
       );
     }
 
-    // Extract user ID from headers (should be set by authentication middleware)
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    // Authenticate user
+    const { user, error: authError } = await authenticate(req);
+    if (authError || !user) {
+      return createErrorResponse(401, authError || 'Authentication failed', undefined, Date.now() - requestStart);
     }
 
-    // Get user from Supabase auth
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid authentication token' }),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    // Apply middleware (rate limiting, validation, etc.)
+    const middlewareResult = await applyMiddleware(req, user, {
+      maxRequestSizeKB: 500, // 500KB max request size for n8n operations
+      requireRateLimit: true
+    });
+
+    if (!middlewareResult.success) {
+      return middlewareResult.error!;
     }
 
     const userId = user.id;
-    const userTier = await getUserTier(userId);
-    
-    // Check rate limits
-    const { allowed, resetTime } = await checkRateLimit(userId, userTier);
-    if (!allowed) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit exceeded',
-          reset_time: resetTime,
-          tier: userTier,
-        }),
-        { 
-          status: 429, 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json',
-            'Retry-After': Math.ceil((resetTime - Date.now()) / 1000).toString(),
-          }
-        }
-      );
-    }
+    const clientInfo = extractClientInfo(req);
 
     // Parse request body for POST/PUT/PATCH requests
     let body: any = {};
@@ -566,34 +550,64 @@ serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: response,
-        user_tier: userTier,
-        timestamp: new Date().toISOString(),
-      }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+    const processingTime = Date.now() - requestStart;
+    
+    // Log successful API usage
+    await logApiUsage(userId, 'n8n', path, 1, 0, 0.001, { 
+      operation: 'success',
+      processing_time: processingTime,
+      user_tier: user.tier
+    });
+
+    return createSuccessResponse(
+      response,
+      'Operation completed successfully',
+      200,
+      processingTime,
+      middlewareResult.rateLimitInfo
     );
 
   } catch (error) {
-    console.error('API operations error:', error);
+    const processingTime = Date.now() - requestStart;
+    console.error(`❌ [API-OPS-${requestId}] Error after ${processingTime}ms:`, error);
     
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error.message || 'Internal server error',
-        timestamp: new Date().toISOString(),
-      }),
-      { 
-        status: error.message?.includes('Authentication') ? 401 : 
-               error.message?.includes('Rate limit') ? 429 : 
-               error.message?.includes('not found') ? 404 : 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    let statusCode = 500;
+    let errorMessage = 'Internal server error';
+    
+    if (error.message?.includes('Authentication') || error.message?.includes('auth')) {
+      statusCode = 401;
+      errorMessage = 'Authentication failed';
+    } else if (error.message?.includes('Rate limit')) {
+      statusCode = 429;
+      errorMessage = 'Rate limit exceeded';
+    } else if (error.message?.includes('not found')) {
+      statusCode = 404;
+      errorMessage = 'Resource not found';
+    } else if (error.message?.includes('n8n API Error')) {
+      statusCode = 502;
+      errorMessage = 'n8n service error';
+    }
+
+    // Log error telemetry
+    try {
+      const { user } = await authenticate(req);
+      if (user) {
+        await logApiUsage(user.id, 'n8n', url.pathname, 1, 0, 0, {
+          operation: 'error',
+          error: error.message,
+          status_code: statusCode,
+          processing_time: processingTime
+        });
       }
+    } catch (telemetryError) {
+      console.warn('Failed to log error telemetry:', telemetryError);
+    }
+
+    return createErrorResponse(
+      statusCode,
+      errorMessage,
+      statusCode >= 500 ? 'An unexpected error occurred. Please try again.' : error.message,
+      processingTime
     );
   }
 });
