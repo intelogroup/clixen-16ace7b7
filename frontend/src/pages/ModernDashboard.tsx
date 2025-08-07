@@ -1,240 +1,359 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ComponentSkeleton } from '../components/LoadingStates';
+import { 
+  BarChart3, 
+  CheckCircle, 
+  Clock, 
+  Plus, 
+  TrendingUp, 
+  Workflow, 
+  Users, 
+  Zap,
+  ArrowRight,
+  Play,
+  Pause,
+  MoreHorizontal,
+  Calendar,
+  Activity
+} from 'lucide-react';
 
 export default function ModernDashboard() {
   const [selectedProject, setSelectedProject] = useState(0);
-  const [loading, setLoading] = useState(false);
 
   const projects = [
-    { name: 'Email Automation', workflows: 3, status: 'active' },
-    { name: 'Data Pipeline', workflows: 5, status: 'active' },
-    { name: 'Social Media Bot', workflows: 2, status: 'draft' }
+    { 
+      name: 'Email Automation', 
+      workflows: 3, 
+      status: 'active',
+      lastRun: '2 hours ago',
+      success: 98
+    },
+    { 
+      name: 'Data Pipeline', 
+      workflows: 5, 
+      status: 'active',
+      lastRun: '5 minutes ago',
+      success: 95
+    },
+    { 
+      name: 'Social Media Bot', 
+      workflows: 2, 
+      status: 'draft',
+      lastRun: 'Never',
+      success: 0
+    }
   ];
 
   const workflows = [
-    { name: 'Daily Email Digest', status: 'active', executions: 156 },
-    { name: 'Slack Notifications', status: 'active', executions: 89 },
-    { name: 'File Backup', status: 'completed', executions: 45 },
-    { name: 'Lead Processing', status: 'draft', executions: 0 },
-    { name: 'Invoice Generation', status: 'active', executions: 234 }
+    { 
+      name: 'Daily Email Digest', 
+      status: 'active', 
+      executions: 156,
+      lastRun: '1 hour ago',
+      nextRun: 'In 23 hours'
+    },
+    { 
+      name: 'Slack Notifications', 
+      status: 'active', 
+      executions: 89,
+      lastRun: '30 minutes ago',
+      nextRun: 'In 30 minutes'
+    },
+    { 
+      name: 'File Backup', 
+      status: 'completed', 
+      executions: 45,
+      lastRun: '3 hours ago',
+      nextRun: 'Manual'
+    },
+    { 
+      name: 'Lead Processing', 
+      status: 'draft', 
+      executions: 0,
+      lastRun: 'Never',
+      nextRun: 'Not scheduled'
+    }
   ];
 
   const stats = [
-    { label: 'Total Workflows', value: '12', icon: '🔄', color: 'from-purple-500 to-purple-700', bgColor: 'bg-purple-500/10' },
-    { label: 'Active Projects', value: '3', icon: '📊', color: 'from-blue-500 to-blue-700', bgColor: 'bg-blue-500/10' },
-    { label: 'Success Rate', value: '94%', icon: '✅', color: 'from-green-500 to-green-700', bgColor: 'bg-green-500/10' },
-    { label: 'Executions Today', value: '1.2k', icon: '⚡', color: 'from-yellow-500 to-yellow-700', bgColor: 'bg-yellow-500/10' }
+    { 
+      label: 'Total Workflows', 
+      value: '12', 
+      icon: Workflow, 
+      change: '+12%',
+      trend: 'up',
+      color: 'blue'
+    },
+    { 
+      label: 'Active Projects', 
+      value: '3', 
+      icon: BarChart3, 
+      change: '+25%',
+      trend: 'up',
+      color: 'green'
+    },
+    { 
+      label: 'Success Rate', 
+      value: '94%', 
+      icon: CheckCircle, 
+      change: '+2%',
+      trend: 'up',
+      color: 'emerald'
+    },
+    { 
+      label: 'Executions Today', 
+      value: '1.2k', 
+      icon: Zap, 
+      change: '+18%',
+      trend: 'up',
+      color: 'orange'
+    }
   ];
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'active': return 'text-green-500 bg-green-500/10 border-green-500/20';
-      case 'completed': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
-      case 'draft': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
-      case 'failed': return 'text-red-500 bg-red-500/10 border-red-500/20';
-      default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
+      case 'active':
+        return { 
+          label: 'Active', 
+          className: 'badge-success',
+          icon: <Play className="w-3 h-3" />
+        };
+      case 'completed':
+        return { 
+          label: 'Completed', 
+          className: 'badge-info',
+          icon: <CheckCircle className="w-3 h-3" />
+        };
+      case 'draft':
+        return { 
+          label: 'Draft', 
+          className: 'badge-warning',
+          icon: <Pause className="w-3 h-3" />
+        };
+      case 'failed':
+        return { 
+          label: 'Failed', 
+          className: 'badge-error',
+          icon: <Clock className="w-3 h-3" />
+        };
+      default:
+        return { 
+          label: 'Unknown', 
+          className: 'badge-info',
+          icon: <Clock className="w-3 h-3" />
+        };
+    }
+  };
+
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case 'blue':
+        return 'bg-blue-50 border-blue-200 text-blue-700';
+      case 'green':
+        return 'bg-green-50 border-green-200 text-green-700';
+      case 'emerald':
+        return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+      case 'orange':
+        return 'bg-orange-50 border-orange-200 text-orange-700';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-700';
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <motion.div 
-        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
+      <div className="clean-card p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Welcome back! 👋
             </h1>
-            <p className="text-gray-400 mt-1">Here's what's happening with your workflows today.</p>
+            <p className="text-gray-600">
+              Here's what's happening with your workflows today.
+            </p>
           </div>
-          <motion.button
-            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            ✨ New Workflow
-          </motion.button>
+          <button className="btn-clean btn-primary">
+            <Plus className="w-4 h-4" />
+            New Workflow
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div 
-            key={index}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.1 }}
-            whileHover={{ y: -4, transition: { duration: 0.2 } }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300`}>
-                {stat.icon}
+        {stats.map((stat, index) => {
+          const IconComponent = stat.icon;
+          return (
+            <div key={index} className="clean-card p-6 clean-hover">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-12 h-12 rounded-lg ${getColorClasses(stat.color)} flex items-center justify-center`}>
+                  <IconComponent className="w-6 h-6" />
+                </div>
+                <div className="flex items-center text-sm text-green-600">
+                  <TrendingUp className="w-4 h-4 mr-1" />
+                  {stat.change}
+                </div>
               </div>
-              <div className="text-green-500 text-sm font-semibold flex items-center gap-1">
-                +12% <span className="text-xs">↗</span>
+              
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {stat.value}
               </div>
+              <p className="text-gray-600 text-sm">{stat.label}</p>
             </div>
-            
-            <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-1`}>
-              {stat.value}
-            </div>
-            <p className="text-gray-400 text-sm">{stat.label}</p>
-          </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Projects Sidebar */}
-        <motion.div 
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-              <span className="text-lg">⭐</span>
-            </div>
-            <h2 className="text-xl font-semibold text-white">Projects</h2>
+        <div className="clean-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2 text-blue-500" />
+              Projects
+            </h2>
+            <button className="text-gray-400 hover:text-gray-600">
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
           </div>
           
           <div className="space-y-3">
             {projects.map((project, index) => (
-              <motion.button
+              <button
                 key={index}
                 onClick={() => setSelectedProject(index)}
-                className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${
+                className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 ${
                   selectedProject === index 
-                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30 shadow-lg' 
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                    ? 'border-blue-200 bg-blue-50' 
+                    : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'
                 }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-white mb-1">{project.name}</h3>
-                    <p className="text-sm text-gray-400">{project.workflows} workflows</p>
-                  </div>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-900">{project.name}</h3>
                   {selectedProject === index && (
-                    <motion.div 
-                      className="text-purple-400"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", duration: 0.3 }}
-                    >
-                      →
-                    </motion.div>
+                    <ArrowRight className="w-4 h-4 text-blue-500" />
                   )}
                 </div>
-              </motion.button>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>{project.workflows} workflows</span>
+                  <span className={`badge-clean ${getStatusConfig(project.status).className}`}>
+                    {getStatusConfig(project.status).icon}
+                    {getStatusConfig(project.status).label}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Last run: {project.lastRun}
+                </div>
+              </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Workflows List */}
-        <motion.div 
-          className="lg:col-span-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
+        <div className="lg:col-span-2 clean-card p-6">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                <span className="text-lg">🔄</span>
-              </div>
-              <h2 className="text-xl font-semibold text-white">Workflows</h2>
-            </div>
-            <div className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
-              {workflows.length} total
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Workflow className="w-5 h-5 mr-2 text-green-500" />
+              Workflows
+            </h2>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                {workflows.length} total
+              </span>
+              <button className="text-gray-400 hover:text-gray-600">
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
-          <div className="space-y-3">
-            {loading ? (
-              <>
-                <ComponentSkeleton className="h-20" />
-                <ComponentSkeleton className="h-20" />
-                <ComponentSkeleton className="h-20" />
-              </>
-            ) : (
-              workflows.map((workflow, index) => (
-                <motion.div
+          <div className="space-y-4">
+            {workflows.map((workflow, index) => {
+              const statusConfig = getStatusConfig(workflow.status);
+              return (
+                <div
                   key={index}
-                  className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl p-4 cursor-pointer transition-all duration-300 group"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: index * 0.05 }}
-                  whileHover={{ x: 4, transition: { duration: 0.2 } }}
+                  className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <span className="text-lg">🤖</span>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <Workflow className="w-5 h-5 text-white" />
                       </div>
                       
                       <div>
-                        <h3 className="font-semibold text-white mb-1">{workflow.name}</h3>
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-semibold border ${getStatusColor(workflow.status)}`}>
-                            {workflow.status}
+                        <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {workflow.name}
+                        </h3>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <span className={`badge-clean ${statusConfig.className}`}>
+                            {statusConfig.icon}
+                            {statusConfig.label}
                           </span>
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-gray-500">
                             {workflow.executions} executions
                           </span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="text-gray-400 group-hover:text-white transition-colors duration-300">
-                      →
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        Last: {workflow.lastRun}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Next: {workflow.nextRun}
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-              ))
-            )}
+                </div>
+              );
+            })}
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <motion.div 
-        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+      <div className="clean-card p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: '🎨', title: 'Design Workflow', desc: 'Create with visual editor' },
-            { icon: '💬', title: 'AI Assistant', desc: 'Build with natural language' },
-            { icon: '📋', title: 'Use Template', desc: 'Start from existing patterns' }
-          ].map((action, index) => (
-            <motion.button
-              key={index}
-              className="text-left p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300 group"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-300 inline-block">
-                {action.icon}
-              </div>
-              <h4 className="font-semibold text-white">{action.title}</h4>
-              <p className="text-sm text-gray-400 mt-1">{action.desc}</p>
-            </motion.button>
-          ))}
+            { 
+              icon: Activity, 
+              title: 'Design Workflow', 
+              desc: 'Create with visual editor',
+              color: 'blue'
+            },
+            { 
+              icon: Users, 
+              title: 'AI Assistant', 
+              desc: 'Build with natural language',
+              color: 'purple'
+            },
+            { 
+              icon: Calendar, 
+              title: 'Use Template', 
+              desc: 'Start from existing patterns',
+              color: 'green'
+            }
+          ].map((action, index) => {
+            const IconComponent = action.icon;
+            return (
+              <button
+                key={index}
+                className="text-left p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 group"
+              >
+                <div className={`w-12 h-12 rounded-lg ${getColorClasses(action.color)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <IconComponent className="w-6 h-6" />
+                </div>
+                <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {action.title}
+                </h4>
+                <p className="text-sm text-gray-600 mt-1">{action.desc}</p>
+              </button>
+            );
+          })}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
