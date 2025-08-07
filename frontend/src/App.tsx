@@ -24,25 +24,32 @@ function AppContent() {
   return (
     <BrowserRouter>
       <Toaster
-        position="bottom-right"
+        position="top-right"
         toastOptions={{
           style: {
-            background: '#ffffff',
-            color: '#374151',
-            border: '1px solid #e5e7eb',
+            background: 'rgba(30, 41, 59, 0.95)',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
           },
           success: {
             iconTheme: {
               primary: '#10b981',
               secondary: '#ffffff',
             },
+            style: {
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+            },
           },
           error: {
             iconTheme: {
               primary: '#ef4444',
               secondary: '#ffffff',
+            },
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.2)',
             },
           },
         }}
