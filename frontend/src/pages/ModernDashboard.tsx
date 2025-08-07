@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { ComponentSkeleton } from '../components/LoadingStates';
 
 export default function ModernDashboard() {
   const [selectedProject, setSelectedProject] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const projects = [
     { name: 'Email Automation', workflows: 3, status: 'active' },
@@ -18,334 +21,220 @@ export default function ModernDashboard() {
   ];
 
   const stats = [
-    { label: 'Total Workflows', value: '12', icon: '🔄', color: '#8b5cf6' },
-    { label: 'Active Projects', value: '3', icon: '📊', color: '#3b82f6' },
-    { label: 'Success Rate', value: '94%', icon: '✅', color: '#10b981' },
-    { label: 'Executions Today', value: '1.2k', icon: '⚡', color: '#f59e0b' }
+    { label: 'Total Workflows', value: '12', icon: '🔄', color: 'from-purple-500 to-purple-700', bgColor: 'bg-purple-500/10' },
+    { label: 'Active Projects', value: '3', icon: '📊', color: 'from-blue-500 to-blue-700', bgColor: 'bg-blue-500/10' },
+    { label: 'Success Rate', value: '94%', icon: '✅', color: 'from-green-500 to-green-700', bgColor: 'bg-green-500/10' },
+    { label: 'Executions Today', value: '1.2k', icon: '⚡', color: 'from-yellow-500 to-yellow-700', bgColor: 'bg-yellow-500/10' }
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return '#10b981';
-      case 'completed': return '#3b82f6';
-      case 'draft': return '#f59e0b';
-      case 'failed': return '#ef4444';
-      default: return '#6b7280';
+      case 'active': return 'text-green-500 bg-green-500/10 border-green-500/20';
+      case 'completed': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+      case 'draft': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+      case 'failed': return 'text-red-500 bg-red-500/10 border-red-500/20';
+      default: return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 25%, #2d1b69 50%, #1a1a3e 75%, #0f0f23 100%)',
-      fontFamily: 'Inter, sans-serif',
-      color: 'white'
-    }}>
-      {/* Header */}
-      <header style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '20px 0'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div style={{
-              width: '50px',
-              height: '50px',
-              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px'
-            }}>
-              ⚡
+    <div className="space-y-6">
+      {/* Welcome Header */}
+      <motion.div 
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Welcome back! 👋
+            </h1>
+            <p className="text-gray-400 mt-1">Here's what's happening with your workflows today.</p>
+          </div>
+          <motion.button
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            ✨ New Workflow
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, index) => (
+          <motion.div 
+            key={index}
+            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: index * 0.1 }}
+            whileHover={{ y: -4, transition: { duration: 0.2 } }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300`}>
+                {stat.icon}
+              </div>
+              <div className="text-green-500 text-sm font-semibold flex items-center gap-1">
+                +12% <span className="text-xs">↗</span>
+              </div>
             </div>
-            <div>
-              <h1 style={{ margin: '0', fontSize: '24px' }}>Clixen AI</h1>
-              <p style={{ margin: '0', color: '#a0a0a0', fontSize: '14px' }}>AI Workflow Platform</p>
+            
+            <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-1`}>
+              {stat.value}
             </div>
+            <p className="text-gray-400 text-sm">{stat.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Projects Sidebar */}
+        <motion.div 
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+              <span className="text-lg">⭐</span>
+            </div>
+            <h2 className="text-xl font-semibold text-white">Projects</h2>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button style={{
-              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '10px',
-              color: 'white',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}>
-              + New Workflow
-            </button>
-            
-            <div style={{
-              width: '40px',
-              height: '40px',
-              background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
-            }}>
-              👤
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '30px 20px'
-      }}>
-        {/* Stats Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '40px'
-        }}>
-          {stats.map((stat, index) => (
-            <div key={index} style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              padding: '24px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                fontSize: '20px'
-              }}>
-                ✨
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                marginBottom: '15px'
-              }}>
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  background: `${stat.color}20`,
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '20px'
-                }}>
-                  {stat.icon}
-                </div>
-                <div style={{ color: '#10b981', fontSize: '12px' }}>
-                  +12% ↗
-                </div>
-              </div>
-              
-              <h3 style={{
-                fontSize: '32px',
-                margin: '0 0 5px',
-                fontWeight: '700',
-                color: stat.color
-              }}>
-                {stat.value}
-              </h3>
-              <p style={{
-                margin: '0',
-                color: '#a0a0a0',
-                fontSize: '14px'
-              }}>
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 2fr',
-          gap: '30px'
-        }}>
-          {/* Projects Sidebar */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '20px'
-            }}>
-              <span style={{ fontSize: '20px' }}>⭐</span>
-              <h2 style={{ margin: '0', fontSize: '18px' }}>Projects</h2>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {projects.map((project, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedProject(index)}
-                  style={{
-                    background: selectedProject === index 
-                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))' 
-                      : 'rgba(255, 255, 255, 0.05)',
-                    border: selectedProject === index 
-                      ? '1px solid rgba(139, 92, 246, 0.3)' 
-                      : '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    cursor: 'pointer',
-                    color: 'white',
-                    textAlign: 'left',
-                    width: '100%',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      <h3 style={{ margin: '0 0 5px', fontSize: '16px' }}>
-                        {project.name}
-                      </h3>
-                      <p style={{ margin: '0', fontSize: '12px', color: '#a0a0a0' }}>
-                        {project.workflows} workflows
-                      </p>
-                    </div>
-                    {selectedProject === index && (
-                      <span style={{ fontSize: '16px' }}>→</span>
-                    )}
+          <div className="space-y-3">
+            {projects.map((project, index) => (
+              <motion.button
+                key={index}
+                onClick={() => setSelectedProject(index)}
+                className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ${
+                  selectedProject === index 
+                    ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-purple-500/30 shadow-lg' 
+                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">{project.name}</h3>
+                    <p className="text-sm text-gray-400">{project.workflows} workflows</p>
                   </div>
-                </button>
-              ))}
+                  {selectedProject === index && (
+                    <motion.div 
+                      className="text-purple-400"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", duration: 0.3 }}
+                    >
+                      →
+                    </motion.div>
+                  )}
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Workflows List */}
+        <motion.div 
+          className="lg:col-span-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                <span className="text-lg">🔄</span>
+              </div>
+              <h2 className="text-xl font-semibold text-white">Workflows</h2>
+            </div>
+            <div className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
+              {workflows.length} total
             </div>
           </div>
 
-          {/* Workflows List */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>🔄</span>
-                <h2 style={{ margin: '0', fontSize: '18px' }}>Workflows</h2>
-              </div>
-              <span style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                color: '#a0a0a0'
-              }}>
-                {workflows.length} total
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {workflows.map((workflow, index) => (
-                <div
+          <div className="space-y-3">
+            {loading ? (
+              <>
+                <ComponentSkeleton className="h-20" />
+                <ComponentSkeleton className="h-20" />
+                <ComponentSkeleton className="h-20" />
+              </>
+            ) : (
+              workflows.map((workflow, index) => (
+                <motion.div
                   key={index}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '20px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }}
+                  className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl p-4 cursor-pointer transition-all duration-300 group"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  whileHover={{ x: 4, transition: { duration: 0.2 } }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '16px'
-                      }}>
-                        🤖
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <span className="text-lg">🤖</span>
                       </div>
                       
                       <div>
-                        <h3 style={{ margin: '0 0 5px', fontSize: '16px' }}>
-                          {workflow.name}
-                        </h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{
-                            background: `${getStatusColor(workflow.status)}20`,
-                            color: getStatusColor(workflow.status),
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            textTransform: 'capitalize'
-                          }}>
+                        <h3 className="font-semibold text-white mb-1">{workflow.name}</h3>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-2 py-1 rounded-lg text-xs font-semibold border ${getStatusColor(workflow.status)}`}>
                             {workflow.status}
                           </span>
-                          <span style={{ fontSize: '12px', color: '#a0a0a0' }}>
+                          <span className="text-sm text-gray-400">
                             {workflow.executions} executions
                           </span>
                         </div>
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '16px', color: '#a0a0a0' }}>→</span>
+                    <div className="text-gray-400 group-hover:text-white transition-colors duration-300">
+                      →
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                </motion.div>
+              ))
+            )}
           </div>
-        </div>
+        </motion.div>
       </div>
+
+      {/* Quick Actions */}
+      <motion.div 
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.4 }}
+      >
+        <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { icon: '🎨', title: 'Design Workflow', desc: 'Create with visual editor' },
+            { icon: '💬', title: 'AI Assistant', desc: 'Build with natural language' },
+            { icon: '📋', title: 'Use Template', desc: 'Start from existing patterns' }
+          ].map((action, index) => (
+            <motion.button
+              key={index}
+              className="text-left p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300 group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform duration-300 inline-block">
+                {action.icon}
+              </div>
+              <h4 className="font-semibold text-white">{action.title}</h4>
+              <p className="text-sm text-gray-400 mt-1">{action.desc}</p>
+            </motion.button>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
