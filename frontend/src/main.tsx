@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import MinimalApp from './MinimalApp.tsx'
+import ModernAuth from './pages/ModernAuth.tsx'
+// import MinimalApp from './MinimalApp.tsx'
 // import App from './App.tsx'
 import './index.css'
 import './styles/responsive.css'
