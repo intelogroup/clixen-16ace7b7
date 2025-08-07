@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { AppLoading, PageLoading } from './components/LoadingStates';
 
 // Modern MVP components
 const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
