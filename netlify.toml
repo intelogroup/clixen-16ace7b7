@@ -1,6 +1,6 @@
 [build]
-  # Build command - simple npm install and build with cache clear
-  command = "npm install && npm run build"
+  # Build command - build the frontend workspace directly
+  command = "npm --prefix frontend ci && npm --prefix frontend run build"
   
   # Publish directory (Vite builds to dist in frontend directory)
   publish = "frontend/dist"
