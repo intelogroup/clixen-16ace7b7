@@ -1,17 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, getErrorMessage } from '../lib/supabase';
 import { Button, Input } from '../components/ui';
+import { useAuth } from '../lib/AuthContext';
+import { Zap, CheckCircle, ArrowRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function StandardAuth() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    fullName: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,27 +33,54 @@ export default function StandardAuth() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName || null
+            }
+          }
         });
-        
+
         if (error) throw error;
-        
-        alert('Check your email to confirm your account!');
+
+        // Create user profile
+        if (data.user) {
+          try {
+            await supabase
+              .from('profiles')
+              .insert({
+                id: data.user.id,
+                email: formData.email,
+                full_name: formData.fullName || null,
+                plan_type: 'free',
+                workflow_count: 0,
+                execution_count: 0
+              });
+          } catch (profileError) {
+            console.error('Profile creation error:', profileError);
+            // Don't fail the signup if profile creation fails
+          }
+        }
+
+        setSuccess('Account created! Please check your email to confirm your account.');
+        toast.success('Account created successfully!');
         setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password
         });
-        
+
         if (error) throw error;
-        
+
+        toast.success('Welcome back!');
         navigate('/dashboard');
       }
     } catch (err: any) {
       setError(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -57,7 +97,17 @@ export default function StandardAuth() {
   const toggleMode = () => {
     setIsSignUp(!isSignUp);
     setError(null);
-    setFormData({ email: '', password: '' });
+    setSuccess(null);
+    setFormData({ email: '', password: '', fullName: '' });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    setSuccess(null);
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   return (
@@ -78,11 +128,32 @@ export default function StandardAuth() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Success Message */}
+          {success && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+              <CheckCircle size={16} />
+              {success}
+            </div>
+          )}
+
           {/* Error Display */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
             </div>
+          )}
+
+          {/* Full Name Input (Sign Up Only) */}
+          {isSignUp && (
+            <Input
+              label="Full Name"
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="Enter your full name"
+              disabled={loading}
+            />
           )}
 
           {/* Email Input */}
@@ -104,10 +175,28 @@ export default function StandardAuth() {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            placeholder="Enter your password"
+            placeholder={isSignUp ? "Create a strong password" : "Enter your password"}
             disabled={loading}
             required
           />
+
+          {/* Password Requirements (Sign Up Only) */}
+          {isSignUp && formData.password && (
+            <div className="text-xs text-gray-600 space-y-1">
+              <div className={`flex items-center gap-2 ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                <CheckCircle size={12} />
+                At least 8 characters
+              </div>
+              <div className={`flex items-center gap-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                <CheckCircle size={12} />
+                One uppercase letter
+              </div>
+              <div className={`flex items-center gap-2 ${/[0-9]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                <CheckCircle size={12} />
+                One number
+              </div>
+            </div>
+          )}
 
           {/* Submit Button */}
           <Button
@@ -116,7 +205,8 @@ export default function StandardAuth() {
             size="lg"
             fullWidth
             isLoading={loading}
-            disabled={loading || !formData.email || !formData.password}
+            disabled={loading || !formData.email || !formData.password || (isSignUp && formData.password.length < 8)}
+            rightIcon={!loading ? <ArrowRight size={16} /> : undefined}
           >
             {isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
