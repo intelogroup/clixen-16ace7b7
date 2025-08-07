@@ -71,8 +71,8 @@ class EnvironmentService {
 
       // Supabase configuration
       supabase: {
-        url: env.VITE_SUPABASE_URL || '',
-        anonKey: env.VITE_SUPABASE_ANON_KEY || '',
+        url: env.VITE_SUPABASE_URL || 'https://zfbgdixbzezpxllkoyfc.supabase.co',
+        anonKey: env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw',
         serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
         jwtSecret: env.SUPABASE_JWT_SECRET,
       },
