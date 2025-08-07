@@ -6,6 +6,7 @@
  */
 
 import { simpleWorkflowService as workflowService, WorkflowMessage } from './SimpleWorkflowService';
+import { fallbackChatService } from './FallbackChatService';
 
 interface ChatResponse {
   response: string;
@@ -37,13 +38,22 @@ export class SimpleChatService {
           content: msg.content
         }));
 
-      // Process with enhanced AI-integrated workflow service
-      const result = await workflowService.processConversation(
-        message, 
-        workflowMessages,
-        'current-user', // TODO: Get actual user ID from context
-        undefined // TODO: Add session ID support
-      );
+      let result;
+
+      try {
+        // Try the full workflow service first
+        result = await workflowService.processConversation(
+          message,
+          workflowMessages,
+          'current-user', // TODO: Get actual user ID from context
+          undefined // TODO: Add session ID support
+        );
+      } catch (edgeFunctionError) {
+        console.warn('🔄 [CHAT] Edge Functions unavailable, using fallback service');
+
+        // Use fallback service when Edge Functions fail
+        result = await fallbackChatService.processConversation(message, workflowMessages);
+      }
 
       // Determine conversation mode based on content and history
       const mode = this.determineConversationMode(message, conversationHistory, result);
