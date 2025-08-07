@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 import { LoadingState } from '../lib/hooks/useLoadingState';
+import { buttonTokens } from '../styles/design-tokens';
 
 export interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loadingState?: LoadingState;
@@ -26,32 +27,41 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
   disabled,
   ...props
 }) => {
+  const getVariantStyles = (): React.CSSProperties => {
+    const variant_key = variant in buttonTokens.variants ? variant : 'primary';
+    const variantTokens = buttonTokens.variants[variant_key as keyof typeof buttonTokens.variants];
+    
+    return {
+      backgroundColor: variantTokens.bg,
+      color: variantTokens.text,
+      borderColor: variantTokens.border,
+    };
+  };
+
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
-        return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600';
+        return 'hover:opacity-90';
       case 'secondary':
-        return 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600';
+        return 'hover:opacity-90';
       case 'danger':
-        return 'bg-red-600 hover:bg-red-700 text-white border-red-600';
+        return 'hover:opacity-90';
       case 'ghost':
-        return 'bg-transparent hover:bg-gray-100 text-gray-700 border-gray-300';
+        return 'hover:opacity-90';
       default:
-        return 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600';
+        return 'hover:opacity-90';
     }
   };
 
-  const getSizeClasses = () => {
-    switch (size) {
-      case 'sm':
-        return 'px-3 py-1.5 text-sm';
-      case 'md':
-        return 'px-4 py-2 text-sm';
-      case 'lg':
-        return 'px-6 py-3 text-base';
-      default:
-        return 'px-4 py-2 text-sm';
-    }
+  const getSizeStyles = (): React.CSSProperties => {
+    const size_key = size in buttonTokens.sizes ? size : 'md';
+    const sizeTokens = buttonTokens.sizes[size_key as keyof typeof buttonTokens.sizes];
+    
+    return {
+      padding: sizeTokens.padding,
+      fontSize: sizeTokens.fontSize,
+      borderRadius: sizeTokens.radius,
+    };
   };
 
   const isDisabled = disabled || loadingState?.isLoading || loadingState?.isRetrying;
@@ -66,10 +76,11 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           type="button"
           onClick={onRetry}
+          style={{ ...getVariantStyles(), ...getSizeStyles() }}
           className={`
-            inline-flex items-center justify-center gap-2 border rounded-lg font-medium
-            transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
-            ${getVariantClasses()} ${getSizeClasses()} ${className}
+            inline-flex items-center justify-center gap-2 border font-medium
+            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
+            ${getVariantClasses()} ${className}
           `}
           {...props}
         >
@@ -92,11 +103,12 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       whileTap={{ scale: isDisabled ? 1 : 0.95 }}
       type="button"
       disabled={isDisabled}
+      style={{ ...getVariantStyles(), ...getSizeStyles() }}
       className={`
-        inline-flex items-center justify-center gap-2 border rounded-lg font-medium
-        transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+        inline-flex items-center justify-center gap-2 border font-medium
+        transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
         disabled:opacity-50 disabled:cursor-not-allowed
-        ${getVariantClasses()} ${getSizeClasses()} ${className}
+        ${getVariantClasses()} ${className}
       `}
       {...props}
     >

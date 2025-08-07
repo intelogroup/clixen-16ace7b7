@@ -26,6 +26,7 @@ import {
   Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { designTokens } from '../styles/design-tokens';
 
 interface Workflow {
   id: string;

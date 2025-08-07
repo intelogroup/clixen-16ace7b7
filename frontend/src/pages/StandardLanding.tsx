@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Shield
 } from 'lucide-react';
+import { designTokens } from '../styles/design-tokens';
 
 export default function StandardLanding() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -103,11 +104,23 @@ export default function StandardLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ 
+                  backgroundColor: designTokens.colors.primary[500],
+                  color: designTokens.colors.white
+                }}
+              >
+                <Zap className="w-5 h-5" />
               </div>
-              <span className="text-xl font-bold text-gray-900">
-                clixen<span className="text-gray-500">.ai</span>
+              <span 
+                className="font-bold"
+                style={{ 
+                  fontSize: designTokens.typography.sizes.xl,
+                  color: designTokens.colors.gray[900]
+                }}
+              >
+                clixen<span style={{ color: designTokens.colors.gray[500] }}>.ai</span>
               </span>
             </Link>
             
@@ -132,7 +145,11 @@ export default function StandardLanding() {
               </Link>
               <Link
                 to="/auth"
-                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 rounded-lg hover:opacity-90 transition-all duration-200"
+                style={{
+                  backgroundColor: designTokens.colors.primary[500],
+                  color: designTokens.colors.white
+                }}
               >
                 Get Started
               </Link>
@@ -155,14 +172,23 @@ export default function StandardLanding() {
               AI-Powered Workflow Automation
             </div>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 
+              className="font-bold mb-6 leading-tight text-5xl md:text-6xl lg:text-7xl"
+              style={{ color: designTokens.colors.gray[900] }}
+            >
               Build Workflows with
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <span style={{ color: designTokens.colors.primary[500] }}>
                 {' '}Natural Language
               </span>
             </h1>
             
-            <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p 
+              className="mb-10 max-w-2xl mx-auto leading-relaxed"
+              style={{ 
+                fontSize: designTokens.typography.sizes.xl,
+                color: designTokens.colors.gray[600]
+              }}
+            >
               Transform your ideas into powerful n8n automations using AI. 
               No coding required – just describe what you want, and watch it come to life.
             </p>
@@ -170,7 +196,11 @@ export default function StandardLanding() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
                 to="/auth"
-                className="bg-black text-white px-8 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all duration-200 flex items-center gap-2 text-lg"
+                className="px-8 py-4 rounded-xl font-medium hover:opacity-90 transition-all duration-200 flex items-center gap-2 text-lg"
+                style={{
+                  backgroundColor: designTokens.colors.primary[500],
+                  color: designTokens.colors.white
+                }}
               >
                 Start Building
                 <ArrowRight className="w-5 h-5" />
@@ -232,10 +262,22 @@ export default function StandardLanding() {
             animate={featuresInView ? { opacity: 1, y: 0 } : {}}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 
+              className="font-bold mb-4"
+              style={{ 
+                fontSize: designTokens.typography.sizes['4xl'],
+                color: designTokens.colors.gray[900]
+              }}
+            >
               Everything you need to automate
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p 
+              className="max-w-2xl mx-auto"
+              style={{ 
+                fontSize: designTokens.typography.sizes.xl,
+                color: designTokens.colors.gray[600]
+              }}
+            >
               Powerful features that make workflow automation accessible to everyone
             </p>
           </motion.div>
@@ -307,7 +349,11 @@ export default function StandardLanding() {
           </p>
           <Link
             to="/auth"
-            className="inline-flex items-center gap-2 bg-black text-white px-8 py-4 rounded-xl font-medium hover:bg-gray-800 transition-all duration-200 text-lg"
+            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-medium hover:opacity-90 transition-all duration-200 text-lg"
+            style={{
+              backgroundColor: designTokens.colors.primary[500],
+              color: designTokens.colors.white
+            }}
           >
             Get Started for Free
             <ArrowRight className="w-5 h-5" />
@@ -320,8 +366,14 @@ export default function StandardLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
+              <div 
+                className="w-6 h-6 rounded-md flex items-center justify-center"
+                style={{ 
+                  backgroundColor: designTokens.colors.primary[500],
+                  color: designTokens.colors.white
+                }}
+              >
+                <Zap className="w-4 h-4" />
               </div>
               <span className="text-lg font-bold text-gray-900">
                 clixen<span className="text-gray-500">.ai</span>
