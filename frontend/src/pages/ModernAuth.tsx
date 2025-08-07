@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, getErrorMessage } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import toast from 'react-hot-toast';
+import { Eye, EyeOff, Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function ModernAuth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -55,11 +56,9 @@ export default function ModernAuth() {
 
         if (data.user) {
           if (data.user.email_confirmed_at) {
-            // User is confirmed, navigate to dashboard
             toast.success('Account created successfully! Welcome to Clixen.');
             navigate('/dashboard', { replace: true });
           } else {
-            // User needs to confirm email
             toast.success('Account created! Please check your email for a confirmation link.');
           }
         }
@@ -78,7 +77,6 @@ export default function ModernAuth() {
 
         if (data.user) {
           toast.success('Welcome back! Redirecting to your dashboard...');
-          // Navigation will happen automatically via AuthContext
           navigate('/dashboard', { replace: true });
         }
       }
@@ -107,129 +105,26 @@ export default function ModernAuth() {
   };
 
   const passwordStrength = getPasswordStrength(formData.password);
-  const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
+  const strengthColors = ['#ef4444', '#f59e0b', '#eab308', '#22c55e'];
 
   // Check if form is valid
   const isFormValid = formData.email && formData.password && (!isSignUp || formData.fullName);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a3e 25%, #2d1b69 50%, #1a1a3e 75%, #0f0f23 100%)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      fontFamily: 'Inter, sans-serif',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Animated background elements */}
-      <div style={{
-        position: 'absolute',
-        top: '10%',
-        left: '10%',
-        width: '300px',
-        height: '300px',
-        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 50%)',
-        borderRadius: '50%',
-        animation: 'float 6s ease-in-out infinite'
-      }} />
-      
-      <div style={{
-        position: 'absolute',
-        bottom: '10%',
-        right: '10%',
-        width: '400px',
-        height: '400px',
-        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 50%)',
-        borderRadius: '50%',
-        animation: 'float 8s ease-in-out infinite reverse'
-      }} />
-
-      {/* Floating UI elements */}
-      <div style={{
-        position: 'absolute',
-        top: '20%',
-        right: '15%',
-        width: '60px',
-        height: '60px',
-        background: 'rgba(139, 92, 246, 0.1)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '15px',
-        border: '1px solid rgba(139, 92, 246, 0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px',
-        animation: 'float 4s ease-in-out infinite'
-      }}>
-        ✨
-      </div>
-
-      <div style={{
-        position: 'absolute',
-        bottom: '30%',
-        left: '15%',
-        width: '50px',
-        height: '50px',
-        background: 'rgba(59, 130, 246, 0.1)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '12px',
-        border: '1px solid rgba(59, 130, 246, 0.2)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '20px',
-        animation: 'float 5s ease-in-out infinite'
-      }}>
-        🤖
-      </div>
-
-      {/* Main auth container */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '24px',
-        padding: '40px',
-        maxWidth: '450px',
-        width: '100%',
-        color: 'white',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-        position: 'relative',
-        zIndex: 10
-      }}>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-            borderRadius: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 20px',
-            fontSize: '32px',
-            boxShadow: '0 10px 30px rgba(139, 92, 246, 0.3)'
-          }}>
-            ⚡
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <span className="text-2xl text-white font-bold">C</span>
           </div>
           
-          <h1 style={{
-            fontSize: '32px',
-            margin: '0 0 10px',
-            background: 'linear-gradient(135deg, #fff, #f0f0f0)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            {isSignUp ? 'Join Clixen' : 'Welcome Back'}
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
           
-          <p style={{ color: '#a0a0a0', margin: '0' }}>
+          <p className="text-gray-600">
             {isSignUp 
               ? 'Start building AI-powered workflows'
               : 'Sign in to your workspace'
@@ -237,310 +132,177 @@ export default function ModernAuth() {
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Full Name (Sign Up Only) */}
-          {isSignUp && (
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                position: 'absolute',
-                left: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#a0a0a0',
-                fontSize: '18px'
-              }}>
-                👤
-              </div>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                placeholder="Full name"
-                required={isSignUp}
-                style={{
-                  width: '100%',
-                  padding: '16px 16px 16px 50px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  color: 'white',
-                  fontSize: '16px',
-                  outline: 'none',
-                  transition: 'all 0.3s ease',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-                  e.target.style.boxShadow = '0 0 0 4px rgba(139, 92, 246, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
-            </div>
-          )}
-
-          {/* Email */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#a0a0a0',
-              fontSize: '18px'
-            }}>
-              📧
-            </div>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email address"
-              required
-              style={{
-                width: '100%',
-                padding: '16px 16px 16px 50px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: 'white',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-                e.target.style.boxShadow = '0 0 0 4px rgba(139, 92, 246, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-          </div>
-
-          {/* Password */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: '#a0a0a0',
-              fontSize: '18px'
-            }}>
-              🔒
-            </div>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder={isSignUp ? "Create a strong password" : "Password"}
-              required
-              minLength={isSignUp ? 8 : undefined}
-              style={{
-                width: '100%',
-                padding: '16px 50px 16px 50px',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                color: 'white',
-                fontSize: '16px',
-                outline: 'none',
-                transition: 'all 0.3s ease',
-                boxSizing: 'border-box'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-                e.target.style.boxShadow = '0 0 0 4px rgba(139, 92, 246, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.target.style.boxShadow = 'none';
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: '#a0a0a0',
-                cursor: 'pointer',
-                fontSize: '18px'
-              }}
-            >
-              {showPassword ? '🙈' : '👁️'}
-            </button>
-          </div>
-
-          {/* Password Strength (Sign Up Only) */}
-          {isSignUp && formData.password && (
-            <div style={{ margin: '10px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '12px' }}>
-                <span style={{ color: '#a0a0a0' }}>Password strength</span>
-                <span style={{ color: strengthColors[passwordStrength] || '#ef4444' }}>
-                  {strengthLabels[passwordStrength] || 'Weak'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                {[0, 1, 2, 3].map((index) => (
-                  <div
-                    key={index}
-                    style={{
-                      height: '4px',
-                      flex: 1,
-                      borderRadius: '2px',
-                      background: index < passwordStrength ? strengthColors[passwordStrength] : 'rgba(255, 255, 255, 0.1)',
-                      transition: 'all 0.3s ease'
-                    }}
+        {/* Form Card */}
+        <div className="clean-card p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Full Name (Sign Up Only) */}
+            {isSignUp && (
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    id="fullName"
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    placeholder="Enter your full name"
+                    required={isSignUp}
+                    className="input-clean pl-10"
                   />
-                ))}
+                </div>
+              </div>
+            )}
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  required
+                  className="input-clean pl-10"
+                />
               </div>
             </div>
-          )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading || !isFormValid}
-            style={{
-              width: '100%',
-              padding: '16px',
-              background: loading || !isFormValid 
-                ? 'rgba(107, 114, 128, 0.5)' 
-                : 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              border: 'none',
-              borderRadius: '12px',
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading || !isFormValid ? 'not-allowed' : 'pointer',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading && isFormValid) {
-                e.currentTarget.style.transform = 'scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 10px 30px rgba(139, 92, 246, 0.3)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            {loading ? (
-              <>
-                <div style={{
-                  width: '20px',
-                  height: '20px',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
-                {isSignUp ? 'Creating Account...' : 'Signing In...'}
-              </>
-            ) : (
-              <>
-                {isSignUp ? 'Create Account' : 'Sign In'}
-                <span>→</span>
-              </>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder={isSignUp ? "Create a strong password" : "Enter your password"}
+                  required
+                  minLength={isSignUp ? 8 : undefined}
+                  className="input-clean pl-10 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Password Strength (Sign Up Only) */}
+            {isSignUp && formData.password && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Password strength</span>
+                  <span style={{ color: strengthColors[passwordStrength] || '#ef4444' }}>
+                    {strengthLabels[passwordStrength] || 'Weak'}
+                  </span>
+                </div>
+                <div className="flex space-x-1">
+                  {[0, 1, 2, 3].map((index) => (
+                    <div
+                      key={index}
+                      className="h-2 flex-1 rounded-full transition-colors duration-300"
+                      style={{
+                        backgroundColor: index < passwordStrength ? strengthColors[passwordStrength] : '#e5e7eb'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Toggle Mode */}
-        <div style={{ textAlign: 'center', marginTop: '30px' }}>
-          <p style={{ color: '#a0a0a0', margin: '0 0 10px' }}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-          </p>
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            disabled={loading}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#8b5cf6',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              textDecoration: 'underline'
-            }}
-          >
-            {isSignUp ? 'Sign in' : 'Sign up'}
-          </button>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading || !isFormValid}
+              className={`btn-clean btn-primary w-full ${
+                loading || !isFormValid ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="spinner-clean mr-2" />
+                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                </div>
+              ) : (
+                <>
+                  {isSignUp ? 'Create Account' : 'Sign In'}
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Toggle Mode */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                disabled={loading}
+                className={`ml-1 text-blue-500 hover:text-blue-600 font-medium ${
+                  loading ? 'cursor-not-allowed opacity-50' : ''
+                }`}
+              >
+                {isSignUp ? 'Sign in' : 'Sign up'}
+              </button>
+            </p>
+          </div>
         </div>
 
         {/* Features (Sign Up Only) */}
         {isSignUp && (
-          <div style={{
-            marginTop: '30px',
-            paddingTop: '20px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <h3 style={{ fontSize: '14px', color: '#fff', marginBottom: '15px', textAlign: 'center' }}>
-              ⭐ What you get with Clixen
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+              What you get with Clixen
             </h3>
-            <div style={{ display: 'grid', gap: '10px', fontSize: '12px' }}>
+            <div className="grid grid-cols-1 gap-4">
               {[
-                { icon: '🤖', text: 'AI-powered workflow automation' },
-                { icon: '🪄', text: 'Natural language workflow creation' },
-                { icon: '🛡️', text: 'Enterprise-grade security' },
-                { icon: '🚀', text: 'Deploy to n8n instantly' }
+                { icon: '🤖', title: 'AI-powered automation', desc: 'Create workflows with natural language' },
+                { icon: '🔗', title: 'Connect services', desc: 'Integrate with your favorite tools' },
+                { icon: '⚡', title: 'Deploy instantly', desc: 'Deploy to n8n with one click' },
+                { icon: '🛡️', title: 'Secure & reliable', desc: 'Enterprise-grade security' }
               ].map((feature, index) => (
-                <div key={index} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  color: '#e0e0e0'
-                }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    background: 'rgba(139, 92, 246, 0.1)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px'
-                  }}>
+                <div key={index} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-100">
+                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-lg">
                     {feature.icon}
                   </div>
-                  {feature.text}
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 text-sm">{feature.title}</h4>
+                    <p className="text-gray-600 text-xs">{feature.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </div>
 
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>
+            By signing in, you agree to our{' '}
+            <a href="#" className="text-blue-500 hover:text-blue-600">Terms of Service</a>
+            {' '}and{' '}
+            <a href="#" className="text-blue-500 hover:text-blue-600">Privacy Policy</a>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
