@@ -1,0 +1,251 @@
+{
+  "name": "Database Schema Code Generator",
+  "description": "AI-powered database schema generator that helps DatabaseAgent create optimized schemas with proper relationships, indexes, and constraints",
+  "data": {
+    "nodes": [
+      {
+        "id": "input-requirements",
+        "type": "ChatInput",
+        "position": { "x": 100, "y": 100 },
+        "data": {
+          "type": "ChatInput",
+          "node": {
+            "base_classes": ["Message"],
+            "description": "Receives natural language database requirements",
+            "display_name": "Database Requirements Input",
+            "documentation": "Input node for database requirements in natural language",
+            "template": {
+              "input_value": {
+                "type": "str",
+                "required": true,
+                "placeholder": "Describe your database requirements...",
+                "show": true,
+                "multiline": true,
+                "display_name": "Database Requirements",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Natural language description of database requirements",
+                "value": ""
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "schema-analyzer",
+        "type": "OpenAIModel",
+        "position": { "x": 400, "y": 100 },
+        "data": {
+          "type": "OpenAIModel",
+          "node": {
+            "base_classes": ["BaseLanguageModel"],
+            "description": "GPT-4 model specialized for database schema analysis",
+            "display_name": "Schema Analysis Model",
+            "template": {
+              "model_name": {
+                "type": "str",
+                "required": true,
+                "show": true,
+                "value": "gpt-4-turbo-preview",
+                "display_name": "Model Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "OpenAI model for schema analysis"
+              },
+              "temperature": {
+                "type": "float",
+                "required": false,
+                "show": true,
+                "value": 0.1,
+                "display_name": "Temperature",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Low temperature for consistent schema generation"
+              },
+              "max_tokens": {
+                "type": "int",
+                "required": false,
+                "show": true,
+                "value": 4000,
+                "display_name": "Max Tokens",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Maximum tokens for schema output"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "schema-prompt",
+        "type": "PromptTemplate",
+        "position": { "x": 400, "y": 300 },
+        "data": {
+          "type": "PromptTemplate",
+          "node": {
+            "base_classes": ["StringPromptTemplate"],
+            "description": "Expert database schema design prompt",
+            "display_name": "Database Schema Design Prompt",
+            "template": {
+              "template": {
+                "type": "str",
+                "required": true,
+                "show": true,
+                "multiline": true,
+                "value": "You are an expert database architect specializing in PostgreSQL schema design for production applications.\n\nGiven the following requirements, create an optimized database schema with:\n1. Proper table structure with appropriate data types\n2. Primary and foreign key relationships\n3. Indexes for performance optimization\n4. Check constraints for data integrity\n5. Row-level security (RLS) policies\n6. Triggers for audit logging where appropriate\n\nRequirements:\n{requirements}\n\nProvide the output in the following JSON format:\n{\n  \"tables\": [\n    {\n      \"name\": \"table_name\",\n      \"columns\": [\n        {\n          \"name\": \"column_name\",\n          \"type\": \"data_type\",\n          \"nullable\": true/false,\n          \"default\": \"default_value\",\n          \"constraints\": [\"constraint_definition\"]\n        }\n      ],\n      \"primary_key\": [\"column_names\"],\n      \"foreign_keys\": [\n        {\n          \"columns\": [\"local_columns\"],\n          \"references\": {\n            \"table\": \"referenced_table\",\n            \"columns\": [\"referenced_columns\"]\n          }\n        }\n      ],\n      \"indexes\": [\n        {\n          \"name\": \"index_name\",\n          \"columns\": [\"column_names\"],\n          \"unique\": true/false,\n          \"type\": \"btree/gin/gist\"\n        }\n      ],\n      \"rls_policies\": [\n        {\n          \"name\": \"policy_name\",\n          \"command\": \"SELECT/INSERT/UPDATE/DELETE\",\n          \"expression\": \"policy_expression\"\n        }\n      ]\n    }\n  ],\n  \"migration_sql\": \"-- Complete SQL migration script\",\n  \"relationships\": {\n    \"description\": \"Explanation of table relationships\",\n    \"diagram\": \"ASCII diagram of relationships\"\n  },\n  \"performance_notes\": [\"Performance optimization recommendations\"],\n  \"security_notes\": [\"Security recommendations\"]\n}",
+                "display_name": "Schema Design Template",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Template for generating database schemas"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "schema-chain",
+        "type": "LLMChain",
+        "position": { "x": 700, "y": 200 },
+        "data": {
+          "type": "LLMChain",
+          "node": {
+            "base_classes": ["Chain"],
+            "description": "Chain that generates database schema",
+            "display_name": "Schema Generation Chain"
+          }
+        }
+      },
+      {
+        "id": "validation-model",
+        "type": "OpenAIModel",
+        "position": { "x": 1000, "y": 100 },
+        "data": {
+          "type": "OpenAIModel",
+          "node": {
+            "base_classes": ["BaseLanguageModel"],
+            "description": "GPT-4 model for schema validation",
+            "display_name": "Schema Validation Model",
+            "template": {
+              "model_name": {
+                "type": "str",
+                "required": true,
+                "show": true,
+                "value": "gpt-4-turbo-preview",
+                "display_name": "Model Name"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "validation-prompt",
+        "type": "PromptTemplate",
+        "position": { "x": 1000, "y": 300 },
+        "data": {
+          "type": "PromptTemplate",
+          "node": {
+            "base_classes": ["StringPromptTemplate"],
+            "description": "Schema validation prompt",
+            "display_name": "Schema Validation Prompt",
+            "template": {
+              "template": {
+                "type": "str",
+                "required": true,
+                "show": true,
+                "multiline": true,
+                "value": "You are a senior database architect reviewing a schema design for production readiness.\n\nReview the following schema and provide:\n1. Validation of the schema design\n2. Identification of potential issues\n3. Performance optimization suggestions\n4. Security recommendations\n5. Best practices compliance check\n\nSchema to validate:\n{schema}\n\nOriginal requirements:\n{requirements}\n\nProvide output in this format:\n{\n  \"validation_status\": \"PASS/FAIL/WARNING\",\n  \"issues\": [\n    {\n      \"severity\": \"HIGH/MEDIUM/LOW\",\n      \"category\": \"PERFORMANCE/SECURITY/DESIGN/COMPLIANCE\",\n      \"description\": \"Issue description\",\n      \"recommendation\": \"How to fix\"\n    }\n  ],\n  \"improvements\": [\n    {\n      \"category\": \"PERFORMANCE/SECURITY/MAINTAINABILITY\",\n      \"suggestion\": \"Improvement suggestion\",\n      \"impact\": \"Expected impact\"\n    }\n  ],\n  \"score\": 85,\n  \"summary\": \"Overall assessment summary\"\n}",
+                "display_name": "Validation Template"
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "validation-chain",
+        "type": "LLMChain",
+        "position": { "x": 1300, "y": 200 },
+        "data": {
+          "type": "LLMChain",
+          "node": {
+            "base_classes": ["Chain"],
+            "description": "Chain that validates the generated schema",
+            "display_name": "Schema Validation Chain"
+          }
+        }
+      },
+      {
+        "id": "output-result",
+        "type": "ChatOutput",
+        "position": { "x": 1600, "y": 200 },
+        "data": {
+          "type": "ChatOutput",
+          "node": {
+            "base_classes": ["Message"],
+            "description": "Outputs the validated schema with recommendations",
+            "display_name": "Schema Output"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-1",
+        "source": "input-requirements",
+        "target": "schema-prompt",
+        "sourceHandle": "output",
+        "targetHandle": "requirements"
+      },
+      {
+        "id": "edge-2",
+        "source": "schema-prompt",
+        "target": "schema-chain",
+        "sourceHandle": "output",
+        "targetHandle": "prompt"
+      },
+      {
+        "id": "edge-3",
+        "source": "schema-analyzer",
+        "target": "schema-chain",
+        "sourceHandle": "output",
+        "targetHandle": "llm"
+      },
+      {
+        "id": "edge-4",
+        "source": "schema-chain",
+        "target": "validation-prompt",
+        "sourceHandle": "output",
+        "targetHandle": "schema"
+      },
+      {
+        "id": "edge-5",
+        "source": "input-requirements",
+        "target": "validation-prompt",
+        "sourceHandle": "output",
+        "targetHandle": "requirements"
+      },
+      {
+        "id": "edge-6",
+        "source": "validation-prompt",
+        "target": "validation-chain",
+        "sourceHandle": "output",
+        "targetHandle": "prompt"
+      },
+      {
+        "id": "edge-7",
+        "source": "validation-model",
+        "target": "validation-chain",
+        "sourceHandle": "output",
+        "targetHandle": "llm"
+      },
+      {
+        "id": "edge-8",
+        "source": "validation-chain",
+        "target": "output-result",
+        "sourceHandle": "output",
+        "targetHandle": "input"
+      }
+    ],
+    "viewport": { "x": 0, "y": 0, "zoom": 1 }
+  },
+  "is_component": false
+}
