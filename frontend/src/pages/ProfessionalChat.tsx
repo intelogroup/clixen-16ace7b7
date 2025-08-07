@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { agentCoordinator } from '../lib/agents';
+import { simpleChatService } from '../lib/services/SimpleChatService';
 
 interface Message {
   id: string;
@@ -276,7 +276,7 @@ export default function ProfessionalChat() {
         throw new Error('Please sign in to continue');
       }
 
-      const response = await agentCoordinator.handleNaturalConversation(userMessage, messages);
+      const response = await simpleChatService.handleNaturalConversation(userMessage, messages);
       
       const updatedMessages = newMessages.filter(m => m.id !== loadingId);
       const assistantMessage: Message = {

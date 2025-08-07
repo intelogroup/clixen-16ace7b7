@@ -8,9 +8,7 @@ const StandardLanding = React.lazy(() => import('./pages/StandardLanding'));
 const StandardAuth = React.lazy(() => import('./pages/StandardAuth'));
 const ProfessionalDashboard = React.lazy(() => import('./pages/ProfessionalDashboard'));
 const ProfessionalChat = React.lazy(() => import('./pages/ProfessionalChat'));
-const Chat = React.lazy(() => import('./pages/Chat'));
-const DatabaseDrivenChat = React.lazy(() => import('./pages/DatabaseDrivenChat'));
-const MVPWorkflowBuilder = React.lazy(() => import('./pages/MVPWorkflowBuilder'));
+// Removed over-engineered chat variants - MVP spec calls for single chat interface
 const OAuthCallback = React.lazy(() => import('./pages/OAuthCallback'));
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 
@@ -120,36 +118,11 @@ function AppContent() {
                 </AsyncErrorBoundary>
               } 
             />
-            <Route 
-              path="/advanced-chat" 
-              element={
-                <AsyncErrorBoundary autoRetry maxRetries={3}>
-                  <Chat />
-                </AsyncErrorBoundary>
-              } 
-            />
-            <Route 
-              path="/database-chat" 
-              element={
-                <AsyncErrorBoundary autoRetry maxRetries={2}>
-                  <DatabaseDrivenChat />
-                </AsyncErrorBoundary>
-              } 
-            />
+            {/* Removed over-engineered chat routes - MVP spec calls for single chat interface */}
           </Route>
         </Route>
 
-        {/* MVP Route - Direct access without layout for full-screen experience */}
-        <Route element={<ProtectedRoute />}>
-          <Route 
-            path="/mvp" 
-            element={
-              <AsyncErrorBoundary autoRetry maxRetries={2}>
-                <MVPWorkflowBuilder />
-              </AsyncErrorBoundary>
-            } 
-          />
-        </Route>
+        {/* Removed separate MVP route - main chat interface follows MVP spec */}
 
         <Route path="*" element={
           <LazyLoadWrapper>
