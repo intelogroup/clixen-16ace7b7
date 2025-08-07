@@ -27,8 +27,9 @@ This MVP comprises three layers:
    - Natural-language guidance: proactively ask clarifying questions to perform feasibility checks, refine requirements, and guide the user through workflow definition.
    - Minimalistic interactive feedback: loading spinners and concise status messages (no JSON or diagram display).
 2. **Workflow Engine (Backend)**
-   - GPT-based processing: parse natural-language into intermediate spec.
-   - n8n JSON generator: map spec to n8n-compatible workflow object.
+   - GPT-based processing: parse natural-language into an intermediate specification.
+   - n8n JSON generator: map the spec to an n8n-compatible workflow definition.
+   - n8n MCP Node Metadata: fetch dynamic node and parameter definitions from the MCP server to enrich prompts, guide node selection, and drive validation.
    - n8n MCP integration: use the Model Context Protocol to validate workflow feasibility, test connectivity against the target n8n instance, and manage workflow lifecycle states.
 3. **Deployment Service**
    - n8n REST API integration: deploy or update workflows on a target n8n instance.

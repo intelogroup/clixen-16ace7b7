@@ -10,6 +10,7 @@
 
 ## Sprint 2: Workflow Generation & Persistence (2 weeks)
 - Integrate OpenAI endpoint: process prompts to generate intermediate specs.
+ - Integrate n8n MCP server: fetch node metadata (nodes, operations, parameters) to enrich prompts and validate generated workflows.
 - Implement n8n JSON generator: map specs to workflow definitions.
 - Persist workflows in Supabase: store workflow metadata and JSON payload.
 - Integration tests for prompt-to-workflow pipeline and persistence.
