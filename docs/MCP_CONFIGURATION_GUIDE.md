@@ -107,6 +107,36 @@ export SUPABASE_SERVICE_KEY="eyJhbGciOiJIUzI1N..."
 echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | node /root/repo/mcp/supabase-mcp-server.js
 ```
 
+### 4. n8n MCP Server
+**Purpose**: Expose n8n node metadata and operations to support dynamic prompt guidance, validation, and workflow compatibility checks via MCP.
+
+**Configuration Location**: `/root/repo/claude_desktop_config.json`
+```json
+{
+  "n8n-mcp": {
+    "command": "npx",
+    "args": ["-y", "@n8n-io/mcp-server-n8n"],
+    "env": {
+      "N8N_URL": "http://18.221.12.50:5678",
+      "N8N_API_KEY": "<YOUR_N8N_API_KEY>"
+    }
+  }
+}
+```
+
+**Available Operations**:
+- `list-nodes`: Retrieve list of all available n8n nodes and versions
+- `get-node-parameters`: Get detailed parameter definitions for a specified node
+- `list-node-actions`: List supported operations for a given node type
+- `validate-workflow`: Validate a proposed workflow JSON against node schemas
+- `test-connection`: Test connectivity to the n8n instance
+
+## Secret Management Strategy
+
+- Store all service credentials (n8n API key, OpenAI key, Supabase service role key, Netlify PAT) in environment variables for Edge Functions or backend services.
+- Never expose API keys in frontend code or UI; proxy calls through secure server or Edge Function layers.
+- For future per-project secrets, store encrypted values in Supabase `secrets` table and decrypt at runtime using pgcrypto in Edge Functions.
+
 ## Credentials and Access Tokens
 
 ### Netlify Access Token
