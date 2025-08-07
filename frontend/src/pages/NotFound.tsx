@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Home, ArrowLeft, Zap } from 'lucide-react';
+import { Button, designTokens } from '../components/ui';
 
 export default function NotFound() {
   return (
@@ -8,8 +9,14 @@ export default function NotFound() {
       <div className="max-w-md w-full text-center">
         <div className="mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ 
+                backgroundColor: designTokens.colors.primary[500],
+                color: designTokens.colors.white
+              }}
+            >
+              <Zap className="w-5 h-5" />
             </div>
             <span className="text-xl font-bold text-gray-900">
               clixen<span className="text-gray-500">.ai</span>
@@ -27,22 +34,25 @@ export default function NotFound() {
         </div>
         
         <div className="space-y-4">
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+          <Button
+            as="a"
+            href="/dashboard"
+            variant="primary"
+            size="lg"
+            leftIcon={<Home className="w-4 h-4" />}
           >
-            <Home className="w-4 h-4" />
             Go to Dashboard
-          </Link>
+          </Button>
           
           <div>
-            <button
+            <Button
               onClick={() => window.history.back()}
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              variant="ghost"
+              size="md"
+              leftIcon={<ArrowLeft className="w-4 h-4" />}
             >
-              <ArrowLeft className="w-4 h-4" />
               Go back
-            </button>
+            </Button>
           </div>
         </div>
         
