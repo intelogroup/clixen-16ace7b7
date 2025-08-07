@@ -24,28 +24,40 @@ This MVP comprises three layers:
 
 1. **Chat Interface (Frontend)**
    - Single-page React app with text prompt and chat history.
-   - Display generated workflow diagram and JSON output.
+   - Minimalistic feedback: loading spinners and concise status messages (no JSON or diagram display).
 2. **Workflow Engine (Backend)**
    - GPT-based processing: parse natural-language into intermediate spec.
    - n8n JSON generator: map spec to n8n-compatible workflow object.
 3. **Deployment Service**
    - n8n REST API integration: deploy or update workflows on a target n8n instance.
+4. **Persistence & Project Management**
+   - Supabase database: store users, projects, and workflow records.
+   - Project dashboard API: list and retrieve saved workflows per project.
+5. **Authentication & Authorization**
+   - Supabase Auth (email/password): sign up, sign in, session management.
+6. **Telemetry & Analytics**
+   - Capture key events: workflow creation, deployment, status updates, and user sign-ins.
 
 ### 2.4 Out-of-Scope
 - Multi-agent orchestration or specialist AI agents.
-- Enterprise-grade error recovery or rollback strategies.
-- Multi-tenant billing, rate-limiting, or advanced caching.
-- Complex OAuth flows beyond basic n8n credentials.
+- Live workflow diagram rendering and interactive JSON editing.
+- Advanced undo/redo or collaborative editing features.
+- External OAuth providers beyond basic email/password.
+- Rate-limiting, complex caching, or multi-tenant billing systems.
 
 ## 3. Acceptance Criteria
-- Users can enter a prompt describing an automation (e.g., “daily Slack reminder from RSS feed”).
-- System returns a valid n8n workflow JSON and diagram preview.
-- Users can click “Deploy” to publish the workflow to a connected n8n instance.
-- Error messages are displayed clearly for invalid prompts or deployment failures.
+- Users can sign up and sign in via email/password.
+- Users can create and select a project in a dashboard view.
+- Within a project, enter a prompt describing an automation (e.g., “daily Slack reminder from RSS feed”).
+- System generates a valid n8n workflow behind the scenes and saves it to the project.
+- Users can click “Deploy” to publish the workflow to a connected n8n instance, with loading spinners and deployment status indicators.
+- Workflows and their statuses are listed in the project dashboard.
+- Clear error messages are displayed for prompt processing or deployment failures.
 
 ## 4. Success Metrics
-- **Workflow Creation**: ≥50 unique workflows generated in private beta.
-- **Deployment Rate**: ≥80% of generated workflows successfully deployed.
-- **Time-to-First-Workflow**: ≤5 minutes from signup to deployed workflow.
+- **User Onboarding**: ≥70% of new users complete their first workflow within 10 minutes of signup.
+- **Workflow Persistence**: ≥90% of generated workflows are saved and retrievable in the dashboard.
+- **Deployment Rate**: ≥80% of generated workflows are successfully deployed.
+- **Telemetry Coverage**: ≥95% of key user actions captured for analytics.
 
 *** End of File
