@@ -21,6 +21,7 @@ import { formatAuthError, getAuthErrorSeverity } from '../lib/auth/authErrorMess
 import LoadingButton from '../components/LoadingButton';
 import { useAuthOperation } from '../lib/hooks/useLoadingState';
 import { ValidatedEmailInput, ValidatedPasswordInput, ValidatedNameInput } from '../components/ValidatedInput';
+import { designTokens } from '../styles/design-tokens';
 
 export default function StandardAuth() {
   const navigate = useNavigate();
@@ -137,20 +138,35 @@ export default function StandardAuth() {
           >
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 mb-8">
-              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ 
+                  backgroundColor: designTokens.colors.primary[500],
+                  color: designTokens.colors.white
+                }}
+              >
+                <Zap className="w-5 h-5" />
               </div>
-              <span className="text-xl font-bold text-gray-900">
-                clixen<span className="text-gray-500">.ai</span>
+              <span 
+                className="text-xl font-bold"
+                style={{ color: designTokens.colors.gray[900] }}
+              >
+                clixen<span style={{ color: designTokens.colors.gray[500] }}>.ai</span>
               </span>
             </Link>
 
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 
+                className="font-bold mb-2"
+                style={{ 
+                  fontSize: designTokens.typography.sizes['3xl'],
+                  color: designTokens.colors.gray[900]
+                }}
+              >
                 {isSignUp ? 'Create your account' : 'Welcome back'}
               </h1>
-              <p className="text-gray-600">
+              <p style={{ color: designTokens.colors.gray[600] }}>
                 {isSignUp 
                   ? 'Start building AI-powered workflows in minutes'
                   : 'Sign in to your Clixen account'
@@ -226,7 +242,7 @@ export default function StandardAuth() {
                 loadingText={isSignUp ? 'Creating Account...' : 'Signing In...'}
                 variant="primary"
                 size="lg"
-                className="w-full bg-black hover:bg-gray-800 border-black"
+                className="w-full"
               >
                 {isSignUp ? 'Create Account' : 'Sign In'}
                 <ArrowRight className="w-5 h-5" />
@@ -235,11 +251,12 @@ export default function StandardAuth() {
 
             {/* Toggle between sign in/up */}
             <div className="mt-6 text-center">
-              <p className="text-gray-600">
+              <p style={{ color: designTokens.colors.gray[600] }}>
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
                 <button
                   onClick={toggleMode}
-                  className="text-black font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="font-medium hover:underline focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ color: designTokens.colors.primary[500] }}
                   disabled={authLoadingState.isLoading || authLoadingState.isRetrying}
                 >
                   {isSignUp ? 'Sign in' : 'Sign up'}

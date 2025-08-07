@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { validationSchemas, sanitize, security } from '../lib/validation/inputValidation';
 import { z } from 'zod';
+import { Textarea } from './ui';
 
 export interface ValidatedTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   label?: string;

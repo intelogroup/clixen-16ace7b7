@@ -26,6 +26,8 @@ import {
   Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { designTokens } from '../styles/design-tokens';
+import { Button, Container, Stack, Section, IconButton } from '../components/ui';
 
 interface Workflow {
   id: string;
@@ -221,21 +223,23 @@ export default function ProfessionalDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button
+              <Button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="p-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all duration-200 disabled:opacity-50"
+                variant="ghost"
+                size="sm"
                 title="Refresh data"
               >
                 <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowCreateWizard(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                variant="primary"
+                size="md"
+                leftIcon={<Plus className="w-4 h-4" />}
               >
-                <Plus className="w-4 h-4" />
                 Create Workflow
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -410,13 +414,14 @@ export default function ProfessionalDashboard() {
               <p className="text-slate-600 mb-6 max-w-md mx-auto">
                 Create your first AI-powered workflow to connect apps, automate tasks, and streamline your business processes.
               </p>
-              <button
+              <Button
                 onClick={() => setShowCreateWizard(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors font-medium shadow-sm"
+                variant="primary"
+                size="lg"
+                leftIcon={<Plus className="w-4 h-4" />}
               >
-                <Plus className="w-4 h-4" />
                 Create Your First Workflow
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="divide-y divide-slate-200/60">
@@ -465,28 +470,27 @@ export default function ProfessionalDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200"
+                        <IconButton 
+                          icon={Eye}
+                          variant="ghost"
+                          size="sm"
+                          color="secondary"
                           title="View workflow"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                          className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200"
+                        />
+                        <IconButton 
+                          icon={workflow.status === 'active' ? Pause : Play}
+                          variant="ghost"
+                          size="sm"
+                          color="secondary"
                           title={workflow.status === 'active' ? "Pause workflow" : "Start workflow"}
-                        >
-                          {workflow.status === 'active' ? (
-                            <Pause className="w-4 h-4" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
-                        </button>
-                        <button 
-                          className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200"
+                        />
+                        <IconButton 
+                          icon={Trash2}
+                          variant="ghost"
+                          size="sm"
+                          color="error"
                           title="Delete workflow"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        />
                       </div>
                     </div>
                   </motion.div>
@@ -507,38 +511,72 @@ export default function ProfessionalDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setShowCreateWizard(true)}
-              className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-200 group text-left w-full"
+              className="flex items-center p-5 border rounded-xl hover:opacity-90 transition-all duration-200 group text-left w-full"
+              style={{
+                borderColor: designTokens.colors.gray[200],
+                backgroundColor: designTokens.colors.white
+              }}
             >
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm">
+              <div 
+                className="p-3 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm"
+                style={{ backgroundColor: designTokens.colors.primary[500] }}
+              >
                 <Plus className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 mb-1">New Workflow</h3>
                 <p className="text-sm text-slate-600">Create automation with AI assistance</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+              <ArrowRight 
+                className="w-4 h-4 transition-colors" 
+                style={{ color: designTokens.colors.gray[400] }}
+              />
             </button>
             
-            <button className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 transition-all duration-200 group text-left">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm">
+            <button 
+              className="flex items-center p-5 border rounded-xl hover:opacity-90 transition-all duration-200 group text-left"
+              style={{
+                borderColor: designTokens.colors.gray[200],
+                backgroundColor: designTokens.colors.white
+              }}
+            >
+              <div 
+                className="p-3 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm"
+                style={{ backgroundColor: designTokens.colors.success[500] }}
+              >
                 <BarChart3 className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 mb-1">Analytics</h3>
                 <p className="text-sm text-slate-600">Monitor performance and insights</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              <ArrowRight 
+                className="w-4 h-4 transition-colors" 
+                style={{ color: designTokens.colors.gray[400] }}
+              />
             </button>
             
-            <button className="flex items-center p-5 border border-slate-200 rounded-xl hover:border-purple-300 hover:bg-purple-50/30 transition-all duration-200 group text-left">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm">
+            <button 
+              className="flex items-center p-5 border rounded-xl hover:opacity-90 transition-all duration-200 group text-left"
+              style={{
+                borderColor: designTokens.colors.gray[200],
+                backgroundColor: designTokens.colors.white
+              }}
+            >
+              <div 
+                className="p-3 rounded-xl mr-4 group-hover:scale-105 transition-transform shadow-sm"
+                style={{ backgroundColor: designTokens.colors.primary[600] }}
+              >
                 <Globe className="w-5 h-5 text-white" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 mb-1">Templates</h3>
                 <p className="text-sm text-slate-600">Browse pre-built workflow templates</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 transition-colors" />
+              <ArrowRight 
+                className="w-4 h-4 transition-colors" 
+                style={{ color: designTokens.colors.gray[400] }}
+              />
             </button>
           </div>
         </motion.div>
