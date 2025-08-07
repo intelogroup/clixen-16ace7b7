@@ -36,38 +36,86 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
   }
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'clixen-auth-token',
-  },
-});
+const isSupabaseConfigured = Boolean(
+  supabaseUrl && supabaseAnonKey && /^https?:\/\//.test(supabaseUrl)
+);
+
+const createStubClient = () => {
+  console.warn('⚠️ [SUPABASE] Running in preview without Supabase configuration. Using stub client.');
+  const auth = {
+    async getSession() { return { data: { session: null }, error: { message: 'Supabase not configured' } } as any; },
+    async getUser() { return { data: { user: null }, error: { message: 'Supabase not configured' } } as any; },
+    async signUp() { return { data: null, error: { message: 'Supabase not configured' } } as any; },
+    async signInWithPassword() { return { data: null, error: { message: 'Supabase not configured' } } as any; },
+    async signOut() { return { error: null } as any; },
+    onAuthStateChange(callback: any) {
+      const sub = { unsubscribe() {} };
+      // Immediately emit a signed out state in preview
+      try { callback('SIGNED_OUT', null); } catch {}
+      return { data: { subscription: sub } } as any;
+    }
+  } as any;
+
+  const from = (_table: string) => {
+    const builder: any = {
+      eq() { return builder; },
+      order() { return builder; },
+      select: async () => ({ data: [], error: null }),
+      insert: (_payload: any) => ({
+        select: () => ({
+          single: async () => ({ data: { id: 'demo-' + Math.random().toString(36).slice(2) }, error: null })
+        })
+      })
+    };
+    return builder;
+  };
+
+  const functions = {
+    async invoke(name: string) {
+      return {
+        data: { response: `Demo mode: function ${name} not available in preview.`, workflow_generated: false },
+        error: null
+      } as any;
+    }
+  } as any;
+
+  return { auth, from, functions } as any;
+};
+
+export const supabase: any = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storageKey: 'clixen-auth-token',
+      },
+    })
+  : createStubClient();
 
 // Initialize auth monitoring in development (non-blocking)
 if (env.get().isDevelopment && typeof window !== 'undefined') {
   console.log('🔧 [SUPABASE] Development mode - enabling auth monitoring');
-  
-  // Defer monitoring setup to avoid blocking app startup
   setTimeout(() => {
     try {
-      monitorAuthState();
-      
-      // Test connection after app has started
-      checkSupabaseConnection().then(connected => {
-        if (!connected) {
-          console.warn('⚠️ [SUPABASE] Initial connection test failed - authentication may not work properly');
-        }
-      }).catch(error => {
-        console.warn('⚠️ [SUPABASE] Connection test error:', error);
-      });
+      if (isSupabaseConfigured) {
+        monitorAuthState();
+        checkSupabaseConnection().then((connected) => {
+          if (!connected) {
+            console.warn('⚠️ [SUPABASE] Initial connection test failed - authentication may not work properly');
+          }
+        }).catch((error) => {
+          console.warn('⚠️ [SUPABASE] Connection test error:', error);
+        });
+      } else {
+        console.log('ℹ️ [SUPABASE] Using stub client in preview - set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable real auth.');
+      }
     } catch (error) {
       console.warn('⚠️ [SUPABASE] Failed to initialize development monitoring:', error);
     }
-  }, 1500); // Defer longer than logger initialization
+  }, 1500);
 }
 
 // Enhanced error handling for authentication
