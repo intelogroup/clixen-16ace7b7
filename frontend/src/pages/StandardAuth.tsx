@@ -88,6 +88,7 @@ export default function StandardAuth() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
+    setSuccess(null);
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
@@ -99,15 +100,6 @@ export default function StandardAuth() {
     setError(null);
     setSuccess(null);
     setFormData({ email: '', password: '', fullName: '' });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null);
-    setSuccess(null);
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
   };
 
   return (
