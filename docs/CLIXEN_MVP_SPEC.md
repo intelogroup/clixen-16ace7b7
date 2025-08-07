@@ -62,6 +62,9 @@ This MVP comprises three layers:
 - **User Onboarding**: ≥70% of new users complete their first workflow within 10 minutes of signup.
 - **Workflow Persistence**: ≥90% of generated workflows are saved and retrievable in the dashboard.
 - **Deployment Rate**: ≥80% of generated workflows are successfully deployed.
-- **Telemetry Coverage**: ≥95% of key user actions captured for analytics.
+- **Telemetry Coverage**: Capture core user events (signup, workflow create, deploy, execution errors) in analytics; full coverage deferred post‑MVP.
+
+## 5. Technical Notes
+Refer to `docs/TECH_NOTES.md` for detailed implementation guidelines on secret management, JSON validation and self‑healing, versioning, pagination, telemetry quotas, testing, migrations, and security practices.
 
 *** End of File

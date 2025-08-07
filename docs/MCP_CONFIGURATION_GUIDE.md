@@ -131,6 +131,12 @@ echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' | node /root/repo/mcp
 - `validate-workflow`: Validate a proposed workflow JSON against node schemas
 - `test-connection`: Test connectivity to the n8n instance
 
+## Secret Management Strategy
+
+- Store all service credentials (n8n API key, OpenAI key, Supabase service role key, Netlify PAT) in environment variables for Edge Functions or backend services.
+- Never expose API keys in frontend code or UI; proxy calls through secure server or Edge Function layers.
+- For future per-project secrets, store encrypted values in Supabase `secrets` table and decrypt at runtime using pgcrypto in Edge Functions.
+
 ## Credentials and Access Tokens
 
 ### Netlify Access Token
