@@ -56,12 +56,13 @@ Current conversation context: This is a workflow creation session.`
         }
       ];
 
-      // Call ai-chat-system (the primary function as per current implementation)
-      const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+      // Call ai-chat-simple (the actual deployed function)
+      const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
         body: {
-          messages,
-          mode: 'workflow_creation',
-          generateWorkflow: this.shouldGenerateWorkflow(userMessage, conversationHistory)
+          message: userMessage,
+          user_id: 'current-user', // TODO: Get actual user ID from context
+          session_id: undefined, // TODO: Add session ID support
+          mode: 'workflow_creation'
         }
       });
 
@@ -69,9 +70,13 @@ Current conversation context: This is a workflow creation session.`
         throw new Error(error.message || 'Failed to process request');
       }
 
-      // Parse response
-      const response = data as WorkflowResponse;
-      
+      // Parse response from ai-chat-simple
+      const response: WorkflowResponse = {
+        content: data.response || 'No response generated',
+        workflowGenerated: data.workflow_generated || false,
+        workflowData: data.workflow_data || null
+      };
+
       // If workflow was generated, validate and prepare for deployment
       if (response.workflowGenerated && response.workflowData) {
         response.workflowData = await this.validateWorkflow(response.workflowData);
@@ -156,8 +161,8 @@ Current conversation context: This is a workflow creation session.`
       // Validate before deployment
       const validatedWorkflow = await this.validateWorkflow(workflowData);
 
-      // Call api-operations function to handle n8n deployment
-      const { data, error } = await supabase.functions.invoke('api-operations', {
+      // Call workflows-api function to handle n8n deployment
+      const { data, error } = await supabase.functions.invoke('workflows-api', {
         body: {
           action: 'deploy_workflow',
           workflow: validatedWorkflow,
