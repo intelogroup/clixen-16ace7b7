@@ -2,8 +2,8 @@
   # Build command - simple npm install and build with cache clear
   command = "npm install && npm run build"
   
-  # Publish directory (Vite builds to dist by default)
-  publish = "dist"
+  # Publish directory (Vite builds to dist in frontend directory)
+  publish = "frontend/dist"
 
 [build.environment]
   # Node.js version - using Netlify default LTS version
