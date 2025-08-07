@@ -61,13 +61,13 @@ function AppContent() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardDashboard />
+                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <ModernDashboard />
                 </React.Suspense>
-              } 
+              }
             />
             <Route 
               path="/chat" 
