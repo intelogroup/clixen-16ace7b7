@@ -3,11 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 
-// Standard MVP components
-const SimpleAuth = React.lazy(() => import('./pages/SimpleAuth'));
-const StandardAuth = React.lazy(() => import('./pages/StandardAuth'));
-const StandardDashboard = React.lazy(() => import('./pages/StandardDashboard'));
-const StandardChat = React.lazy(() => import('./pages/StandardChat'));
+// Modern MVP components
+const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
+const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
+const ModernChat = React.lazy(() => import('./pages/ModernChat'));
 
 // Basic components
 import Layout from './components/Layout';
