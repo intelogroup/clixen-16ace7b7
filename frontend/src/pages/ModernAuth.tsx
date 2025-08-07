@@ -1,4 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase, getErrorMessage } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function ModernAuth() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -9,16 +13,81 @@ export default function ModernAuth() {
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.email || !formData.password) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      alert(`${isSignUp ? 'Account created' : 'Signed in'} successfully!`);
+    try {
+      if (isSignUp) {
+        // Sign up with Supabase
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName,
+              display_name: formData.fullName
+            }
+          }
+        });
+
+        if (error) {
+          console.error('Sign up error:', error);
+          toast.error(getErrorMessage(error));
+          return;
+        }
+
+        if (data.user) {
+          if (data.user.email_confirmed_at) {
+            // User is confirmed, navigate to dashboard
+            toast.success('Account created successfully! Welcome to Clixen.');
+            navigate('/dashboard', { replace: true });
+          } else {
+            // User needs to confirm email
+            toast.success('Account created! Please check your email for a confirmation link.');
+          }
+        }
+      } else {
+        // Sign in with Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) {
+          console.error('Sign in error:', error);
+          toast.error(getErrorMessage(error));
+          return;
+        }
+
+        if (data.user) {
+          toast.success('Welcome back! Redirecting to your dashboard...');
+          // Navigation will happen automatically via AuthContext
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    } catch (error: any) {
+      console.error('Authentication error:', error);
+      toast.error(getErrorMessage(error));
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,6 +109,9 @@ export default function ModernAuth() {
   const passwordStrength = getPasswordStrength(formData.password);
   const strengthColors = ['#ef4444', '#f97316', '#eab308', '#22c55e'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+  // Check if form is valid
+  const isFormValid = formData.email && formData.password && (!isSignUp || formData.fullName);
 
   return (
     <div style={{
@@ -186,6 +258,7 @@ export default function ModernAuth() {
                 value={formData.fullName}
                 onChange={handleChange}
                 placeholder="Full name"
+                required={isSignUp}
                 style={{
                   width: '100%',
                   padding: '16px 16px 16px 50px',
@@ -271,6 +344,7 @@ export default function ModernAuth() {
               onChange={handleChange}
               placeholder={isSignUp ? "Create a strong password" : "Password"}
               required
+              minLength={isSignUp ? 8 : undefined}
               style={{
                 width: '100%',
                 padding: '16px 50px 16px 50px',
@@ -340,11 +414,11 @@ export default function ModernAuth() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || !formData.email || !formData.password}
+            disabled={loading || !isFormValid}
             style={{
               width: '100%',
               padding: '16px',
-              background: loading || !formData.email || !formData.password 
+              background: loading || !isFormValid 
                 ? 'rgba(107, 114, 128, 0.5)' 
                 : 'linear-gradient(135deg, #8b5cf6, #ec4899)',
               border: 'none',
@@ -352,7 +426,7 @@ export default function ModernAuth() {
               color: 'white',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: loading || !formData.email || !formData.password ? 'not-allowed' : 'pointer',
+              cursor: loading || !isFormValid ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
@@ -360,7 +434,7 @@ export default function ModernAuth() {
               gap: '8px'
             }}
             onMouseEnter={(e) => {
-              if (!loading && formData.email && formData.password) {
+              if (!loading && isFormValid) {
                 e.currentTarget.style.transform = 'scale(1.02)';
                 e.currentTarget.style.boxShadow = '0 10px 30px rgba(139, 92, 246, 0.3)';
               }
@@ -380,7 +454,7 @@ export default function ModernAuth() {
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }} />
-                Processing...
+                {isSignUp ? 'Creating Account...' : 'Signing In...'}
               </>
             ) : (
               <>
@@ -405,7 +479,7 @@ export default function ModernAuth() {
               color: '#8b5cf6',
               fontSize: '16px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               textDecoration: 'underline'
             }}
           >
