@@ -69,21 +69,21 @@ function AppContent() {
                 </React.Suspense>
               }
             />
-            <Route 
-              path="/chat" 
+            <Route
+              path="/chat"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardChat />
+                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <ModernChat />
                 </React.Suspense>
-              } 
+              }
             />
-            <Route 
-              path="/chat/:id" 
+            <Route
+              path="/chat/:id"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardChat />
+                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" /></div>}>
+                  <ModernChat />
                 </React.Suspense>
-              } 
+              }
             />
           </Route>
         </Route>
