@@ -28,6 +28,6 @@ if (import.meta.env.DEV) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ModernChat />
+    <App />
   </React.StrictMode>,
 )
