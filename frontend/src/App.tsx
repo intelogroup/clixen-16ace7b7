@@ -88,9 +88,9 @@ function AppContent() {
           </Route>
         </Route>
 
-        {/* Default redirects - Start with auth for unauthenticated users */}
-        <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        {/* Default redirects - Handle auth state properly */}
+        <Route path="/" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
       </Routes>
     </BrowserRouter>
   );
