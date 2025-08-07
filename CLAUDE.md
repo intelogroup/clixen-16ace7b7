@@ -1,4 +1,4 @@
-# Clixen Project - AI WORKFLOW AUTOMATION MVP ✅
+7# Clixen Project - AI WORKFLOW AUTOMATION MVP ✅
 
 ## 🎯 **SIMPLIFIED NATURAL-LANGUAGE WORKFLOW CREATOR**
 
@@ -273,6 +273,7 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 3. **Simple > Complex**: Always choose simpler implementation
 4. **MVP Success Metrics**: Focus on the 4 core metrics defined in spec
 5. **User Journey First**: Prioritize complete user flow over advanced features
+6. **Read and proceed according rules.md** this set of rules are not restricting you but guide you to act safely.
 
 ## 📚 **Documentation Discipline**
 
