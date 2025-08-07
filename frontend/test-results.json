@@ -129,20 +129,30 @@
     "webServer": {
       "command": "npm run dev",
       "port": 8081,
-      "reuseExistingServer": false,
+      "reuseExistingServer": true,
       "timeout": 120000
     }
   },
   "suites": [],
   "errors": [
     {
-      "message": "Error: http://localhost:8081 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer.",
-      "stack": "Error: http://localhost:8081 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer."
+      "message": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.",
+      "stack": "Error: Playwright Test did not expect test.describe() to be called here.\nMost common reasons include:\n- You are calling test.describe() in a configuration file.\n- You are calling test.describe() in a file that is imported by the configuration file.\n- You have two different versions of @playwright/test. This usually happens\n  when one of the dependencies in your package.json depends on @playwright/test.\n    at TestTypeImpl._currentSuite (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:74:13)\n    at TestTypeImpl._describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/common/testType.js:114:24)\n    at Function.describe (/app/code/node_modules/@playwright/test/node_modules/playwright/lib/transform/transform.js:275:12)\n    at /app/code/frontend/tests/modern-ui-auth.spec.ts:3:6",
+      "location": {
+        "file": "/app/code/frontend/tests/modern-ui-auth.spec.ts",
+        "column": 6,
+        "line": 3
+      },
+      "snippet": "   at modern-ui-auth.spec.ts:3\n\n  1 | import { test, expect } from '@playwright/test';\n  2 |\n> 3 | test.describe('Modern UI Authentication Flow with Screenshots', () => {\n    |      ^\n  4 |   test.beforeEach(async ({ page }) => {\n  5 |     // Clear any existing auth state\n  6 |     await page.context().clearCookies();"
+    },
+    {
+      "message": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments.",
+      "stack": "Error: No tests found.\nMake sure that arguments are regular expressions matching test files.\nYou may need to escape symbols like \"$\" or \"*\" and quote the arguments."
     }
   ],
   "stats": {
-    "startTime": "2025-08-07T23:35:04.800Z",
-    "duration": 27.55899999999997,
+    "startTime": "2025-08-07T23:35:20.148Z",
+    "duration": 145.81299999999987,
     "expected": 0,
     "skipped": 0,
     "unexpected": 0,
