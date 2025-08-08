@@ -218,21 +218,26 @@ Please try your request again!`,
         timestamp: new Date().toISOString()
       });
 
-      // Check if it's a deployment issue
+      // Provide specific error messages for different failure types
+      let errorMessage = 'Edge Function failed';
+
       if (error.message?.includes('Function not found') || error.message?.includes('404')) {
-        throw new Error('Edge Function not deployed - using fallback service');
+        errorMessage = 'AI service not deployed - using demo mode';
+        console.log('🔍 [EDGE-FUNCTION] Function not found - likely not deployed to Supabase');
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'AI service timeout - using demo mode';
+        console.log('⏱️ [EDGE-FUNCTION] Timeout - likely OpenAI API taking too long');
+      } else if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
+        errorMessage = 'Authentication issue - using demo mode';
+        console.log('🔐 [EDGE-FUNCTION] Auth error - check user session or API keys');
+      } else if (error.message?.includes('OpenAI API Key')) {
+        errorMessage = 'OpenAI API key not configured - using demo mode';
+        console.log('🔑 [EDGE-FUNCTION] OpenAI API key missing or invalid');
+      } else {
+        console.log('🔧 [EDGE-FUNCTION] Generic error - check function logs:', error.message);
       }
 
-      // Check for other common errors
-      if (error.message?.includes('timeout')) {
-        throw new Error('Edge Function timeout - service taking too long');
-      }
-
-      if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
-        throw new Error('Edge Function authentication error');
-      }
-
-      throw new Error(`Edge Function failed: ${error.message}`);
+      throw new Error(errorMessage);
     }
 
     console.log('✅ [EDGE-FUNCTION] Response received successfully:', {
