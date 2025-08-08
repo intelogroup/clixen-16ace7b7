@@ -170,6 +170,12 @@ export class SimpleChatService {
     // Get the current session to include auth token
     const { data: { session } } = await supabase.auth.getSession();
 
+    console.log('🔐 [EDGE-FUNCTION] Auth session check:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token,
+      tokenLength: session?.access_token?.length || 0
+    });
+
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
       body: requestPayload,
       headers: {
