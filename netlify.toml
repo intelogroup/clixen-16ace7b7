@@ -10,6 +10,8 @@
   NODE_VERSION = "18"
   # Force npm usage instead of pnpm auto-detection
   NPM_FLAGS = "--legacy-peer-deps"
+  # Secrets scanning configuration - exclude test files from scanning
+  SECRETS_SCAN_OMIT_PATHS = "tests/**,test-*,**/*.test.*,**/*.spec.*,**/*.mjs,**/*.html"
 
 # Security headers - CSP handled in HTML meta tag
 [[headers]]
