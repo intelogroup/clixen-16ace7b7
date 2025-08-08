@@ -174,7 +174,10 @@ export default function ModernDashboard() {
               Here's what's happening with your workflows today.
             </p>
           </div>
-          <button className="btn-clean btn-primary">
+          <button
+            className="btn-clean btn-primary"
+            onClick={() => navigate('/chat')}
+          >
             <Plus className="w-4 h-4" />
             New Workflow
           </button>
