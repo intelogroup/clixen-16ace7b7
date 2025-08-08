@@ -96,6 +96,11 @@ export class SimpleChatService {
       throw new Error('User not authenticated');
     }
 
+    console.log('🔄 [EDGE-FUNCTION] Calling ai-chat-simple with:', {
+      message: message.substring(0, 50) + '...',
+      historyLength: conversationHistory.length
+    });
+
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
       body: {
         message,
@@ -107,8 +112,18 @@ export class SimpleChatService {
 
     if (error) {
       console.error('Edge Function error:', error);
+      // Check if it's a deployment issue
+      if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+        throw new Error('Edge Function not deployed - using fallback service');
+      }
       throw new Error(`Edge Function failed: ${error.message}`);
     }
+
+    console.log('✅ [EDGE-FUNCTION] Response received:', {
+      hasResponse: !!data?.response,
+      phase: data?.phase,
+      workflowGenerated: data?.workflow_generated
+    });
 
     return data;
   }
