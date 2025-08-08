@@ -43,26 +43,22 @@ export class SimpleChatService {
       console.log('🔄 [CHAT] Attempting to use ai-chat-simple Edge Function');
       const result = await this.callAiChatEdgeFunction(message, workflowMessages);
 
-      // Determine conversation mode based on content and history
-      const mode = this.determineConversationMode(message, conversationHistory, result);
-      
-      // Extract any questions from the response
-      const questions = this.extractQuestions(result.content);
-      
-      // Determine if we need more info or can proceed
-      const needsMoreInfo = questions.length > 0 || mode === 'scoping';
-      const canProceed = mode === 'creating' || (mode === 'validating' && !needsMoreInfo);
+      // The ai-chat-simple edge function returns data in this format:
+      // { response, phase, needs_more_info, ready_for_generation, clarifying_questions, workflow_generated, workflow_data }
+
+      const mode = this.mapPhaseToMode(result.phase || 'scoping');
+      const questions = result.clarifying_questions || [];
 
       return {
-        response: result.content,
+        response: result.response || 'Sorry, I could not process your request.',
         questions,
         mode,
-        needsMoreInfo,
-        canProceed,
-        scopeStatus: result.workflowGenerated ? {
+        needsMoreInfo: result.needs_more_info || false,
+        canProceed: result.ready_for_generation || false,
+        scopeStatus: result.workflow_generated ? {
           generated: true,
-          validated: !result.error,
-          workflow: result.workflowData
+          validated: true,
+          workflow: result.workflow_data
         } : undefined
       };
     } catch (error) {
