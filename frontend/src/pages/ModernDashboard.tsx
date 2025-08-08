@@ -345,6 +345,11 @@ export default function ModernDashboard() {
             return (
               <button
                 key={index}
+                onClick={() => {
+                  if (action.title === 'AI Assistant' || action.title === 'Design Workflow') {
+                    navigate('/chat');
+                  }
+                }}
                 className="text-left p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 group"
               >
                 <div className={`w-12 h-12 rounded-lg ${getColorClasses(action.color)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
