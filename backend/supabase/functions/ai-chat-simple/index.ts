@@ -467,7 +467,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📝 [AI-Chat-Simple] Processing message for user: ${user_id}`);
+    console.log(`📝 [AI-Chat-Simple] [${requestId}] Processing message:`, {
+      userId: user_id?.substring(0, 8) + '***',
+      messageLength: message.length,
+      messagePreview: message.substring(0, 50) + '...',
+      sessionId: session_id?.substring(0, 8) + '***',
+      mode
+    });
 
     // Get conversation history (simplified - last 10 messages)
     let conversationHistory: ChatMessage[] = [];
