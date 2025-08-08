@@ -8,6 +8,7 @@
 import { simpleWorkflowService as workflowService, WorkflowMessage } from './SimpleWorkflowService';
 import { fallbackChatService } from './FallbackChatService';
 import { supabase } from '../supabase';
+import toast from 'react-hot-toast';
 
 interface ChatResponse {
   response: string;
