@@ -24,7 +24,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // N8n API configuration
 const N8N_API_URL = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
-const N8N_API_KEY = Deno.env.get('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
+const N8N_API_KEY = Deno.env.get('N8N_API_KEY');
+if (!N8N_API_KEY) {
+  throw new Error('N8N_API_KEY environment variable is required');
+}
 
 // System prompt for MVP workflow creation
 const SYSTEM_PROMPT = `You are Clixen, an intelligent workflow automation assistant. You're helpful, conversational, and adaptable.

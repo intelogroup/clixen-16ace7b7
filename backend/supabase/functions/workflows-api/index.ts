@@ -63,7 +63,10 @@ interface ApiResponse<T = any> {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const n8nApiUrl = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
-const n8nApiKey = Deno.env.get('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
+const n8nApiKey = Deno.env.get('N8N_API_KEY');
+if (!n8nApiKey) {
+  throw new Error('N8N_API_KEY environment variable is required');
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 

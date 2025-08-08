@@ -1,0 +1,125 @@
+{
+  "timestamp": "2025-08-08T14:18:05.453Z",
+  "summary": {
+    "totalTests": 13,
+    "totalPassed": 11,
+    "overallRate": 85,
+    "criticalSystems": {
+      "authentication": true,
+      "database": true,
+      "apis": false,
+      "security": true
+    }
+  },
+  "results": {
+    "authentication": [
+      {
+        "test": "User Sign-in",
+        "success": true,
+        "details": "User: jayveedz19@gmail.com",
+        "metrics": {
+          "authTime": 558
+        },
+        "timestamp": "2025-08-08T14:18:03.215Z"
+      },
+      {
+        "test": "Session Validation",
+        "success": true,
+        "details": "Valid session active",
+        "timestamp": "2025-08-08T14:18:03.216Z"
+      }
+    ],
+    "database": [
+      {
+        "test": "Row Level Security",
+        "success": true,
+        "details": "Returned 0 workflows, all owned by user: true",
+        "metrics": {
+          "queryTime": 303
+        },
+        "timestamp": "2025-08-08T14:18:03.519Z"
+      },
+      {
+        "test": "Workflow Data Access",
+        "success": true,
+        "details": "Found 0 workflows",
+        "metrics": {
+          "queryTime": 303
+        },
+        "timestamp": "2025-08-08T14:18:03.519Z"
+      },
+      {
+        "test": "Projects Access",
+        "success": true,
+        "details": "Found 0 user projects out of 0 total",
+        "timestamp": "2025-08-08T14:18:03.734Z"
+      },
+      {
+        "test": "Sync Schema Check",
+        "success": true,
+        "details": "Basic sync columns present",
+        "timestamp": "2025-08-08T14:18:03.855Z"
+      }
+    ],
+    "apis": [
+      {
+        "test": "n8n API Connection",
+        "success": true,
+        "details": "Connected, found 11 workflows",
+        "metrics": {
+          "responseTime": 133
+        },
+        "timestamp": "2025-08-08T14:18:03.992Z"
+      },
+      {
+        "test": "n8n User Isolation",
+        "success": false,
+        "details": "Found 0 user-prefixed workflows",
+        "timestamp": "2025-08-08T14:18:03.992Z"
+      },
+      {
+        "test": "Edge Functions",
+        "success": false,
+        "details": "Edge Function returned a non-2xx status code",
+        "timestamp": "2025-08-08T14:18:04.169Z"
+      }
+    ],
+    "security": [
+      {
+        "test": "Unauthorized Database Access",
+        "success": true,
+        "details": "RLS properly blocks access",
+        "timestamp": "2025-08-08T14:18:04.433Z"
+      },
+      {
+        "test": "API Key Validation",
+        "success": true,
+        "details": "Invalid API keys properly rejected",
+        "timestamp": "2025-08-08T14:18:04.496Z"
+      }
+    ],
+    "performance": [
+      {
+        "test": "Database Query Performance",
+        "success": true,
+        "details": "Avg: 177ms, Range: 119-293ms",
+        "metrics": {
+          "avgTime": 177,
+          "maxTime": 293,
+          "minTime": 119
+        },
+        "timestamp": "2025-08-08T14:18:05.382Z"
+      },
+      {
+        "test": "n8n API Performance",
+        "success": true,
+        "details": "Response time: 68ms",
+        "metrics": {
+          "apiTime": 68
+        },
+        "timestamp": "2025-08-08T14:18:05.450Z"
+      }
+    ]
+  },
+  "recommendation": "READY"
+}
