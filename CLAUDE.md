@@ -8,7 +8,7 @@
 - **Supabase Backend**: https://zfbgdixbzezpxllkoyfc.supabase.co ✅
 - **n8n Interface**: http://18.221.12.50:5678 ✅
 
-**Last Updated**: August 7, 2025 | **Status**: MVP Build Ready | **Architecture**: Netlify Static + Supabase
+**Last Updated**: August 8, 2025 | **Status**: Security Enhanced MVP | **Architecture**: Netlify Static + Supabase + n8n Community
 
 ---
 
@@ -137,6 +137,50 @@ Clixen is a **natural-language workflow creator** that transforms user prompts i
 
 ---
 
+## 🔐 **MVP Security Implementation (50-User Trial)**
+
+### **User Isolation Strategy**
+For our 50-user MVP trial with n8n Community Edition (self-hosted), we implement a pragmatic security approach:
+
+1. **Workflow Naming Convention**: `[USR-{userId}] {workflowName}`
+   - Every workflow is prefixed with user identifier
+   - Prevents naming collisions between users
+   - Enables easy identification and cleanup
+
+2. **Webhook Path Security**: `webhook/{userHash}/{timestamp}/{random}`
+   - Unguessable webhook URLs per user
+   - Timestamp prevents replay attacks
+   - Random suffix ensures uniqueness
+
+3. **Supabase as Source of Truth**
+   - All workflow metadata stored in Supabase with RLS
+   - Dashboard queries only from Supabase (never direct n8n)
+   - User can only see their own workflows via RLS policies
+
+4. **Data Flow Architecture**:
+   ```
+   User → Frontend → Supabase (RLS) → Edge Functions → n8n API
+                          ↑                              ↓
+                     [Source of Truth]          [Execution Engine]
+   ```
+
+### **Implementation Components**
+
+**Backend Services:**
+- `/backend/supabase/functions/_shared/workflow-isolation.ts` - User isolation utilities
+- `/backend/scripts/workflow-cleanup.ts` - GDPR-compliant data deletion
+- `/backend/supabase/migrations/20250108_user_workflow_sync.sql` - RLS policies
+
+**Frontend Services:**
+- `/frontend/src/lib/services/workflowService.ts` - User-scoped workflow operations
+- Dashboard components only query Supabase (never n8n directly)
+
+### **Known Limitations (Accepted for MVP)**
+- n8n admin panel shows all workflows (users don't have access)
+- Execution logs are global (mitigated by user prefixes)
+- Resource limits shared across users (monitoring for abuse)
+- No workflow execution sandboxing (acceptable for 50 trusted users)
+
 ## 🔒 **Production Environment Configuration**
 
 ### **Verified Working Configuration**
@@ -172,16 +216,32 @@ conversations   -- Chat history per workflow
 
 ---
 
-## 🚀 **User Journey Flow**
+## 🚀 **User Journey Flow (Enhanced with 2-Way Sync)**
 
 ### **Primary User Path**
 1. **Authentication**: Email/password sign in/up
 2. **Project Dashboard**: Create/select project
 3. **Chat Interface**: Enter natural language prompt
 4. **GPT Processing**: System asks clarifying questions  
-5. **Workflow Generation**: GPT creates n8n workflow specification
-6. **Save & Deploy**: Store workflow, optionally deploy to n8n
-7. **Status Monitoring**: Basic deployment status feedback
+5. **Workflow Generation**: GPT creates n8n workflow with user prefix
+6. **Save & Deploy**: Store in Supabase + deploy to n8n with isolation
+7. **Status Monitoring**: Real-time sync between Supabase and n8n
+
+### **2-Way Synchronization Flow**
+```
+CREATE/UPDATE:
+User Action → Supabase (RLS) → Edge Function → n8n API
+                    ↓                              ↓
+              [Store Metadata]            [Deploy with USR prefix]
+
+READ/DISPLAY:
+Dashboard ← Supabase (RLS) ← Sync Service ← n8n Status
+              ↑
+        [User sees only their workflows]
+
+DELETE/CLEANUP:
+User Delete → Supabase Soft Delete → Cleanup Job → n8n Hard Delete
+```
 
 ### **UI/UX Specifications** 
 - **Minimalist Design**: Clean whitespace, readable typography
@@ -217,26 +277,132 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 
 ---
 
+## 🎯 **Implementation Plan for Engineering Team**
+
+### **Phase 1: Backend Security Layer (Day 1)**
+**Owner: Backend Engineer**
+
+1. **Deploy Workflow Isolation Manager**
+   - [ ] Deploy `/backend/supabase/functions/_shared/workflow-isolation.ts`
+   - [ ] Update `ai-chat-simple` Edge Function with user prefixing
+   - [ ] Test workflow naming with multiple users
+
+2. **Database Migration**
+   - [ ] Run migration: `/backend/supabase/migrations/20250108_user_workflow_sync.sql`
+   - [ ] Verify RLS policies are enforcing user isolation
+   - [ ] Test that users can only see their own workflows
+
+3. **Cleanup Utilities**
+   - [ ] Deploy `/backend/scripts/workflow-cleanup.ts`
+   - [ ] Schedule weekly cleanup job for inactive workflows
+   - [ ] Test user data deletion flow
+
+### **Phase 2: Frontend Integration (Day 2)**
+**Owner: Frontend Engineer**
+
+1. **Dashboard Updates**
+   - [ ] Integrate `WorkflowService` in StandardDashboard
+   - [ ] Remove any direct n8n API calls from frontend
+   - [ ] Ensure all workflow queries go through Supabase
+
+2. **UI Components Needed**
+   - [ ] Workflow status badges (deployed/draft/error)
+   - [ ] Workflow actions menu (Edit/Archive/Delete)
+   - [ ] Execution count display
+   - [ ] Last accessed timestamp
+   - [ ] Project selector dropdown
+
+3. **Chat Interface Enhancements**
+   - [ ] Add workflow name input field
+   - [ ] Display deployment status in real-time
+   - [ ] Show webhook URL (if applicable)
+   - [ ] Add "Test Workflow" button
+
+### **Phase 3: 2-Way Sync Implementation (Day 3)**
+**Owner: Full-Stack Engineer**
+
+1. **Sync Service Creation**
+   ```typescript
+   // Create new Edge Function: workflow-sync
+   - Poll n8n for execution status
+   - Update Supabase with execution counts
+   - Handle workflow state changes
+   - Implement retry logic for failed syncs
+   ```
+
+2. **Real-time Updates**
+   - [ ] Setup Supabase Realtime for workflow status
+   - [ ] Implement WebSocket connection in frontend
+   - [ ] Auto-refresh dashboard on status changes
+
+3. **Error Handling**
+   - [ ] Graceful degradation if n8n is down
+   - [ ] Queue failed deployments for retry
+   - [ ] User-friendly error messages
+
+### **Phase 4: Testing & Validation (Day 4)**
+**Owner: QA + All Engineers**
+
+1. **User Isolation Testing**
+   - [ ] Create 5 test users
+   - [ ] Deploy workflows from each user
+   - [ ] Verify dashboard isolation
+   - [ ] Test webhook uniqueness
+
+2. **2-Way Sync Testing**
+   - [ ] Deploy workflow → Verify in n8n
+   - [ ] Execute in n8n → Verify count in Supabase
+   - [ ] Delete in dashboard → Verify removal from n8n
+   - [ ] Test error scenarios
+
+3. **Performance Testing**
+   - [ ] Dashboard load time < 3s with 50 workflows
+   - [ ] Deployment time < 5s
+   - [ ] Sync delay < 2s
+
+### **Phase 5: MVP Release Prep (Day 5)**
+**Owner: DevOps + Product**
+
+1. **Deployment Checklist**
+   - [ ] Remove all hardcoded API keys
+   - [ ] Set environment variables in Netlify
+   - [ ] Enable Supabase RLS on all tables
+   - [ ] Deploy Edge Functions to production
+
+2. **User Communication**
+   - [ ] Prepare disclaimer for 50 beta users
+   - [ ] Create onboarding email with limitations
+   - [ ] Setup support channel for feedback
+
+3. **Monitoring Setup**
+   - [ ] Workflow creation metrics
+   - [ ] Deployment success rate
+   - [ ] User activity tracking
+   - [ ] Error rate monitoring
+
 ## 🎯 **Current Build Status**
 
-**✅ Build Ready for Netlify:**
-- Frontend build: ✅ Successfully generating 720KB output
-- Dependencies: ✅ All npm packages installed
-- Configuration: ✅ netlify.toml properly configured
-- Security headers: ✅ CSP and security policies set
-- Environment variables: ✅ All contexts configured
+**✅ Security Enhancements Completed:**
+- User isolation: ✅ Workflow naming convention implemented
+- Database security: ✅ RLS policies configured
+- Cleanup utilities: ✅ GDPR-compliant deletion ready
+- Frontend service: ✅ WorkflowService with user scoping
 
-**✅ Core Infrastructure:**
-- Authentication: ✅ Supabase Auth working with test user
-- Database: ✅ PostgreSQL with core tables
-- n8n Integration: ✅ API key configured and tested
-- Edge Functions: ✅ Deployment methods verified (MCP + CLI)
+**🔄 In Progress:**
+- 2-way sync service implementation
+- Dashboard UI updates for workflow management
+- Real-time status updates
 
-**Next Steps:**
-1. Test complete user journey end-to-end
-2. Fix any errors that arise during testing
-3. Ensure MVP scope compliance
-4. Deploy to Netlify for production
+**📋 Ready for Testing:**
+- User isolation with [USR-] prefixes
+- Supabase-only dashboard queries
+- Workflow cleanup scripts
+
+**Next Sprint Focus:**
+1. Complete 2-way sync implementation
+2. Add missing UI components
+3. Run full integration tests with 5 users
+4. Deploy to production for 50-user trial
 
 ---
 
