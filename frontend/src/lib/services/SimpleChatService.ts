@@ -167,8 +167,15 @@ export class SimpleChatService {
       payloadSize: JSON.stringify(requestPayload).length
     });
 
+    // Get the current session to include auth token
+    const { data: { session } } = await supabase.auth.getSession();
+
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
-      body: requestPayload
+      body: requestPayload,
+      headers: {
+        Authorization: session?.access_token ? `Bearer ${session.access_token}` : undefined,
+        'Content-Type': 'application/json'
+      }
     });
 
     const edgeCallDuration = Date.now() - edgeCallStart;
