@@ -143,11 +143,25 @@ export class SimpleChatService {
   }
 
   /**
+   * Map edge function phase to chat mode
+   */
+  private mapPhaseToMode(phase: string): 'greeting' | 'scoping' | 'validating' | 'creating' {
+    switch (phase) {
+      case 'gathering': return 'scoping';
+      case 'refining': return 'scoping';
+      case 'confirming': return 'validating';
+      case 'validating': return 'validating';
+      case 'generating': return 'creating';
+      default: return 'greeting';
+    }
+  }
+
+  /**
    * Determine conversation mode based on context
    */
   private determineConversationMode(
-    message: string, 
-    history: Message[], 
+    message: string,
+    history: Message[],
     result: any
   ): 'greeting' | 'scoping' | 'validating' | 'creating' {
     const messageText = message.toLowerCase();
