@@ -18,7 +18,6 @@ import {
 
 export default function ModernDashboard() {
   const [selectedProject, setSelectedProject] = useState(0);
-  const navigate = useNavigate();
 
   const projects = [
     { 
