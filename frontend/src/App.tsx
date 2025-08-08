@@ -102,31 +102,32 @@ function AppContent() {
 }
 
 export default function App() {
-  try {
-    return (
-      <ErrorBoundary>
-        <NotificationProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </NotificationProvider>
-      </ErrorBoundary>
-    );
-  } catch (error) {
-    console.error('App initialization error:', error);
-    return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
-          <h1 className="text-xl font-bold text-red-600 mb-4">Initialization Error</h1>
-          <p className="text-gray-700 mb-4">Error: {error?.toString()}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
+      <div className="bg-slate-800 p-8 rounded-lg shadow-lg max-w-md text-center">
+        <h1 className="text-2xl font-bold mb-4">Clixen MVP</h1>
+        <p className="text-slate-300 mb-6">Testing basic functionality...</p>
+        <div className="space-y-3">
+          <a
+            href="/auth"
+            className="block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
           >
-            Reload
-          </button>
+            Go to Auth
+          </a>
+          <a
+            href="/dashboard"
+            className="block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+          >
+            Go to Dashboard
+          </a>
+          <a
+            href="/chat"
+            className="block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors"
+          >
+            Go to Chat
+          </a>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
