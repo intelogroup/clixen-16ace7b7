@@ -90,14 +90,6 @@ function AppContent() {
                 </React.Suspense>
               }
             />
-            <Route
-              path="/test"
-              element={
-                <React.Suspense fallback={<PageLoading message="Loading test..." />}>
-                  <TestEdgeFunction />
-                </React.Suspense>
-              }
-            />
           </Route>
         </Route>
 
