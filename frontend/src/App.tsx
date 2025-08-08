@@ -90,14 +90,6 @@ function AppContent() {
                 </React.Suspense>
               }
             />
-            <Route
-              path="/test-chat"
-              element={
-                <React.Suspense fallback={<PageLoading message="Loading test..." />}>
-                  <TestChat />
-                </React.Suspense>
-              }
-            />
           </Route>
         </Route>
 
