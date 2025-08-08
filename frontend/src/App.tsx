@@ -9,7 +9,6 @@ import { NotificationProvider, ErrorBoundary } from './components/Notifications'
 const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
 const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
 const ModernChat = React.lazy(() => import('./pages/ModernChat'));
-const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
 // Basic components
 import Layout from './components/Layout';
