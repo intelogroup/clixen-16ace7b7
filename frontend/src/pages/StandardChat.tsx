@@ -370,14 +370,14 @@ What would you like to automate today?`,
     setIsLoading(true);
 
     try {
-      const workflowMessages = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
+      const conversationHistory = messages.map(msg => ({
+        type: msg.role as 'user' | 'assistant',
         content: msg.content
       }));
 
-      const result = await fallbackChatService.processConversation(
+      const result = await simpleChatService.handleNaturalConversation(
         userMessage.content,
-        workflowMessages
+        conversationHistory
       );
 
       const assistantMessage: Message = {
