@@ -1,142 +1,50 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { Loader2, Zap, CheckCircle } from 'lucide-react';
 
 // Main app loading screen
 export const AppLoading = () => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
-    {/* Animated background orbs */}
-    <motion.div 
-      className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
-      animate={{
-        x: [0, 100, 0],
-        y: [0, -50, 0],
-        scale: [1, 1.1, 1],
-      }}
-      transition={{
-        duration: 8,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
-    />
-    <motion.div 
-      className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl"
-      animate={{
-        x: [0, -100, 0],
-        y: [0, 50, 0],
-        scale: [1, 0.8, 1],
-      }}
-      transition={{
-        duration: 10,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
-    />
-    
-    {/* Main loading content */}
-    <motion.div 
-      className="text-center z-10"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-    >
-      <motion.div
-        className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-        animate={{ 
-          scale: [1, 1.1, 1],
-          rotate: [0, 5, -5, 0]
-        }}
-        transition={{ 
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      >
-        <span className="text-3xl">⚡</span>
-      </motion.div>
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+        <Zap className="w-8 h-8 text-white" />
+      </div>
       
-      <motion.div
-        className="flex justify-center mb-4"
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        <div className="flex space-x-2">
-          {[0, 1, 2].map((i) => (
-            <motion.div
-              key={i}
-              className="w-3 h-3 bg-purple-500 rounded-full"
-              animate={{
-                scale: [0.8, 1.2, 0.8],
-                opacity: [0.5, 1, 0.5],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                delay: i * 0.2,
-                ease: "easeInOut"
-              }}
-            />
-          ))}
-        </div>
-      </motion.div>
+      <div className="flex justify-center mb-4">
+        <div className="spinner-clean"></div>
+      </div>
       
-      <motion.h2 
-        className="text-2xl font-bold text-white mb-2"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.6 }}
-      >
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">
         Loading Clixen
-      </motion.h2>
+      </h2>
       
-      <motion.p 
-        className="text-gray-400"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.6 }}
-      >
+      <p className="text-gray-600">
         Preparing your AI workspace...
-      </motion.p>
-    </motion.div>
+      </p>
+    </div>
   </div>
 );
 
 // Page transition loading
 export const PageLoading = ({ message = "Loading..." }: { message?: string }) => (
-  <motion.div 
-    className="flex items-center justify-center p-8"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.3 }}
-  >
+  <div className="flex items-center justify-center p-8">
     <div className="text-center">
-      <motion.div
-        className="w-12 h-12 border-3 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-4"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      />
-      <p className="text-gray-400 text-sm">{message}</p>
+      <div className="spinner-clean mx-auto mb-4"></div>
+      <p className="text-gray-600 text-sm">{message}</p>
     </div>
-  </motion.div>
+  </div>
 );
 
 // Component loading skeleton
 export const ComponentSkeleton = ({ className = "" }: { className?: string }) => (
-  <motion.div 
-    className={`animate-pulse bg-white/5 rounded-xl border border-white/10 ${className}`}
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration: 0.3 }}
-  >
+  <div className={`animate-pulse bg-gray-100 rounded-xl border border-gray-200 ${className}`}>
     <div className="p-6 space-y-4">
-      <div className="h-4 bg-white/10 rounded w-1/4"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
       <div className="space-y-2">
-        <div className="h-3 bg-white/10 rounded"></div>
-        <div className="h-3 bg-white/10 rounded w-5/6"></div>
+        <div className="h-3 bg-gray-200 rounded"></div>
+        <div className="h-3 bg-gray-200 rounded w-5/6"></div>
       </div>
     </div>
-  </motion.div>
+  </div>
 );
 
 // Button loading state
@@ -148,11 +56,7 @@ export const ButtonLoading = ({ children, loading, ...props }: {
   <button {...props} disabled={loading || props.disabled}>
     {loading ? (
       <div className="flex items-center justify-center gap-2">
-        <motion.div
-          className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
+        <div className="spinner-clean" />
         <span>Loading...</span>
       </div>
     ) : (
@@ -164,45 +68,129 @@ export const ButtonLoading = ({ children, loading, ...props }: {
 // Form field loading
 export const FieldLoading = () => (
   <div className="animate-pulse">
-    <div className="h-4 bg-white/10 rounded w-24 mb-2"></div>
-    <div className="h-12 bg-white/10 rounded-lg"></div>
+    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+    <div className="h-12 bg-gray-100 rounded-lg border border-gray-200"></div>
   </div>
 );
 
 // Chat message loading
 export const MessageLoading = () => (
-  <motion.div 
-    className="flex gap-3 items-start"
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3 }}
-  >
-    <div className="w-9 h-9 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-      <span className="text-sm">🤖</span>
+  <div className="flex gap-3 items-start">
+    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+      <span className="text-sm text-white">🤖</span>
     </div>
-    <div className="flex-1 bg-white/10 rounded-xl p-4">
+    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-2">
         {[0, 1, 2].map((i) => (
-          <motion.div
+          <div
             key={i}
-            className="w-2 h-2 bg-purple-500 rounded-full"
-            animate={{
-              scale: [0.8, 1.2, 0.8],
-              opacity: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 1.4,
-              repeat: Infinity,
-              delay: i * 0.2,
-              ease: "easeInOut"
-            }}
+            className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"
+            style={{ animationDelay: `${i * 0.2}s` }}
           />
         ))}
-        <span className="text-gray-400 text-sm ml-2">AI is thinking...</span>
+        <span className="text-gray-600 text-sm ml-2">AI is thinking...</span>
       </div>
     </div>
-  </motion.div>
+  </div>
 );
+
+// Card loading skeleton
+export const CardSkeleton = () => (
+  <div className="clean-card p-6 animate-pulse">
+    <div className="flex items-center space-x-4 mb-4">
+      <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
+      <div className="flex-1 space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </div>
+    <div className="space-y-2">
+      <div className="h-3 bg-gray-200 rounded"></div>
+      <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+    </div>
+  </div>
+);
+
+// Table loading skeleton
+export const TableSkeleton = ({ rows = 5 }: { rows?: number }) => (
+  <div className="clean-card overflow-hidden">
+    <div className="p-6 border-b border-gray-200">
+      <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+    </div>
+    <div className="divide-y divide-gray-200">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div key={index} className="p-4 animate-pulse">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+            <div className="w-20 h-6 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Success state
+export const SuccessState = ({ title, message }: { title: string; message: string }) => (
+  <div className="text-center py-12">
+    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <CheckCircle className="w-8 h-8 text-green-600" />
+    </div>
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+    <p className="text-gray-600">{message}</p>
+  </div>
+);
+
+// Empty state
+export const EmptyState = ({ 
+  title, 
+  message, 
+  action 
+}: { 
+  title: string; 
+  message: string; 
+  action?: React.ReactNode;
+}) => (
+  <div className="text-center py-12">
+    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div className="w-8 h-8 bg-gray-300 rounded"></div>
+    </div>
+    <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+    <p className="text-gray-600 mb-4">{message}</p>
+    {action}
+  </div>
+);
+
+// Progress indicator
+export const ProgressIndicator = ({ progress, label }: { progress: number; label?: string }) => (
+  <div className="space-y-2">
+    {label && <div className="text-sm font-medium text-gray-700">{label}</div>}
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div 
+        className="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
+        style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+      />
+    </div>
+    <div className="text-sm text-gray-600 text-right">{Math.round(progress)}%</div>
+  </div>
+);
+
+// Inline loading spinner
+export const InlineSpinner = ({ size = 'sm' }: { size?: 'sm' | 'md' | 'lg' }) => {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8'
+  };
+
+  return (
+    <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-500`} />
+  );
+};
 
 export default {
   AppLoading,
@@ -210,5 +198,11 @@ export default {
   ComponentSkeleton,
   ButtonLoading,
   FieldLoading,
-  MessageLoading
+  MessageLoading,
+  CardSkeleton,
+  TableSkeleton,
+  SuccessState,
+  EmptyState,
+  ProgressIndicator,
+  InlineSpinner
 };
