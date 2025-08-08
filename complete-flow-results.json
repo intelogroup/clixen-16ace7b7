@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-08-08T02:46:34.786Z",
+  "tests": [
+    {
+      "success": false,
+      "method": "direct-api",
+      "error": "HTTP 404: {\"message\":\"not found\"}"
+    },
+    {
+      "success": false,
+      "error": "No webhook available"
+    }
+  ]
+}

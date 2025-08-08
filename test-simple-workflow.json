@@ -1,0 +1,60 @@
+{
+  "name": "Simple Test Workflow - Math Calculator",
+  "nodes": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [200, 200],
+      "parameters": {
+        "path": "calculate",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "b2c3d4e5-f6g7-8901-bcde-f12345678901",
+      "name": "Calculate",
+      "type": "n8n-nodes-base.function",
+      "position": [500, 200],
+      "parameters": {
+        "functionCode": "// Simple math calculation from webhook data\nconst data = $input.first().json;\nconst { a, b, operation } = data;\n\nlet result;\nswitch(operation) {\n  case 'add':\n    result = a + b;\n    break;\n  case 'subtract':\n    result = a - b;\n    break;\n  case 'multiply':\n    result = a * b;\n    break;\n  case 'divide':\n    result = b !== 0 ? a / b : 'Error: Division by zero';\n    break;\n  default:\n    result = 'Error: Invalid operation';\n}\n\nreturn [{\n  json: {\n    input: { a, b, operation },\n    result: result,\n    timestamp: new Date().toISOString(),\n    message: `${a} ${operation} ${b} = ${result}`\n  }\n}];"
+      }
+    },
+    {
+      "id": "c3d4e5f6-g7h8-9012-cdef-123456789012",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [800, 200],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Calculate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": {}
+}
