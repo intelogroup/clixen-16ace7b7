@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Send, 
-  MessageSquare, 
-  Save, 
-  Rocket, 
-  Lightbulb, 
+import {
+  Send,
+  MessageSquare,
+  Save,
+  Rocket,
+  Lightbulb,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -15,6 +15,8 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
+import { simpleChatService } from '../lib/services/SimpleChatService';
+import toast from 'react-hot-toast';
 
 export default function ModernChat() {
   const [messages, setMessages] = useState([
