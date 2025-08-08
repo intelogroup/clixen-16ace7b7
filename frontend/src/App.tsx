@@ -9,6 +9,7 @@ import { NotificationProvider, ErrorBoundary } from './components/Notifications'
 const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
 const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
 const ModernChat = React.lazy(() => import('./pages/ModernChat'));
+const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
 // Basic components
 import Layout from './components/Layout';
@@ -90,6 +91,14 @@ function AppContent() {
                 </React.Suspense>
               }
             />
+            <Route
+              path="/test"
+              element={
+                <React.Suspense fallback={<PageLoading message="Loading test..." />}>
+                  <TestEdgeFunction />
+                </React.Suspense>
+              }
+            />
           </Route>
         </Route>
 
@@ -103,7 +112,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary showDetails={true}>
+    <ErrorBoundary>
       <NotificationProvider>
         <AuthProvider>
           <AppContent />
