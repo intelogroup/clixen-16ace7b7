@@ -31,6 +31,14 @@ export class SimpleChatService {
    * Matches the existing AgentCoordinator.handleNaturalConversation interface
    */
   async handleNaturalConversation(message: string, conversationHistory: Message[] = []): Promise<ChatResponse> {
+    const startTime = Date.now();
+    console.log('🚀 [CHAT] Starting handleNaturalConversation', {
+      message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+      messageLength: message.length,
+      historyLength: conversationHistory.length,
+      timestamp: new Date().toISOString()
+    });
+
     try {
       // Convert chat history to workflow service format
       const workflowMessages: WorkflowMessage[] = conversationHistory
@@ -39,6 +47,16 @@ export class SimpleChatService {
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
           content: msg.content
         }));
+
+      console.log('📝 [CHAT] Converted conversation history', {
+        originalLength: conversationHistory.length,
+        processedLength: workflowMessages.length,
+        workflowMessages: workflowMessages.map(msg => ({
+          role: msg.role,
+          contentLength: msg.content.length,
+          contentPreview: msg.content.substring(0, 50) + '...'
+        }))
+      });
 
       // Try to use real Edge Function first
       console.log('🔄 [CHAT] Attempting to use ai-chat-simple Edge Function');
@@ -52,7 +70,7 @@ export class SimpleChatService {
       const mode = this.mapPhaseToMode(result.phase || 'scoping');
       const questions = result.clarifying_questions || [];
 
-      return {
+      const chatResponse = {
         response: result.response || 'Sorry, I could not process your request.',
         questions,
         mode,
@@ -64,8 +82,28 @@ export class SimpleChatService {
           workflow: result.workflow_data
         } : undefined
       };
+
+      const duration = Date.now() - startTime;
+      console.log('✅ [CHAT] Successfully processed conversation', {
+        duration: `${duration}ms`,
+        responseLength: chatResponse.response.length,
+        mode: chatResponse.mode,
+        needsMoreInfo: chatResponse.needsMoreInfo,
+        canProceed: chatResponse.canProceed,
+        questionsCount: chatResponse.questions.length,
+        workflowGenerated: !!chatResponse.scopeStatus?.generated
+      });
+
+      return chatResponse;
     } catch (error) {
-      console.error('SimpleChatService error:', error);
+      const duration = Date.now() - startTime;
+      console.error('❌ [CHAT] SimpleChatService error after', duration + 'ms:', {
+        error: error.message || error,
+        stack: error.stack,
+        name: error.name,
+        originalMessage: message.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
       console.log('🔄 [CHAT] Edge Function failed, falling back to demo service');
       toast.error('Using demo mode (Edge Function not available)', { id: 'ai-service' });
 
@@ -74,7 +112,13 @@ export class SimpleChatService {
         const fallbackResult = await fallbackChatService.processConversation(message, workflowMessages);
         return this.convertFallbackResponse(fallbackResult);
       } catch (fallbackError) {
-        console.error('Fallback service also failed:', fallbackError);
+        const duration = Date.now() - startTime;
+        console.error('💥 [CHAT] Fallback service also failed after', duration + 'ms:', {
+          error: fallbackError.message || fallbackError,
+          stack: fallbackError.stack,
+          originalError: error.message || error,
+          timestamp: new Date().toISOString()
+        });
         return {
           response: 'I apologize, but I encountered an error. Please try again or rephrase your question.',
           questions: [],
@@ -90,39 +134,91 @@ export class SimpleChatService {
    * Call the ai-chat-simple Edge Function
    */
   private async callAiChatEdgeFunction(message: string, conversationHistory: WorkflowMessage[]): Promise<any> {
+    const edgeCallStart = Date.now();
+    console.log('🌐 [EDGE-FUNCTION] Starting callAiChatEdgeFunction', {
+      timestamp: new Date().toISOString(),
+      messageLength: message.length,
+      historyLength: conversationHistory.length
+    });
+
     const { data: { user } } = await supabase.auth.getUser();
+    console.log('👤 [EDGE-FUNCTION] Auth check completed', {
+      hasUser: !!user,
+      userId: user?.id ? user.id.substring(0, 8) + '***' : null,
+      email: user?.email || null
+    });
 
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    console.log('🔄 [EDGE-FUNCTION] Calling ai-chat-simple with:', {
+    const requestPayload = {
+      message,
+      user_id: user.id,
+      conversation_history: conversationHistory,
+      mode: 'workflow_creation'
+    };
+
+    console.log('📤 [EDGE-FUNCTION] Calling ai-chat-simple with payload:', {
       message: message.substring(0, 50) + '...',
-      historyLength: conversationHistory.length
+      userId: user.id.substring(0, 8) + '***',
+      historyLength: conversationHistory.length,
+      mode: requestPayload.mode,
+      payloadSize: JSON.stringify(requestPayload).length
     });
 
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
-      body: {
-        message,
-        user_id: user.id,
-        conversation_history: conversationHistory,
-        mode: 'workflow_creation'
-      }
+      body: requestPayload
+    });
+
+    const edgeCallDuration = Date.now() - edgeCallStart;
+    console.log('📡 [EDGE-FUNCTION] Edge Function call completed', {
+      duration: `${edgeCallDuration}ms`,
+      hasData: !!data,
+      hasError: !!error,
+      errorMessage: error?.message,
+      timestamp: new Date().toISOString()
     });
 
     if (error) {
-      console.error('Edge Function error:', error);
+      console.error('❌ [EDGE-FUNCTION] Edge Function error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        status: error.status,
+        statusText: error.statusText,
+        timestamp: new Date().toISOString()
+      });
+
       // Check if it's a deployment issue
       if (error.message?.includes('Function not found') || error.message?.includes('404')) {
         throw new Error('Edge Function not deployed - using fallback service');
       }
+
+      // Check for other common errors
+      if (error.message?.includes('timeout')) {
+        throw new Error('Edge Function timeout - service taking too long');
+      }
+
+      if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
+        throw new Error('Edge Function authentication error');
+      }
+
       throw new Error(`Edge Function failed: ${error.message}`);
     }
 
-    console.log('✅ [EDGE-FUNCTION] Response received:', {
+    console.log('✅ [EDGE-FUNCTION] Response received successfully:', {
       hasResponse: !!data?.response,
+      responseLength: data?.response?.length || 0,
       phase: data?.phase,
-      workflowGenerated: data?.workflow_generated
+      needsMoreInfo: data?.needs_more_info,
+      readyForGeneration: data?.ready_for_generation,
+      workflowGenerated: data?.workflow_generated,
+      clarifyingQuestionsCount: data?.clarifying_questions?.length || 0,
+      sessionId: data?.session_id,
+      responseDataSize: JSON.stringify(data).length,
+      timestamp: new Date().toISOString()
     });
 
     return data;
