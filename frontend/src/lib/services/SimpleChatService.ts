@@ -66,7 +66,7 @@ export class SimpleChatService {
       let result;
       try {
         result = await this.callAiChatEdgeFunction(message, workflowMessages);
-        toast.success('✅ AI service connected', { id: 'ai-service' });
+        toast.success('�� AI service connected', { id: 'ai-service' });
       } catch (edgeError) {
         console.log('🔄 [CHAT] Edge Function failed, using fallback immediately');
         toast.dismiss('ai-service');
@@ -191,13 +191,9 @@ Please try your request again!`,
       tokenLength: session?.access_token?.length || 0
     });
 
+    // Call the edge function with proper authentication
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
-      body: requestPayload,
-      headers: {
-        'Authorization': session?.access_token ? `Bearer ${session.access_token}` : undefined,
-        'Content-Type': 'application/json',
-        'apikey': supabaseConfig.anonKey
-      }
+      body: requestPayload
     });
 
     const edgeCallDuration = Date.now() - edgeCallStart;
