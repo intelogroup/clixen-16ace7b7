@@ -201,36 +201,51 @@ const extractWorkflowSpec = (conversationText: string): WorkflowSpec | null => {
     const actions: Array<{ type: string; description: string; parameters: Record<string, any> }> = [];
     const integrations: string[] = [];
     
-    // Detect trigger types
+    // Detect trigger types with better pattern matching
     if (text.includes('webhook') || text.includes('http')) {
       trigger = { type: 'webhook', description: 'HTTP webhook trigger', parameters: {} };
-    } else if (text.includes('schedule') || text.includes('cron') || text.includes('daily') || text.includes('hourly')) {
+    } else if (text.includes('schedule') || text.includes('cron') || text.includes('daily') || text.includes('hourly') ||
+               text.includes('every minute') || text.includes('every hour') || text.includes('every day') ||
+               text.match(/every \d+ (minute|hour|day)/) || text.includes('at 10 pm') || text.includes('morning')) {
       trigger = { type: 'cron', description: 'Scheduled trigger', parameters: {} };
     } else if (text.includes('email') && text.includes('receive')) {
       trigger = { type: 'email_trigger', description: 'Email trigger', parameters: {} };
-    } else if (text.includes('manual') || text.includes('click') || text.includes('button')) {
+    } else if (text.includes('manual') || text.includes('click') || text.includes('button') || text.includes('auto trigger')) {
       trigger = { type: 'manual', description: 'Manual trigger', parameters: {} };
     }
     
-    // Detect actions
-    if (text.includes('send email') || text.includes('email notification')) {
+    // Detect actions with better pattern matching
+    if (text.includes('send email') || text.includes('email notification') ||
+        text.includes('via email') || text.includes('gmail')) {
       actions.push({ type: 'email_send', description: 'Send email', parameters: {} });
       integrations.push('email');
     }
-    
+
     if (text.includes('slack') && text.includes('message')) {
       actions.push({ type: 'slack', description: 'Send Slack message', parameters: {} });
       integrations.push('slack');
     }
-    
+
     if (text.includes('http request') || text.includes('api call')) {
       actions.push({ type: 'http_request', description: 'Make HTTP request', parameters: {} });
       integrations.push('webhook');
     }
-    
+
     if (text.includes('google sheets') || text.includes('spreadsheet')) {
       actions.push({ type: 'google_sheets', description: 'Update Google Sheets', parameters: {} });
       integrations.push('google_sheets');
+    }
+
+    // Handle calculation/computation tasks
+    if (text.includes('calculate') || text.includes('result') || text.match(/\d+\s*[*+\-/]\s*\d+/)) {
+      actions.push({ type: 'function', description: 'Perform calculation', parameters: {} });
+      integrations.push('computation');
+    }
+
+    // Handle general "send" actions
+    if (text.includes('send') && !actions.length) {
+      actions.push({ type: 'send_data', description: 'Send data/result', parameters: {} });
+      integrations.push('notification');
     }
     
     // Assess complexity
