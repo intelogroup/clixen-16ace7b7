@@ -187,7 +187,10 @@ Please try your request again!`,
     console.log('🔐 [EDGE-FUNCTION] Auth session check:', {
       hasSession: !!session,
       hasAccessToken: !!session?.access_token,
-      tokenLength: session?.access_token?.length || 0
+      tokenLength: session?.access_token?.length || 0,
+      tokenPrefix: session?.access_token?.substring(0, 20) + '...' || 'none',
+      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown',
+      sessionValid: session?.expires_at ? session.expires_at > Math.floor(Date.now() / 1000) : false
     });
 
     // Call the edge function with proper authentication
