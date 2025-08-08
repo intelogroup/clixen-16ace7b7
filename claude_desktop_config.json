@@ -67,6 +67,22 @@
         "@modelcontextprotocol/server-filesystem",
         "/root/repo"
       ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@henkey/postgres-mcp-server",
+        "--connection-string",
+        "postgresql://postgres.zfbgdixbzezpxllkoyfc:fq5MNcF00F8P7DqY@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+      ]
+    },
+    "testsprite": {
+      "command": "npx",
+      "args": ["@testsprite/testsprite-mcp@latest"],
+      "env": {
+        "API_KEY": "demo-key"
+      }
     }
   }
 }
