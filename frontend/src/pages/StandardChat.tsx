@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fallbackChatService } from '../lib/services/FallbackChatService';
+import { simpleChatService } from '../lib/services/SimpleChatService';
 import { 
   Send, 
   ArrowLeft, 
