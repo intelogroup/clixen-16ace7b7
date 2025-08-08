@@ -6,7 +6,7 @@
 set -e  # Exit on any error
 
 # Configuration
-PROJECT_REF="iiujgdslrbccewlczuvo"
+PROJECT_REF="zfbgdixbzezpxllkoyfc"
 FUNCTIONS_DIR="supabase/functions"
 
 # Colors for output
