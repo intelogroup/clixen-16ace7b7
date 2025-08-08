@@ -1,0 +1,148 @@
+{
+  "mcpServers": {
+    "browserstack-mcp": {
+      "command": "npx",
+      "args": ["browserstack-mcp-server"],
+      "env": {
+        "BROWSERSTACK_USERNAME": "your-browserstack-username",
+        "BROWSERSTACK_ACCESS_KEY": "your-browserstack-access-key"
+      }
+    },
+    "neon-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.neon.tech/mcp"],
+      "env": {
+        "NEON_API_KEY": "your-neon-api-key"
+      }
+    },
+    "convex-mcp": {
+      "command": "npx",
+      "args": ["-y", "convex@latest", "mcp", "start"],
+      "env": {
+        "CONVEX_DEPLOY_KEY": "your-convex-deploy-key"
+      }
+    },
+    "knowledge-graph-memory-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-knowledge-graph", "--memory-path", "/tmp/clixen-memory.jsonl"]
+    },
+    "globalping-mcp": {
+      "command": "npx",
+      "args": ["-y", "globalping-mcp-server"]
+    },
+    "aws-serverless-mcp": {
+      "command": "uvx",
+      "args": ["awslabs.aws-serverless-mcp-server@latest", "--allow-write", "--allow-sensitive-data-access"],
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      }
+    },
+    "fetch-mcp": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "exa-search-mcp": {
+      "command": "npx",
+      "args": ["exa-mcp-server"],
+      "env": {
+        "EXA_API_KEY": "your-exa-api-key"
+      }
+    },
+    "context7-mcp": {
+      "command": "npx",
+      "args": ["@upstash/context7-mcp"],
+      "env": {
+        "UPSTASH_REDIS_REST_URL": "your-upstash-redis-url",
+        "UPSTASH_REDIS_REST_TOKEN": "your-upstash-redis-token"
+      }
+    },
+    "browser-tools-mcp": {
+      "command": "npx",
+      "args": ["@agentdeskai/browser-tools-mcp@latest"]
+    },
+    "firecrawl-mcp": {
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "your-firecrawl-api-key"
+      }
+    },
+    "ref-mcp": {
+      "url": "https://api.ref.tools/mcp",
+      "env": {
+        "REF_API_KEY": "your-ref-api-key"
+      }
+    },
+    "ip2location-mcp": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/ip2locationio", "run", "ip2locationio.py"],
+      "env": {
+        "IP2LOCATION_API_KEY": "your-ip2location-api-key"
+      }
+    },
+    "powertools-aws-mcp": {
+      "command": "npx",
+      "args": ["-y", "powertools-aws-mcp"],
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      }
+    },
+    "coderabbit-mcp": {
+      "command": "npx",
+      "args": ["coderabbitai-mcp@latest"],
+      "env": {
+        "GITHUB_TOKEN": "your-github-personal-access-token"
+      }
+    },
+    "posthog-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.posthog.com/sse"],
+      "env": {
+        "POSTHOG_PERSONAL_API_KEY": "your-posthog-api-key"
+      }
+    },
+    "auth0-mcp": {
+      "command": "npx",
+      "args": ["-y", "@auth0/auth0-mcp-server", "run"],
+      "env": {
+        "AUTH0_DOMAIN": "your-auth0-domain",
+        "AUTH0_CLIENT_ID": "your-auth0-client-id"
+      }
+    },
+    "operative-browser-agent": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/Operative-Sh/web-eval-agent.git", "webEvalAgent"],
+      "env": {
+        "OPERATIVE_API_KEY": "your-operative-api-key"
+      }
+    },
+    "prisma-mcp": {
+      "command": "npx",
+      "args": ["-y", "prisma", "mcp"]
+    },
+    "lighthouse-mcp": {
+      "command": "npx",
+      "args": ["lighthouse-mcp"]
+    },
+    "memory-bank-mcp": {
+      "command": "npx",
+      "args": ["-y", "@allpepper/memory-bank-mcp@latest"]
+    },
+    "minimax-mcp": {
+      "command": "uvx",
+      "args": ["minimax-mcp", "-y"],
+      "env": {
+        "MINIMAX_API_KEY": "your-minimax-api-key"
+      }
+    },
+    "figma-mcp": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "your-figma-api-key"
+      }
+    }
+  }
+}

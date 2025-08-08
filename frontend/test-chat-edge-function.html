@@ -48,11 +48,11 @@
     </div>
 
     <script>
-        // Configuration
+        // Configuration - Use environment variables in production
         const SUPABASE_URL = 'https://zfbgdixbzezpxllkoyfc.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw';
-        const TEST_EMAIL = 'jayveedz19@gmail.com';
-        const TEST_PASSWORD = 'Goldyear2023#';
+        const SUPABASE_ANON_KEY = 'PLACEHOLDER_ANON_KEY'; // Replace with actual key
+        const TEST_EMAIL = 'test@example.com';
+        const TEST_PASSWORD = 'TestPassword123!';
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

@@ -4,8 +4,12 @@ OPENAI_KEY.txt
 *.secret
 
 # Environment files with real keys
+.env
 .env.local
 .env.production
+frontend/.env
+frontend/.env.local
+frontend/.env.production
 
 # Dependencies
 node_modules/
