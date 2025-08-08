@@ -114,14 +114,20 @@ What would you like to automate today?`,
 
   const getStatusConfig = (status: string) => {
     switch (status) {
+      case 'validating':
+        return {
+          label: 'Refining',
+          className: 'badge-warning',
+          icon: <Clock className="w-3 h-3" />
+        };
       case 'generated':
-        return { 
-          label: 'Generated', 
+        return {
+          label: 'Generated',
           className: 'badge-success',
           icon: <CheckCircle className="w-3 h-3" />
         };
       case 'saved':
-        return { 
+        return {
           label: 'Saved', 
           className: 'badge-info',
           icon: <Save className="w-3 h-3" />
