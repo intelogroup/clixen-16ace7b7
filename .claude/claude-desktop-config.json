@@ -1,0 +1,165 @@
+{
+  "description": "Claude Desktop configuration for Clixen MVP with 15 specialized subagents",
+  "instructions": [
+    "Copy this configuration to your Claude Desktop config file:",
+    "macOS: ~/Library/Application Support/Claude/claude_desktop_config.json",
+    "Windows: %APPDATA%/Claude/claude_desktop_config.json",
+    "Linux: ~/.config/claude/claude_desktop_config.json",
+    "",
+    "Before using, replace placeholder API keys with your actual keys:",
+    "- BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY",
+    "- NEON_API_KEY (optional for remote usage)",
+    "- EXA_API_KEY",
+    "- FIRECRAWL_API_KEY", 
+    "- REF_API_KEY",
+    "- IP2LOCATION_API_KEY (optional)",
+    "- AWS credentials (AWS_PROFILE, AWS_REGION)",
+    "- GITHUB_TOKEN",
+    "- POSTHOG_PERSONAL_API_KEY",
+    "- AUTH0_DOMAIN and AUTH0_CLIENT_ID",
+    "- OPERATIVE_API_KEY",
+    "- MINIMAX_API_KEY",
+    "- FIGMA_API_KEY",
+    "- UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN"
+  ],
+  "mcpServers": {
+    "neon-remote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.neon.tech/mcp"]
+    },
+    "knowledge-graph-memory": {
+      "command": "npx",
+      "args": ["-y", "mcp-knowledge-graph", "--memory-path", "~/.claude/clixen-memory.jsonl"]
+    },
+    "globalping": {
+      "command": "npx",
+      "args": ["-y", "globalping-mcp-server"]
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
+    },
+    "ref-remote": {
+      "url": "https://api.ref.tools/mcp?apiKey=YOUR_REF_API_KEY"
+    },
+    "posthog-remote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.posthog.com/sse"],
+      "env": {
+        "POSTHOG_PERSONAL_API_KEY": "YOUR_POSTHOG_API_KEY"
+      }
+    },
+    "prisma": {
+      "command": "npx",
+      "args": ["-y", "prisma", "mcp"]
+    },
+    "memory-bank": {
+      "command": "npx",
+      "args": ["-y", "@allpepper/memory-bank-mcp@latest"]
+    },
+    "browserstack": {
+      "command": "npx",
+      "args": ["browserstack-mcp-server"],
+      "env": {
+        "BROWSERSTACK_USERNAME": "YOUR_BROWSERSTACK_USERNAME",
+        "BROWSERSTACK_ACCESS_KEY": "YOUR_BROWSERSTACK_ACCESS_KEY"
+      }
+    },
+    "exa-search": {
+      "command": "npx",
+      "args": ["exa-mcp-server"],
+      "env": {
+        "EXA_API_KEY": "YOUR_EXA_API_KEY"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["@upstash/context7-mcp"],
+      "env": {
+        "UPSTASH_REDIS_REST_URL": "YOUR_UPSTASH_REDIS_URL",
+        "UPSTASH_REDIS_REST_TOKEN": "YOUR_UPSTASH_REDIS_TOKEN"
+      }
+    },
+    "browser-tools": {
+      "command": "npx",
+      "args": ["@agentdeskai/browser-tools-mcp@latest"]
+    },
+    "firecrawl": {
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "YOUR_FIRECRAWL_API_KEY"
+      }
+    },
+    "ip2location": {
+      "command": "uv",
+      "args": ["--directory", "~/.claude/ip2location", "run", "ip2locationio.py"],
+      "env": {
+        "IP2LOCATION_API_KEY": "YOUR_IP2LOCATION_API_KEY"
+      }
+    },
+    "coderabbit": {
+      "command": "npx",
+      "args": ["coderabbitai-mcp@latest"],
+      "env": {
+        "GITHUB_TOKEN": "YOUR_GITHUB_TOKEN"
+      }
+    },
+    "auth0": {
+      "command": "npx",
+      "args": ["-y", "@auth0/auth0-mcp-server", "run"],
+      "env": {
+        "AUTH0_DOMAIN": "YOUR_AUTH0_DOMAIN",
+        "AUTH0_CLIENT_ID": "YOUR_AUTH0_CLIENT_ID"
+      }
+    },
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "YOUR_FIGMA_API_KEY"
+      }
+    },
+    "lighthouse": {
+      "command": "npx",
+      "args": ["lighthouse-mcp"]
+    },
+    "aws-serverless": {
+      "command": "uvx",
+      "args": ["awslabs.aws-serverless-mcp-server@latest", "--allow-write", "--allow-sensitive-data-access"],
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      }
+    },
+    "powertools-aws": {
+      "command": "npx",
+      "args": ["-y", "powertools-aws-mcp"],
+      "env": {
+        "AWS_PROFILE": "default",
+        "AWS_REGION": "us-east-1"
+      }
+    },
+    "operative-browser": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/Operative-Sh/web-eval-agent.git", "webEvalAgent"],
+      "env": {
+        "OPERATIVE_API_KEY": "YOUR_OPERATIVE_API_KEY"
+      }
+    },
+    "minimax": {
+      "command": "uvx",
+      "args": ["minimax-mcp", "-y"],
+      "env": {
+        "MINIMAX_API_KEY": "YOUR_MINIMAX_API_KEY"
+      }
+    },
+    "convex": {
+      "command": "npx",
+      "args": ["-y", "convex@latest", "mcp", "start"],
+      "env": {
+        "CONVEX_DEPLOY_KEY": "YOUR_CONVEX_DEPLOY_KEY"
+      }
+    }
+  }
+}
