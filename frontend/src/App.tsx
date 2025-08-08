@@ -103,7 +103,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary showDetails={true}>
       <NotificationProvider>
         <AuthProvider>
           <AppContent />
