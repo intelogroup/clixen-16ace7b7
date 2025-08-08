@@ -61,8 +61,20 @@ export class SimpleChatService {
       // Try to use real Edge Function first
       console.log('🔄 [CHAT] Attempting to use ai-chat-simple Edge Function');
       toast.loading('Connecting to AI service...', { id: 'ai-service' });
-      const result = await this.callAiChatEdgeFunction(message, workflowMessages);
-      toast.success('✅ AI service connected', { id: 'ai-service' });
+
+      let result;
+      try {
+        result = await this.callAiChatEdgeFunction(message, workflowMessages);
+        toast.success('✅ AI service connected', { id: 'ai-service' });
+      } catch (edgeError) {
+        console.log('🔄 [CHAT] Edge Function failed, using fallback immediately');
+        toast.dismiss('ai-service');
+        toast.loading('Using demo mode...', { id: 'fallback-service' });
+
+        const fallbackResult = await fallbackChatService.processConversation(message, workflowMessages);
+        toast.success('✅ Demo mode active', { id: 'fallback-service' });
+        return this.convertFallbackResponse(fallbackResult);
+      }
 
       // The ai-chat-simple edge function returns data in this format:
       // { response, phase, needs_more_info, ready_for_generation, clarifying_questions, workflow_generated, workflow_data }
