@@ -26,44 +26,45 @@ const N8N_API_URL = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api
 const N8N_API_KEY = Deno.env.get('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
 
 // System prompt for MVP workflow creation
-const SYSTEM_PROMPT = `You are Clixen, an intelligent workflow automation assistant following the MVP specification.
+const SYSTEM_PROMPT = `You are Clixen, an intelligent workflow automation assistant. You're helpful, conversational, and adaptable.
 
-Your role is to help users create n8n workflows through natural conversation:
+CORE BEHAVIOR:
+- Answer questions naturally and helpfully
+- Be conversational and context-aware
+- Only focus on workflow creation when the user clearly wants automation
+- Remember previous conversation context
+- Don't force every conversation toward workflow creation
 
-1. **GATHERING PHASE**: Understand user automation requirements
-   - Ask specific clarifying questions (max 2-3 per response)
-   - Focus on trigger mechanism, actions, and integrations needed
-   - Assess feasibility and identify potential issues
+WHEN TO CREATE WORKFLOWS:
+- User explicitly mentions automation, workflows, or n8n
+- User describes repetitive tasks they want automated
+- User asks for help with triggers, webhooks, or integrations
+- User confirms they want to proceed with workflow creation
 
-2. **VALIDATION PHASE**: Confirm complete requirements
-   - Summarize what will be built
-   - Check for missing information
-   - Validate technical feasibility
+WHEN NOT TO FORCE WORKFLOWS:
+- User is asking general questions (like math, testing, casual chat)
+- User is testing the system
+- User hasn't indicated they want automation
+- Conversation is exploratory or educational
 
-3. **GENERATION PHASE**: Create n8n workflow JSON
-   - Generate complete, valid n8n workflow structure
-   - Include proper nodes, connections, and configuration
-   - Ensure workflow follows n8n best practices
+CONVERSATION FLOW FOR WORKFLOWS:
+1. **UNDERSTANDING**: Listen to what the user wants to automate
+2. **CLARIFYING**: Ask specific questions only if needed for workflow creation
+3. **CONFIRMING**: Summarize the complete plan before building
+4. **BUILDING**: Generate the n8n workflow JSON
 
-CONVERSATION GUIDELINES:
-- Be conversational and encouraging
-- Ask specific, actionable questions
-- Explain technical concepts simply
-- Focus on practical, achievable automations
-- Guide users through the process step by step
+BE INTELLIGENT:
+- Use conversation history to avoid repetitive questions
+- Understand context and intent
+- Provide direct answers when appropriate
+- Be helpful beyond just workflow creation
+- Remember what the user has already told you
 
-WORKFLOW GENERATION CRITERIA:
-Only generate workflow JSON when:
-- Trigger mechanism is clearly defined
-- Required actions are specified
-- Integration requirements are understood
-- User has confirmed the specification
-
-When generating, create a complete n8n workflow with:
-- Proper node types and configurations
-- Valid connections between nodes
-- Required metadata and settings
-- Reasonable default parameters`;
+EXAMPLES:
+- If user asks "what is 2+3", just answer "5" - don't force workflow creation
+- If user says "send email every morning", then discuss automation
+- If user is testing, acknowledge and be helpful
+- Build on previous conversation rather than starting over`;
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -372,59 +373,79 @@ const analyzeConversation = (messages: ChatMessage[]): {
 } => {
   const userMessages = messages.filter(m => m.role === 'user');
   const conversationText = userMessages.map(m => m.content).join(' ').toLowerCase();
-  
-  // Extract potential workflow specification
-  const spec = extractWorkflowSpec(conversationText);
-  
+  const recentMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || '';
+
+  // Check if this is NOT a workflow request
+  const isGeneralQuestion = recentMessage.includes('what is') ||
+                           recentMessage.includes('calculate') ||
+                           recentMessage.includes('test') ||
+                           recentMessage.match(/^\d+\s*[+\-*/]\s*\d+/) ||
+                           recentMessage.includes('hi') ||
+                           recentMessage.includes('hello') ||
+                           recentMessage.length < 20;
+
+  // Check if user is clearly asking for workflow/automation
+  const isWorkflowRequest = conversationText.includes('automat') ||
+                           conversationText.includes('workflow') ||
+                           conversationText.includes('trigger') ||
+                           conversationText.includes('schedule') ||
+                           conversationText.includes('webhook') ||
+                           conversationText.includes('send') && (conversationText.includes('email') || conversationText.includes('slack')) ||
+                           conversationText.includes('every') && (conversationText.includes('minute') || conversationText.includes('hour') || conversationText.includes('day'));
+
+  // If it's a general question, don't force workflow creation
+  if (isGeneralQuestion && !isWorkflowRequest) {
+    return {
+      phase: 'gathering',
+      needsMoreInfo: false,
+      readyForGeneration: false,
+      clarifyingQuestions: []
+    };
+  }
+
+  // Extract potential workflow specification only if it's a workflow request
+  const spec = isWorkflowRequest ? extractWorkflowSpec(conversationText) : null;
+
   // Determine phase based on conversation content and completeness
   let phase: 'gathering' | 'refining' | 'confirming' | 'generating' = 'gathering';
   let needsMoreInfo = true;
   let readyForGeneration = false;
   const clarifyingQuestions: string[] = [];
-  
-  if (spec) {
+
+  if (spec && isWorkflowRequest) {
     // We have some specification
     const hasCompleteTrigger = spec.trigger.type !== 'unknown';
     const hasActions = spec.actions.length > 0;
     const hasIntegrations = spec.integrations.length > 0;
-    
+
     if (hasCompleteTrigger && hasActions && hasIntegrations) {
       // Complete specification - move to confirmation
       phase = 'confirming';
       needsMoreInfo = false;
-      
+
       // Check for confirmation keywords in recent messages
-      const recentMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || '';
-      if (recentMessage.includes('yes') || recentMessage.includes('correct') || 
-          recentMessage.includes('proceed') || recentMessage.includes('create')) {
+      if (recentMessage.includes('yes') || recentMessage.includes('correct') ||
+          recentMessage.includes('proceed') || recentMessage.includes('create') ||
+          recentMessage.includes('make it') || recentMessage.includes('build')) {
         phase = 'generating';
         readyForGeneration = true;
       }
     } else {
       // Incomplete specification - refining phase
       phase = 'refining';
-      
-      if (!hasCompleteTrigger) {
-        clarifyingQuestions.push('What should trigger this automation? (webhook, schedule, manual, etc.)');
-      }
-      if (!hasActions) {
-        clarifyingQuestions.push('What actions should the workflow perform?');
-      }
-      if (!hasIntegrations) {
-        clarifyingQuestions.push('Which services or integrations do you need to connect?');
-      }
+      needsMoreInfo = true;
     }
-  } else {
-    // No clear specification yet - gathering phase
-    clarifyingQuestions.push('What would you like to automate?');
-    clarifyingQuestions.push('How would you like this automation to be triggered?');
+  } else if (isWorkflowRequest) {
+    // User wants workflow but no clear specification
+    phase = 'gathering';
+    needsMoreInfo = true;
   }
-  
+
   return {
     phase,
     needsMoreInfo,
     readyForGeneration,
-    clarifyingQuestions: clarifyingQuestions.slice(0, 2) // Limit to 2 questions max
+    clarifyingQuestions: [] // Let AI handle questions naturally
   };
 };
 
@@ -599,8 +620,15 @@ serve(async (req) => {
         {
           role: 'system',
           content: `Current conversation phase: ${analysis.phase}
-${analysis.clarifyingQuestions.length > 0 ? `Ask these questions: ${analysis.clarifyingQuestions.join('; ')}` : ''}
-Provide helpful, conversational response to guide the user through workflow creation.`
+
+Context: You have the full conversation history above. Be contextual and intelligent:
+- If user is asking non-workflow questions, answer them directly
+- If user wants automation, help them build workflows
+- Remember what they've already told you
+- Don't repeat the same questions
+- Be natural and helpful
+
+${analysis.needsMoreInfo && analysis.phase !== 'gathering' ? 'Focus on gathering remaining workflow requirements naturally.' : ''}`
         }
       ];
 
