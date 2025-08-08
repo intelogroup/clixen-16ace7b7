@@ -26,44 +26,45 @@ const N8N_API_URL = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api
 const N8N_API_KEY = Deno.env.get('N8N_API_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU';
 
 // System prompt for MVP workflow creation
-const SYSTEM_PROMPT = `You are Clixen, an intelligent workflow automation assistant following the MVP specification.
+const SYSTEM_PROMPT = `You are Clixen, an intelligent workflow automation assistant. You're helpful, conversational, and adaptable.
 
-Your role is to help users create n8n workflows through natural conversation:
+CORE BEHAVIOR:
+- Answer questions naturally and helpfully
+- Be conversational and context-aware
+- Only focus on workflow creation when the user clearly wants automation
+- Remember previous conversation context
+- Don't force every conversation toward workflow creation
 
-1. **GATHERING PHASE**: Understand user automation requirements
-   - Ask specific clarifying questions (max 2-3 per response)
-   - Focus on trigger mechanism, actions, and integrations needed
-   - Assess feasibility and identify potential issues
+WHEN TO CREATE WORKFLOWS:
+- User explicitly mentions automation, workflows, or n8n
+- User describes repetitive tasks they want automated
+- User asks for help with triggers, webhooks, or integrations
+- User confirms they want to proceed with workflow creation
 
-2. **VALIDATION PHASE**: Confirm complete requirements
-   - Summarize what will be built
-   - Check for missing information
-   - Validate technical feasibility
+WHEN NOT TO FORCE WORKFLOWS:
+- User is asking general questions (like math, testing, casual chat)
+- User is testing the system
+- User hasn't indicated they want automation
+- Conversation is exploratory or educational
 
-3. **GENERATION PHASE**: Create n8n workflow JSON
-   - Generate complete, valid n8n workflow structure
-   - Include proper nodes, connections, and configuration
-   - Ensure workflow follows n8n best practices
+CONVERSATION FLOW FOR WORKFLOWS:
+1. **UNDERSTANDING**: Listen to what the user wants to automate
+2. **CLARIFYING**: Ask specific questions only if needed for workflow creation
+3. **CONFIRMING**: Summarize the complete plan before building
+4. **BUILDING**: Generate the n8n workflow JSON
 
-CONVERSATION GUIDELINES:
-- Be conversational and encouraging
-- Ask specific, actionable questions
-- Explain technical concepts simply
-- Focus on practical, achievable automations
-- Guide users through the process step by step
+BE INTELLIGENT:
+- Use conversation history to avoid repetitive questions
+- Understand context and intent
+- Provide direct answers when appropriate
+- Be helpful beyond just workflow creation
+- Remember what the user has already told you
 
-WORKFLOW GENERATION CRITERIA:
-Only generate workflow JSON when:
-- Trigger mechanism is clearly defined
-- Required actions are specified
-- Integration requirements are understood
-- User has confirmed the specification
-
-When generating, create a complete n8n workflow with:
-- Proper node types and configurations
-- Valid connections between nodes
-- Required metadata and settings
-- Reasonable default parameters`;
+EXAMPLES:
+- If user asks "what is 2+3", just answer "5" - don't force workflow creation
+- If user says "send email every morning", then discuss automation
+- If user is testing, acknowledge and be helpful
+- Build on previous conversation rather than starting over`;
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -200,36 +201,51 @@ const extractWorkflowSpec = (conversationText: string): WorkflowSpec | null => {
     const actions: Array<{ type: string; description: string; parameters: Record<string, any> }> = [];
     const integrations: string[] = [];
     
-    // Detect trigger types
+    // Detect trigger types with better pattern matching
     if (text.includes('webhook') || text.includes('http')) {
       trigger = { type: 'webhook', description: 'HTTP webhook trigger', parameters: {} };
-    } else if (text.includes('schedule') || text.includes('cron') || text.includes('daily') || text.includes('hourly')) {
+    } else if (text.includes('schedule') || text.includes('cron') || text.includes('daily') || text.includes('hourly') ||
+               text.includes('every minute') || text.includes('every hour') || text.includes('every day') ||
+               text.match(/every \d+ (minute|hour|day)/) || text.includes('at 10 pm') || text.includes('morning')) {
       trigger = { type: 'cron', description: 'Scheduled trigger', parameters: {} };
     } else if (text.includes('email') && text.includes('receive')) {
       trigger = { type: 'email_trigger', description: 'Email trigger', parameters: {} };
-    } else if (text.includes('manual') || text.includes('click') || text.includes('button')) {
+    } else if (text.includes('manual') || text.includes('click') || text.includes('button') || text.includes('auto trigger')) {
       trigger = { type: 'manual', description: 'Manual trigger', parameters: {} };
     }
     
-    // Detect actions
-    if (text.includes('send email') || text.includes('email notification')) {
+    // Detect actions with better pattern matching
+    if (text.includes('send email') || text.includes('email notification') ||
+        text.includes('via email') || text.includes('gmail')) {
       actions.push({ type: 'email_send', description: 'Send email', parameters: {} });
       integrations.push('email');
     }
-    
+
     if (text.includes('slack') && text.includes('message')) {
       actions.push({ type: 'slack', description: 'Send Slack message', parameters: {} });
       integrations.push('slack');
     }
-    
+
     if (text.includes('http request') || text.includes('api call')) {
       actions.push({ type: 'http_request', description: 'Make HTTP request', parameters: {} });
       integrations.push('webhook');
     }
-    
+
     if (text.includes('google sheets') || text.includes('spreadsheet')) {
       actions.push({ type: 'google_sheets', description: 'Update Google Sheets', parameters: {} });
       integrations.push('google_sheets');
+    }
+
+    // Handle calculation/computation tasks
+    if (text.includes('calculate') || text.includes('result') || text.match(/\d+\s*[*+\-/]\s*\d+/)) {
+      actions.push({ type: 'function', description: 'Perform calculation', parameters: {} });
+      integrations.push('computation');
+    }
+
+    // Handle general "send" actions
+    if (text.includes('send') && !actions.length) {
+      actions.push({ type: 'send_data', description: 'Send data/result', parameters: {} });
+      integrations.push('notification');
     }
     
     // Assess complexity
@@ -372,68 +388,94 @@ const analyzeConversation = (messages: ChatMessage[]): {
 } => {
   const userMessages = messages.filter(m => m.role === 'user');
   const conversationText = userMessages.map(m => m.content).join(' ').toLowerCase();
-  
-  // Extract potential workflow specification
-  const spec = extractWorkflowSpec(conversationText);
-  
+  const recentMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || '';
+
+  // Check if this is NOT a workflow request
+  const isGeneralQuestion = recentMessage.includes('what is') ||
+                           recentMessage.includes('calculate') ||
+                           recentMessage.includes('test') ||
+                           recentMessage.match(/^\d+\s*[+\-*/]\s*\d+/) ||
+                           recentMessage.includes('hi') ||
+                           recentMessage.includes('hello') ||
+                           recentMessage.length < 20;
+
+  // Check if user is clearly asking for workflow/automation
+  const isWorkflowRequest = conversationText.includes('automat') ||
+                           conversationText.includes('workflow') ||
+                           conversationText.includes('trigger') ||
+                           conversationText.includes('schedule') ||
+                           conversationText.includes('webhook') ||
+                           conversationText.includes('send') && (conversationText.includes('email') || conversationText.includes('slack')) ||
+                           conversationText.includes('every') && (conversationText.includes('minute') || conversationText.includes('hour') || conversationText.includes('day'));
+
+  // If it's a general question, don't force workflow creation
+  if (isGeneralQuestion && !isWorkflowRequest) {
+    return {
+      phase: 'gathering',
+      needsMoreInfo: false,
+      readyForGeneration: false,
+      clarifyingQuestions: []
+    };
+  }
+
+  // Extract potential workflow specification only if it's a workflow request
+  const spec = isWorkflowRequest ? extractWorkflowSpec(conversationText) : null;
+
   // Determine phase based on conversation content and completeness
   let phase: 'gathering' | 'refining' | 'confirming' | 'generating' = 'gathering';
   let needsMoreInfo = true;
   let readyForGeneration = false;
   const clarifyingQuestions: string[] = [];
-  
-  if (spec) {
+
+  if (spec && isWorkflowRequest) {
     // We have some specification
     const hasCompleteTrigger = spec.trigger.type !== 'unknown';
     const hasActions = spec.actions.length > 0;
     const hasIntegrations = spec.integrations.length > 0;
-    
+
     if (hasCompleteTrigger && hasActions && hasIntegrations) {
       // Complete specification - move to confirmation
       phase = 'confirming';
       needsMoreInfo = false;
-      
+
       // Check for confirmation keywords in recent messages
-      const recentMessage = userMessages[userMessages.length - 1]?.content.toLowerCase() || '';
-      if (recentMessage.includes('yes') || recentMessage.includes('correct') || 
-          recentMessage.includes('proceed') || recentMessage.includes('create')) {
+      if (recentMessage.includes('yes') || recentMessage.includes('correct') ||
+          recentMessage.includes('proceed') || recentMessage.includes('create') ||
+          recentMessage.includes('make it') || recentMessage.includes('build')) {
         phase = 'generating';
         readyForGeneration = true;
       }
     } else {
       // Incomplete specification - refining phase
       phase = 'refining';
-      
-      if (!hasCompleteTrigger) {
-        clarifyingQuestions.push('What should trigger this automation? (webhook, schedule, manual, etc.)');
-      }
-      if (!hasActions) {
-        clarifyingQuestions.push('What actions should the workflow perform?');
-      }
-      if (!hasIntegrations) {
-        clarifyingQuestions.push('Which services or integrations do you need to connect?');
-      }
+      needsMoreInfo = true;
     }
-  } else {
-    // No clear specification yet - gathering phase
-    clarifyingQuestions.push('What would you like to automate?');
-    clarifyingQuestions.push('How would you like this automation to be triggered?');
+  } else if (isWorkflowRequest) {
+    // User wants workflow but no clear specification
+    phase = 'gathering';
+    needsMoreInfo = true;
   }
-  
+
   return {
     phase,
     needsMoreInfo,
     readyForGeneration,
-    clarifyingQuestions: clarifyingQuestions.slice(0, 2) // Limit to 2 questions max
+    clarifyingQuestions: [] // Let AI handle questions naturally
   };
 };
 
 // Main request handler
 serve(async (req) => {
-  console.log(`🚀 [AI-Chat-Simple] ${req.method} ${req.url}`);
+  const requestId = crypto.randomUUID().substring(0, 8);
+  console.log(`🚀 [AI-Chat-Simple] [${requestId}] ${req.method} ${req.url}`, {
+    userAgent: req.headers.get('user-agent'),
+    origin: req.headers.get('origin'),
+    authHeader: req.headers.get('authorization') ? 'present' : 'missing'
+  });
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log(`✅ [AI-Chat-Simple] [${requestId}] CORS preflight handled`);
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -441,8 +483,52 @@ serve(async (req) => {
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
-        { 
+        {
           status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Validate authentication token
+    const authHeader = req.headers.get('authorization');
+    let authenticatedUser = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError) {
+          console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth validation failed:`, authError.message);
+          return new Response(
+            JSON.stringify({ error: 'Invalid authentication token' }),
+            {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+        authenticatedUser = user;
+        console.log(`✅ [AI-Chat-Simple] [${requestId}] User authenticated:`, {
+          userId: user?.id?.substring(0, 8) + '***',
+          email: user?.email
+        });
+      } catch (error) {
+        console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth token validation error:`, error.message);
+        return new Response(
+          JSON.stringify({ error: 'Authentication failed' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } else {
+      console.log(`❌ [AI-Chat-Simple] [${requestId}] No authorization header provided`);
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -450,6 +536,21 @@ serve(async (req) => {
 
     const body = await req.json();
     const { message, user_id, session_id, mode = 'workflow_creation' } = body;
+
+    // Verify the user_id matches the authenticated user
+    if (user_id && authenticatedUser && user_id !== authenticatedUser.id) {
+      console.log(`❌ [AI-Chat-Simple] [${requestId}] User ID mismatch:`, {
+        providedUserId: user_id?.substring(0, 8) + '***',
+        authenticatedUserId: authenticatedUser.id?.substring(0, 8) + '***'
+      });
+      return new Response(
+        JSON.stringify({ error: 'User ID mismatch' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     if (!message || typeof message !== 'string') {
       return new Response(
@@ -461,7 +562,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`📝 [AI-Chat-Simple] Processing message for user: ${user_id}`);
+    console.log(`📝 [AI-Chat-Simple] [${requestId}] Processing message:`, {
+      userId: user_id?.substring(0, 8) + '***',
+      messageLength: message.length,
+      messagePreview: message.substring(0, 50) + '...',
+      sessionId: session_id?.substring(0, 8) + '***',
+      mode
+    });
 
     // Get conversation history (simplified - last 10 messages)
     let conversationHistory: ChatMessage[] = [];
@@ -528,8 +635,15 @@ serve(async (req) => {
         {
           role: 'system',
           content: `Current conversation phase: ${analysis.phase}
-${analysis.clarifyingQuestions.length > 0 ? `Ask these questions: ${analysis.clarifyingQuestions.join('; ')}` : ''}
-Provide helpful, conversational response to guide the user through workflow creation.`
+
+Context: You have the full conversation history above. Be contextual and intelligent:
+- If user is asking non-workflow questions, answer them directly
+- If user wants automation, help them build workflows
+- Remember what they've already told you
+- Don't repeat the same questions
+- Be natural and helpful
+
+${analysis.needsMoreInfo && analysis.phase !== 'gathering' ? 'Focus on gathering remaining workflow requirements naturally.' : ''}`
         }
       ];
 
@@ -587,7 +701,12 @@ Provide helpful, conversational response to guide the user through workflow crea
     );
 
   } catch (error) {
-    console.error('❌ [AI-Chat-Simple] Error:', error);
+    console.error(`❌ [AI-Chat-Simple] [${requestId}] Unexpected error:`, {
+      error: error.message || error,
+      stack: error.stack,
+      name: error.name,
+      timestamp: new Date().toISOString()
+    });
 
     return new Response(
       JSON.stringify({
@@ -596,9 +715,10 @@ Provide helpful, conversational response to guide the user through workflow crea
         phase: 'gathering',
         needs_more_info: true,
         ready_for_generation: false,
-        workflow_generated: false
+        workflow_generated: false,
+        request_id: requestId
       }),
-      { 
+      {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }

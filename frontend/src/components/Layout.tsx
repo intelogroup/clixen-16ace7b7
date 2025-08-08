@@ -1,23 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { 
-  HomeIcon, 
-  ChatBubbleLeftRightIcon, 
-  Cog6ToothIcon, 
-  ArrowRightOnRectangleIcon,
-  Bars3Icon,
-  XMarkIcon,
-  SparklesIcon,
-  DocumentTextIcon,
-  ChartBarIcon
-} from '@heroicons/react/24/outline';
+  Home, 
+  MessageSquare, 
+  LogOut,
+  Menu,
+  X,
+  BarChart3,
+  FileText,
+  Settings,
+  User,
+  Bell,
+  Search
+} from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Standard chat has its own layout
   if (location.pathname === '/chat') {
@@ -38,220 +45,215 @@ export default function Layout() {
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: HomeIcon,
+      icon: Home,
       current: location.pathname === '/dashboard'
     },
     {
       name: 'Create Workflow',
       href: '/chat',
-      icon: ChatBubbleLeftRightIcon,
+      icon: MessageSquare,
       current: location.pathname === '/chat' || location.pathname === '/advanced-chat'
     },
     {
       name: 'Analytics',
       href: '/analytics',
-      icon: ChartBarIcon,
+      icon: BarChart3,
       current: location.pathname === '/analytics'
     },
     {
       name: 'Documentation',
       href: '/docs',
-      icon: DocumentTextIcon,
+      icon: FileText,
       current: location.pathname === '/docs'
     }
   ];
 
+  if (!mounted) return null;
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-zinc-950 border-r border-zinc-800 px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <Link to="/dashboard" className="text-xl font-bold font-mono">
-              clixen<span className="text-zinc-500">.ai</span>
+      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-y-auto">
+          {/* Logo */}
+          <div className="flex items-center flex-shrink-0 px-6 py-4 border-b border-gray-200">
+            <Link to="/dashboard" className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <span className="text-sm font-bold text-white">C</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">
+                Clixen
+              </span>
             </Link>
           </div>
-          <nav className="flex flex-1 flex-col">
-            <ul role="list" className="flex flex-1 flex-col gap-y-7">
-              <li>
-                <ul role="list" className="-mx-2 space-y-1">
-                  {navigationItems.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        to={item.href}
-                        className={`
-                          group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-all duration-200
-                          ${
-                            item.current
-                              ? 'bg-white/10 text-white shadow-sm'
-                              : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                          }
-                        `}
-                      >
-                        <item.icon
-                          className={`h-6 w-6 shrink-0 transition-colors ${
-                            item.current ? 'text-white' : 'text-zinc-400 group-hover:text-white'
-                          }`}
-                          aria-hidden="true"
-                        />
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-              <li className="mt-auto">
-                <button
-                  onClick={handleLogout}
-                  className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-zinc-400 hover:bg-white/5 hover:text-white transition-all duration-200 w-full"
+          
+          {/* Navigation */}
+          <nav className="mt-8 flex-1 px-4 space-y-2">
+            {navigationItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`nav-item flex items-center space-x-3 ${
+                    item.current ? 'active' : ''
+                  }`}
                 >
-                  <ArrowRightOnRectangleIcon
-                    className="h-6 w-6 shrink-0 text-zinc-400 group-hover:text-white"
-                    aria-hidden="true"
-                  />
-                  Logout
-                </button>
-              </li>
-            </ul>
+                  <IconComponent className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
           </nav>
+          
+          {/* User Section */}
+          <div className="flex-shrink-0 border-t border-gray-200 p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  John Doe
+                </p>
+                <p className="text-xs text-gray-500">
+                  john@example.com
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="nav-item w-full flex items-center space-x-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden">
-        {/* Mobile top bar */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-800 bg-black/90 backdrop-blur-sm px-4 sm:gap-x-6 sm:px-6">
-          <button
-            type="button"
-            className="-m-2.5 p-2.5 text-zinc-400 lg:hidden"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-          </button>
-
-          {/* Separator */}
-          <div className="h-6 w-px bg-zinc-800 lg:hidden" aria-hidden="true" />
-
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            <div className="flex items-center">
-              <Link to="/dashboard" className="text-xl font-bold font-mono">
-                clixen<span className="text-zinc-500">.ai</span>
+      {/* Mobile sidebar */}
+      <div className={`lg:hidden ${sidebarOpen ? 'fixed inset-0 z-40' : ''}`}>
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+        )}
+        
+        <div className={`fixed inset-y-0 left-0 flex w-64 flex-col transform ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } transition-transform duration-300 ease-in-out z-50`}>
+          <div className="flex flex-col flex-grow bg-white border-r border-gray-200 overflow-y-auto">
+            {/* Mobile header */}
+            <div className="flex items-center justify-between flex-shrink-0 px-6 py-4 border-b border-gray-200">
+              <Link to="/dashboard" className="flex items-center space-x-3" onClick={() => setSidebarOpen(false)}>
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <span className="text-sm font-bold text-white">C</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">
+                  Clixen
+                </span>
               </Link>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
-            <div className="flex items-center gap-x-4 lg:gap-x-6 ml-auto">
+            
+            {/* Mobile Navigation */}
+            <nav className="mt-8 flex-1 px-4 space-y-2">
+              {navigationItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`nav-item flex items-center space-x-3 ${
+                      item.current ? 'active' : ''
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+            
+            {/* Mobile User Section */}
+            <div className="flex-shrink-0 border-t border-gray-200 p-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    John Doe
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    john@example.com
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={handleLogout}
-                className="text-zinc-400 hover:text-white text-sm font-medium transition-colors"
+                className="nav-item w-full flex items-center space-x-3 text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                <ArrowRightOnRectangleIcon className="h-6 w-6" />
+                <LogOut className="w-5 h-5" />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Mobile sidebar */}
-        {sidebarOpen && (
-          <div className="relative z-50 lg:hidden">
-            <div className="fixed inset-0 bg-black/80" onClick={() => setSidebarOpen(false)} />
-            <div className="fixed inset-0 flex">
-              <div className="relative mr-16 flex w-full max-w-xs flex-1">
-                <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                  <button
-                    type="button"
-                    className="-m-2.5 p-2.5"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <span className="sr-only">Close sidebar</span>
-                    <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-zinc-950 px-6 pb-4">
-                  <div className="flex h-16 shrink-0 items-center">
-                    <Link to="/dashboard" className="text-xl font-bold font-mono">
-                      clixen<span className="text-zinc-500">.ai</span>
-                    </Link>
-                  </div>
-                  <nav className="flex flex-1 flex-col">
-                    <ul role="list" className="flex flex-1 flex-col gap-y-7">
-                      <li>
-                        <ul role="list" className="-mx-2 space-y-1">
-                          {navigationItems.map((item) => (
-                            <li key={item.name}>
-                              <Link
-                                to={item.href}
-                                onClick={() => setSidebarOpen(false)}
-                                className={`
-                                  group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-all duration-200
-                                  ${
-                                    item.current
-                                      ? 'bg-white/10 text-white shadow-sm'
-                                      : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                                  }
-                                `}
-                              >
-                                <item.icon
-                                  className={`h-6 w-6 shrink-0 transition-colors ${
-                                    item.current ? 'text-white' : 'text-zinc-400 group-hover:text-white'
-                                  }`}
-                                  aria-hidden="true"
-                                />
-                                {item.name}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                      <li className="mt-auto">
-                        <button
-                          onClick={handleLogout}
-                          className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-zinc-400 hover:bg-white/5 hover:text-white transition-all duration-200 w-full"
-                        >
-                          <ArrowRightOnRectangleIcon
-                            className="h-6 w-6 shrink-0 text-zinc-400 group-hover:text-white"
-                            aria-hidden="true"
-                          />
-                          Logout
-                        </button>
-                      </li>
-                    </ul>
-                  </nav>
-                </div>
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col lg:pl-64">
+        {/* Top navigation */}
+        <div className="header-clean sticky top-0 z-10 flex h-16 flex-shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            className="lg:hidden p-2 text-gray-400 hover:text-gray-600 rounded-md"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+          
+          <div className="flex-1 lg:hidden" />
+          
+          <div className="flex items-center space-x-4">
+            {/* Search */}
+            <div className="hidden sm:block relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
               </div>
+              <input
+                type="text"
+                placeholder="Search workflows..."
+                className="input-clean pl-10 w-64"
+              />
             </div>
+            
+            {/* Notifications */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1 right-1 h-2 w-2 bg-red-400 rounded-full"></span>
+            </button>
+            
+            {/* Settings */}
+            <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md">
+              <Settings className="h-5 w-5" />
+            </button>
           </div>
-        )}
-      </div>
-
-      {/* Bottom Navigation for Mobile */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 z-40">
-        <div className="grid grid-cols-4 gap-1">
-          {navigationItems.slice(0, 4).map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`
-                flex flex-col items-center justify-center px-2 py-3 text-xs font-medium transition-all duration-200
-                ${
-                  item.current
-                    ? 'text-white bg-white/10'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                }
-              `}
-            >
-              <item.icon className="h-6 w-6 mb-1" />
-              <span className="truncate">{item.name.split(' ')[0]}</span>
-            </Link>
-          ))}
         </div>
-      </div>
 
-      {/* Main content */}
-      <main className="lg:pl-72 pb-20 lg:pb-0">
-        <div className="px-4 sm:px-6 lg:px-8 py-8">
-          <Outlet />
-        </div>
-      </main>
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="container-clean">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

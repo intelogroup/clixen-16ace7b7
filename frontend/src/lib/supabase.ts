@@ -92,8 +92,23 @@ export const supabase: any = isSupabaseConfigured
         storage: typeof window !== 'undefined' ? window.localStorage : undefined,
         storageKey: 'clixen-auth-token',
       },
+      global: {
+        headers: {
+          'x-clixen-debug': 'true'
+        }
+      }
     })
   : createStubClient();
+
+// Debug configuration in development
+if (env.get().isDevelopment && typeof window !== 'undefined') {
+  console.log('🔧 [SUPABASE] Configuration:', {
+    url: supabaseUrl,
+    anonKeyPrefix: supabaseAnonKey?.substring(0, 20) + '...',
+    isConfigured: isSupabaseConfigured,
+    environment: env.get().isDevelopment ? 'development' : 'production'
+  });
+}
 
 // Initialize auth monitoring in development (non-blocking)
 if (env.get().isDevelopment && typeof window !== 'undefined') {

@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '../supabase';
+import { handleEdgeFunctionError, createFallbackResponse } from '../edgeFunctionErrorHandler';
 
 export interface WorkflowMessage {
   role: 'user' | 'assistant' | 'system';
@@ -56,22 +57,28 @@ Current conversation context: This is a workflow creation session.`
         }
       ];
 
-      // Call ai-chat-system (the primary function as per current implementation)
-      const { data, error } = await supabase.functions.invoke('ai-chat-system', {
+      // Call ai-chat-simple (the actual deployed function)
+      const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
         body: {
-          messages,
-          mode: 'workflow_creation',
-          generateWorkflow: this.shouldGenerateWorkflow(userMessage, conversationHistory)
+          message: userMessage,
+          user_id: 'current-user', // TODO: Get actual user ID from context
+          session_id: undefined, // TODO: Add session ID support
+          mode: 'workflow_creation'
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to process request');
+        const errorInfo = handleEdgeFunctionError(error, 'ai-chat-simple');
+        throw new Error(errorInfo.message);
       }
 
-      // Parse response
-      const response = data as WorkflowResponse;
-      
+      // Parse response from ai-chat-simple
+      const response: WorkflowResponse = {
+        content: data.response || 'No response generated',
+        workflowGenerated: data.workflow_generated || false,
+        workflowData: data.workflow_data || null
+      };
+
       // If workflow was generated, validate and prepare for deployment
       if (response.workflowGenerated && response.workflowData) {
         response.workflowData = await this.validateWorkflow(response.workflowData);
@@ -79,11 +86,10 @@ Current conversation context: This is a workflow creation session.`
 
       return response;
     } catch (error) {
-      console.error('SimpleWorkflowService error:', error);
-      return {
-        content: 'I apologize, but I encountered an error processing your request. Please try again or rephrase your question.',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      const errorInfo = handleEdgeFunctionError(error, 'ai-chat-simple');
+      console.error('SimpleWorkflowService error:', errorInfo);
+      return createFallbackResponse('AI Chat',
+        'I encountered an issue connecting to the chat service. This might be a temporary problem - please try again in a moment.');
     }
   }
 
@@ -156,8 +162,8 @@ Current conversation context: This is a workflow creation session.`
       // Validate before deployment
       const validatedWorkflow = await this.validateWorkflow(workflowData);
 
-      // Call api-operations function to handle n8n deployment
-      const { data, error } = await supabase.functions.invoke('api-operations', {
+      // Call workflows-api function to handle n8n deployment
+      const { data, error } = await supabase.functions.invoke('workflows-api', {
         body: {
           action: 'deploy_workflow',
           workflow: validatedWorkflow,
@@ -166,7 +172,8 @@ Current conversation context: This is a workflow creation session.`
       });
 
       if (error) {
-        throw new Error(error.message || 'Deployment failed');
+        const errorInfo = handleEdgeFunctionError(error, 'workflows-api');
+        throw new Error(errorInfo.message);
       }
 
       return {
@@ -174,10 +181,11 @@ Current conversation context: This is a workflow creation session.`
         workflowId: data.workflowId
       };
     } catch (error) {
-      console.error('Workflow deployment error:', error);
+      const errorInfo = handleEdgeFunctionError(error, 'workflows-api');
+      console.error('Workflow deployment error:', errorInfo);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Deployment failed'
+        error: errorInfo.message
       };
     }
   }

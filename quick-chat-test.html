@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Chat Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin: 15px 0;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .assistant {
+            background: #f1f3f4;
+            color: #333;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        input:focus {
+            border-color: #007bff;
+        }
+        button {
+            padding: 12px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+        }
+        .success {
+            color: #2e7d32;
+            background: #e8f5e8;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <h2>🤖 Quick AI Chat Test</h2>
+        <p>This will test the chat functionality and show what's happening behind the scenes.</p>
+        
+        <div id="messages">
+            <div class="message assistant">
+                👋 Hello! I'm ready to help you create workflow automations. Try sending me a message!
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="Type your automation request..."
+                value="I want to create a workflow that sends me a Slack notification every morning"
+            >
+            <button onclick="sendMessage()" id="sendBtn">Send</button>
+        </div>
+        
+        <div id="debugInfo" style="margin-top: 20px; font-size: 12px; color: #666;">
+            <strong>Debug info will appear here...</strong>
+        </div>
+    </div>
+
+    <script>
+        let messageId = 1;
+        
+        function addMessage(content, type = 'assistant', className = '') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type} ${className}`;
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateDebug(info) {
+            document.getElementById('debugInfo').innerHTML = `
+                <strong>Debug Info:</strong><br>
+                <pre style="white-space: pre-wrap; font-size: 11px;">${JSON.stringify(info, null, 2)}</pre>
+            `;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const button = document.getElementById('sendBtn');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            button.disabled = true;
+            
+            // Add loading message
+            const loadingId = `loading-${messageId++}`;
+            addMessage('🤔 Thinking...', 'assistant', 'loading');
+            
+            updateDebug({
+                status: 'Sending message',
+                message: message,
+                timestamp: new Date().toISOString()
+            });
+            
+            try {
+                // Simulate the SimpleChatService call
+                const response = await simulateChatService(message);
+                
+                // Remove loading message
+                const loadingMsg = document.querySelector('.loading');
+                if (loadingMsg) loadingMsg.remove();
+                
+                // Add response
+                addMessage(response.content, 'assistant', response.success ? 'success' : 'error');
+                
+                updateDebug({
+                    status: 'Response received',
+                    success: response.success,
+                    method: response.method,
+                    response: response.content.substring(0, 100) + '...',
+                    timestamp: new Date().toISOString()
+                });
+                
+            } catch (error) {
+                // Remove loading message
+                const loadingMsg = document.querySelector('.loading');
+                if (loadingMsg) loadingMsg.remove();
+                
+                addMessage(`❌ Error: ${error.message}`, 'assistant', 'error');
+                
+                updateDebug({
+                    status: 'Error occurred',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            } finally {
+                button.disabled = false;
+            }
+        }
+        
+        async function simulateChatService(message) {
+            // This simulates what SimpleChatService does
+            
+            // Step 1: Try Edge Function (this will likely fail)
+            try {
+                updateDebug({ status: 'Attempting Edge Function call...' });
+                
+                // Simulate Edge Function call
+                const response = await fetch('/nonexistent-edge-function');
+                if (!response.ok) throw new Error('Edge Function not available');
+                
+                return {
+                    success: true,
+                    method: 'Edge Function',
+                    content: 'This would be the real AI response from the Edge Function'
+                };
+            } catch (edgeError) {
+                updateDebug({ 
+                    status: 'Edge Function failed, trying fallback...',
+                    edgeError: edgeError.message 
+                });
+                
+                // Step 2: Use Fallback Service
+                return simulateFallbackService(message);
+            }
+        }
+        
+        function simulateFallbackService(message) {
+            // This simulates the FallbackChatService
+            const msg = message.toLowerCase();
+            
+            if (msg.includes('slack') || msg.includes('notification')) {
+                return {
+                    success: true,
+                    method: 'Fallback Service',
+                    content: `💬 **Slack Notification Automation**
+
+I can help you create a workflow that sends Slack notifications! 
+
+Let me ask a few questions:
+1. What should trigger the Slack message? (schedule, webhook, email, etc.)
+2. Which Slack channel should receive the message?
+3. Should the message content be dynamic or the same every time?
+
+Based on your request for morning notifications, I'm thinking of a scheduled trigger at 9 AM. Does that sound right?`
+                };
+            } else if (msg.includes('email')) {
+                return {
+                    success: true,
+                    method: 'Fallback Service',
+                    content: `📧 **Email Automation Detected**
+
+Great! I can help with email workflows.
+
+A few questions:
+1. Do you want to trigger this when you **receive** emails or **send** emails?
+2. Should this work with all emails or only specific ones?
+3. What should happen when the email trigger fires?`
+                };
+            } else {
+                return {
+                    success: true,
+                    method: 'Fallback Service',
+                    content: `🤔 **Let me understand your automation:**
+
+I'm ready to help you create a workflow! To get started:
+
+1. **What should trigger this automation?** (email, schedule, webhook, etc.)
+2. **What actions should it perform?** (send messages, save data, etc.)
+3. **Which services do you want to connect?** (Slack, Gmail, etc.)
+
+The more details you provide, the better I can help!`
+                };
+            }
+        }
+        
+        // Allow sending with Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        console.log('🧪 Quick Chat Test loaded');
+        console.log('This simulates the chat functionality to help debug issues');
+    </script>
+</body>
+</html>

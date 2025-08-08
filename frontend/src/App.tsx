@@ -2,49 +2,55 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { AppLoading, PageLoading } from './components/LoadingStates';
+import { NotificationProvider, ErrorBoundary } from './components/Notifications';
 
-// Standard MVP components
-const StandardAuth = React.lazy(() => import('./pages/StandardAuth'));
-const StandardDashboard = React.lazy(() => import('./pages/StandardDashboard'));
-const StandardChat = React.lazy(() => import('./pages/StandardChat'));
+// Modern MVP components
+const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
+const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
+const ModernChat = React.lazy(() => import('./pages/ModernChat'));
+const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
 // Basic components
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function AppContent() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="h-8 w-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
-      </div>
-    );
+    return <AppLoading />;
   }
 
   return (
     <BrowserRouter>
       <Toaster
-        position="bottom-right"
+        position="top-right"
         toastOptions={{
           style: {
-            background: '#ffffff',
-            color: '#374151',
-            border: '1px solid #e5e7eb',
+            background: 'rgba(30, 41, 59, 0.95)',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '12px',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
           },
           success: {
             iconTheme: {
               primary: '#10b981',
               secondary: '#ffffff',
             },
+            style: {
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+            },
           },
           error: {
             iconTheme: {
               primary: '#ef4444',
               secondary: '#ffffff',
+            },
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.2)',
             },
           },
         }}
@@ -53,44 +59,52 @@ function AppContent() {
       <Routes>
         {/* Public routes */}
         <Route path="/auth" element={
-          <React.Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center"><div className="h-8 w-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-            <StandardAuth />
+          <React.Suspense fallback={<AppLoading />}>
+            <ModernAuth />
           </React.Suspense>
         } />
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardDashboard />
+                <React.Suspense fallback={<PageLoading message="Loading dashboard..." />}>
+                  <ModernDashboard />
                 </React.Suspense>
-              } 
+              }
             />
-            <Route 
-              path="/chat" 
+            <Route
+              path="/chat"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardChat />
+                <React.Suspense fallback={<PageLoading message="Loading chat..." />}>
+                  <ModernChat />
                 </React.Suspense>
-              } 
+              }
             />
-            <Route 
-              path="/chat/:id" 
+            <Route
+              path="/chat/:id"
               element={
-                <React.Suspense fallback={<div className="flex items-center justify-center p-8"><div className="h-6 w-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" /></div>}>
-                  <StandardChat />
+                <React.Suspense fallback={<PageLoading message="Loading chat..." />}>
+                  <ModernChat />
                 </React.Suspense>
-              } 
+              }
+            />
+            <Route
+              path="/test"
+              element={
+                <React.Suspense fallback={<PageLoading message="Loading test..." />}>
+                  <TestEdgeFunction />
+                </React.Suspense>
+              }
             />
           </Route>
         </Route>
 
-        {/* Default redirects - Start with auth for unauthenticated users */}
-        <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        {/* Default redirects - Handle auth state properly */}
+        <Route path="/" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
+        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
       </Routes>
     </BrowserRouter>
   );
@@ -98,8 +112,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <NotificationProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </NotificationProvider>
+    </ErrorBoundary>
   );
 }

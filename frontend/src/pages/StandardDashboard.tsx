@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { 
@@ -16,7 +16,15 @@ import {
   Zap,
   User,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Bot,
+  Workflow,
+  Globe,
+  Star,
+  ArrowUpRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { designTokens } from '../styles/design-tokens';
@@ -47,13 +55,13 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     switch (status) {
       case 'active':
       case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 border-green-500/30';
       case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-400 border-red-500/30';
       case 'draft':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 border-yellow-500/30';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gradient-to-r from-gray-500/20 to-slate-500/20 text-gray-400 border-gray-500/30';
     }
   };
 
@@ -72,12 +80,63 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border ${getStatusStyle()}`}>
+    <motion.span 
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border backdrop-blur-sm ${getStatusStyle()}`}
+      whileHover={{ scale: 1.05 }}
+      transition={{ duration: 0.2 }}
+    >
       {getStatusIcon()}
       <span className="capitalize">{status}</span>
-    </span>
+    </motion.span>
   );
 };
+
+const StatsCard: React.FC<{ 
+  title: string; 
+  value: string | number; 
+  icon: React.ReactNode; 
+  gradient: string; 
+  trend?: number;
+}> = ({ title, value, icon, gradient, trend }) => (
+  <motion.div
+    className="relative p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden group hover:bg-white/10 transition-all duration-300"
+    whileHover={{ y: -5, scale: 1.02 }}
+    transition={{ duration: 0.3 }}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+  >
+    {/* Background gradient */}
+    <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 group-hover:opacity-20 transition-opacity duration-300`} />
+    
+    {/* Sparkle effect */}
+    <motion.div
+      className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+    >
+      <Sparkles className="w-4 h-4 text-white/30" />
+    </motion.div>
+
+    <div className="relative z-10">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg`}>
+          {icon}
+        </div>
+        {trend && (
+          <div className="flex items-center gap-1 text-green-400 text-sm">
+            <TrendingUp className="w-4 h-4" />
+            <span>+{trend}%</span>
+          </div>
+        )}
+      </div>
+      
+      <div className="space-y-1">
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-sm text-gray-300">{title}</p>
+      </div>
+    </div>
+  </motion.div>
+);
 
 export default function StandardDashboard() {
   const { user, signOut } = useAuth();
@@ -110,8 +169,6 @@ export default function StandardDashboard() {
 
   const loadProjects = async () => {
     try {
-      // For MVP, we'll simulate projects using conversations as project containers
-      // In future iterations, this would use a proper projects table
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
@@ -120,7 +177,6 @@ export default function StandardDashboard() {
 
       if (error) throw error;
 
-      // Group conversations by project (using title as project name for MVP)
       const projectMap = new Map<string, Project>();
       
       data?.forEach((conv) => {
@@ -140,7 +196,6 @@ export default function StandardDashboard() {
         
         const project = projectMap.get(projectId)!;
         project.workflow_count = (project.workflow_count || 0) + 1;
-        // Update to latest date
         if (new Date(conv.updated_at) > new Date(project.updated_at)) {
           project.updated_at = conv.updated_at;
         }
@@ -149,7 +204,6 @@ export default function StandardDashboard() {
       const projectList = Array.from(projectMap.values());
       setProjects(projectList);
 
-      // Auto-select first project if none selected
       if (projectList.length > 0 && !selectedProject) {
         setSelectedProject(projectList[0]);
         await loadWorkflows(projectList[0].id);
@@ -171,14 +225,12 @@ export default function StandardDashboard() {
 
       if (error) throw error;
 
-      // Filter workflows based on selected project
       const projectWorkflows = data?.filter(conv => {
         const convProjectName = conv.title || 'Default Project';
         const convProjectId = `project-${convProjectName.replace(/\s+/g, '-').toLowerCase()}`;
         return convProjectId === projectId;
       }) || [];
 
-      // Transform conversations to workflow format
       const workflowList: Workflow[] = projectWorkflows.map(conv => ({
         id: conv.id,
         title: conv.title || 'Untitled Workflow',
@@ -250,219 +302,338 @@ export default function StandardDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div 
+            className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-gray-300 text-lg">Loading your workspace...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+    <div className="min-h-screen relative">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20" />
+      
+      {/* Header with Glassmorphism */}
+      <motion.header 
+        className="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10 shadow-2xl"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <Container>
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ 
-                  backgroundColor: designTokens.colors.primary[500],
-                  color: designTokens.colors.white
-                }}
-              >
-                <Zap className="w-5 h-5" />
+          <div className="flex items-center justify-between h-20">
+            {/* Enhanced Logo */}
+            <motion.div 
+              className="flex items-center gap-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-xl">
+                <Zap className="w-7 h-7 text-white" />
               </div>
-              <span 
-                className="text-xl font-bold"
-                style={{ color: designTokens.colors.gray[900] }}
-              >
-                clixen<span style={{ color: designTokens.colors.gray[500] }}>.ai</span>
-              </span>
-            </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  clixen<span className="text-gray-400">.ai</span>
+                </h1>
+                <p className="text-sm text-gray-400">AI Workflow Platform</p>
+              </div>
+            </motion.div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              <Button
+            {/* Enhanced Actions */}
+            <motion.div 
+              className="flex items-center gap-4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <motion.button
                 onClick={handleRefresh}
-                variant="ghost"
-                size="sm"
+                className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 backdrop-blur-sm"
                 disabled={refreshing}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              </Button>
+                <RefreshCw className={`w-5 h-5 text-gray-300 ${refreshing ? 'animate-spin' : ''}`} />
+              </motion.button>
 
-              <Button
+              <motion.button
                 onClick={handleNewWorkflow}
-                variant="primary"
-                size="md"
-                leftIcon={<Plus className="w-4 h-4" />}
+                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
+                <Plus className="w-5 h-5" />
                 New Workflow
-              </Button>
+              </motion.button>
 
-              {/* User Menu */}
+              {/* Enhanced User Menu */}
               <div className="relative">
-                <button
+                <motion.button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center hover:bg-purple-200 transition-colors"
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <User className="w-4 h-4 text-purple-700" />
-                </button>
+                  <User className="w-5 h-5 text-white" />
+                </motion.button>
 
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {user?.email}
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleSignOut}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div 
+                      className="absolute right-0 mt-2 w-64 backdrop-blur-xl bg-white/10 rounded-2xl shadow-2xl border border-white/20 py-2 z-50"
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </button>
-                  </div>
-                )}
+                      <div className="px-4 py-3 border-b border-white/10">
+                        <p className="text-sm font-medium text-white truncate">{user?.email}</p>
+                        <p className="text-xs text-gray-400">Free Plan</p>
+                      </div>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full px-4 py-3 text-left text-sm text-gray-300 hover:bg-red-500/10 hover:text-red-400 flex items-center gap-3 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </div>
+            </motion.div>
           </div>
         </Container>
-      </header>
+      </motion.header>
 
-      <Container maxWidth="xl" className="py-8">
+      <Container maxWidth="xl" className="py-8 relative z-10">
+        {/* Stats Grid */}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <StatsCard
+            title="Total Workflows"
+            value={workflows.length}
+            icon={<Workflow className="w-6 h-6 text-white" />}
+            gradient="from-purple-500 to-pink-500"
+            trend={12}
+          />
+          <StatsCard
+            title="Active Projects"
+            value={projects.length}
+            icon={<Globe className="w-6 h-6 text-white" />}
+            gradient="from-blue-500 to-cyan-500"
+            trend={8}
+          />
+          <StatsCard
+            title="Success Rate"
+            value="94%"
+            icon={<BarChart3 className="w-6 h-6 text-white" />}
+            gradient="from-green-500 to-emerald-500"
+            trend={5}
+          />
+          <StatsCard
+            title="AI Interactions"
+            value="1.2k"
+            icon={<Bot className="w-6 h-6 text-white" />}
+            gradient="from-orange-500 to-red-500"
+            trend={23}
+          />
+        </motion.div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Projects Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900">Projects</h2>
+          {/* Enhanced Projects Sidebar */}
+          <motion.div 
+            className="lg:col-span-1"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                <h2 className="font-semibold text-white text-lg flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  Projects
+                </h2>
               </div>
               
               {projects.length === 0 ? (
-                <div className="p-4 text-center">
-                  <p className="text-sm text-gray-500 mb-3">No projects yet</p>
-                  <Button
-                    onClick={handleNewWorkflow}
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    leftIcon={<Plus className="w-4 h-4" />}
+                <div className="p-6 text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.6 }}
                   >
-                    Create First Workflow
-                  </Button>
+                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400 mb-4">No projects yet</p>
+                    <Button
+                      onClick={handleNewWorkflow}
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      leftIcon={<Plus className="w-4 h-4" />}
+                    >
+                      Create First Project
+                    </Button>
+                  </motion.div>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
-                  {projects.map((project) => (
-                    <button
+                <div className="divide-y divide-white/10">
+                  {projects.map((project, index) => (
+                    <motion.button
                       key={project.id}
                       onClick={() => handleProjectSelect(project)}
-                      className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                        selectedProject?.id === project.id ? 'bg-purple-50 border-r-2 border-purple-500' : ''
+                      className={`w-full p-4 text-left hover:bg-white/10 transition-all duration-300 group ${
+                        selectedProject?.id === project.id ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 border-r-2 border-purple-500' : ''
                       }`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * index + 0.6 }}
+                      whileHover={{ x: 4 }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 truncate">
+                          <p className="font-medium text-white truncate group-hover:text-purple-300 transition-colors">
                             {project.name}
                           </p>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-gray-400 mt-1">
                             {project.workflow_count || 0} workflows
                           </p>
                         </div>
                         {selectedProject?.id === project.id && (
-                          <ChevronRight className="w-4 h-4 text-purple-500" />
+                          <ChevronRight className="w-4 h-4 text-purple-400" />
                         )}
                       </div>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
-          {/* Main Content */}
+          {/* Enhanced Main Content */}
           <div className="lg:col-span-3">
             {selectedProject ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
                 className="space-y-6"
               >
-                {/* Project Header */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <div className="flex items-center justify-between">
+                {/* Enhanced Project Header */}
+                <div className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl p-8 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-blue-500/5" />
+                  <div className="relative z-10 flex items-center justify-between">
                     <div>
-                      <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                      <h1 className="text-3xl font-bold text-white mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                         {selectedProject.name}
                       </h1>
-                      <p className="text-gray-600">
-                        {selectedProject.description}
-                      </p>
+                      <p className="text-gray-300 mb-4">{selectedProject.description}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Updated {formatRelativeDate(selectedProject.updated_at)}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Workflow className="w-4 h-4" />
+                          {selectedProject.workflow_count || 0} workflows
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">Updated</p>
-                      <p className="text-sm font-medium text-gray-900">
-                        {formatRelativeDate(selectedProject.updated_at)}
-                      </p>
-                    </div>
+                    <motion.div
+                      className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-xl"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Star className="w-10 h-10 text-white" />
+                    </motion.div>
                   </div>
                 </div>
 
-                {/* Workflows List */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900">Workflows</h3>
-                    <span className="text-sm text-gray-500">
-                      {workflows.length} total
-                    </span>
+                {/* Enhanced Workflows List */}
+                <div className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+                  <div className="p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-white text-lg flex items-center gap-2">
+                        <Workflow className="w-5 h-5 text-blue-400" />
+                        Workflows
+                      </h3>
+                      <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
+                        {workflows.length} total
+                      </span>
+                    </div>
                   </div>
 
                   {workflows.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-gray-900 mb-2">
+                    <motion.div 
+                      className="p-12 text-center"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.8 }}
+                    >
+                      <Bot className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h4 className="text-xl font-medium text-white mb-2">
                         No workflows yet
                       </h4>
-                      <p className="text-gray-600 mb-4">
-                        Create your first workflow to get started with automation.
+                      <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                        Create your first AI-powered workflow to automate tasks and boost productivity.
                       </p>
-                      <Button
+                      <motion.button
                         onClick={handleNewWorkflow}
-                        variant="primary"
-                        leftIcon={<Plus className="w-4 h-4" />}
+                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
+                        <Plus className="w-5 h-5" />
                         Create Workflow
-                      </Button>
-                    </div>
+                      </motion.button>
+                    </motion.div>
                   ) : (
-                    <div className="divide-y divide-gray-200">
+                    <div className="divide-y divide-white/10">
                       {workflows.map((workflow, index) => (
                         <motion.button
                           key={workflow.id}
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
+                          transition={{ delay: index * 0.1 + 0.8 }}
                           onClick={() => handleWorkflowClick(workflow)}
-                          className="w-full p-4 text-left hover:bg-gray-50 transition-colors group"
+                          className="w-full p-6 text-left hover:bg-white/10 transition-all duration-300 group relative overflow-hidden"
+                          whileHover={{ x: 4 }}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          
+                          <div className="flex items-center justify-between relative z-10">
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h4 className="font-medium text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-                                  {workflow.title}
-                                </h4>
-                                <StatusBadge status={workflow.status} />
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                                  <Bot className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-white truncate group-hover:text-purple-300 transition-colors text-lg">
+                                    {workflow.title}
+                                  </h4>
+                                  <StatusBadge status={workflow.status} />
+                                </div>
                               </div>
                               
                               {workflow.workflow_summary && (
-                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                <p className="text-sm text-gray-400 mb-3 line-clamp-2">
                                   {workflow.workflow_summary}
                                 </p>
                               )}
@@ -473,15 +644,17 @@ export default function StandardDashboard() {
                                   Created {formatRelativeDate(workflow.created_at)}
                                 </div>
                                 {workflow.workflow_generated && (
-                                  <div className="flex items-center gap-1 text-green-600">
+                                  <div className="flex items-center gap-1 text-green-400">
                                     <CheckCircle className="w-3 h-3" />
-                                    Generated
+                                    AI Generated
                                   </div>
                                 )}
                               </div>
                             </div>
                             
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                            <div className="flex items-center gap-2">
+                              <ArrowUpRight className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                            </div>
                           </div>
                         </motion.button>
                       ))}
@@ -490,23 +663,45 @@ export default function StandardDashboard() {
                 </div>
               </motion.div>
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Welcome to Clixen
+              <motion.div 
+                className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl p-12 text-center"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.7 }}
+              >
+                <div className="relative">
+                  <motion.div
+                    className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-2xl"
+                    animate={{ 
+                      scale: [1, 1.1, 1],
+                      rotate: [0, 5, -5, 0]
+                    }}
+                    transition={{ 
+                      duration: 4, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Sparkles className="w-12 h-12 text-white" />
+                  </motion.div>
+                </div>
+                
+                <h3 className="text-2xl font-semibold text-white mb-3">
+                  Welcome to Clixen AI
                 </h3>
-                <p className="text-gray-600 mb-6">
-                  Select a project from the sidebar to view workflows, or create your first automation to get started.
+                <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg">
+                  Select a project from the sidebar to view workflows, or create your first AI-powered automation to get started.
                 </p>
-                <Button
+                <motion.button
                   onClick={handleNewWorkflow}
-                  variant="primary"
-                  size="lg"
-                  leftIcon={<Plus className="w-5 h-5" />}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto text-lg"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
+                  <Plus className="w-6 h-6" />
                   Create Your First Workflow
-                </Button>
-              </div>
+                </motion.button>
+              </motion.div>
             )}
           </div>
         </div>

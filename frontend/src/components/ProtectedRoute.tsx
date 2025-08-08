@@ -8,9 +8,10 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="h-8 w-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner-clean mx-auto mb-4" />
+          <p className="text-gray-600">Checking authentication...</p>
         </div>
       </div>
     );

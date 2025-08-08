@@ -10,10 +10,16 @@ test.describe('Authentication Flow', () => {
   test('should load landing page successfully', async ({ page }) => {
     await page.goto('/');
     
-    // Take screenshot for documentation
-    await page.screenshot({ 
-      path: 'test-results/01-landing-page.png',
-      fullPage: true 
+    // Take screenshot for documentation - Modern UI
+    await page.screenshot({
+      path: 'test-results/modern-01-landing-page.png',
+      fullPage: true
+    });
+
+    // Also capture viewport only
+    await page.screenshot({
+      path: 'test-results/modern-01-landing-viewport.png',
+      fullPage: false
     });
     
     // Check if page loads with expected content
@@ -73,9 +79,14 @@ test.describe('Authentication Flow', () => {
       }
     }
     
-    await page.screenshot({ 
-      path: 'test-results/02-auth-page.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-02-auth-page-full.png',
+      fullPage: true
+    });
+
+    await page.screenshot({
+      path: 'test-results/modern-02-auth-page-viewport.png',
+      fullPage: false
     });
     
     // Wait for auth form to appear
@@ -120,9 +131,15 @@ test.describe('Authentication Flow', () => {
     await expect(passwordField).toBeVisible();
     await passwordField.fill('Goldyear2023#');
     
-    await page.screenshot({ 
-      path: 'test-results/03-credentials-filled.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-03-credentials-filled.png',
+      fullPage: true
+    });
+
+    // Also capture just the form area
+    await page.screenshot({
+      path: 'test-results/modern-03-form-viewport.png',
+      fullPage: false
     });
     
     // Submit the form
@@ -132,10 +149,23 @@ test.describe('Authentication Flow', () => {
     // Wait for either successful login or error
     await page.waitForTimeout(3000);
     
-    await page.screenshot({ 
-      path: 'test-results/04-after-login-attempt.png',
-      fullPage: true 
+    await page.screenshot({
+      path: 'test-results/modern-04-after-login-attempt.png',
+      fullPage: true
     });
+
+    // Test mobile responsiveness after login
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.waitForTimeout(1000);
+
+    await page.screenshot({
+      path: 'test-results/modern-04-mobile-after-login.png',
+      fullPage: true
+    });
+
+    // Reset to desktop view
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.waitForTimeout(1000);
     
     // Check for successful authentication
     const isAuthenticated = await page.waitForFunction(() => {

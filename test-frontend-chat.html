@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Chat Functionality</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ccc;
+        }
+        .success { border-left-color: #4CAF50; background: #f1f8e9; }
+        .error { border-left-color: #f44336; background: #ffebee; }
+        .warning { border-left-color: #ff9800; background: #fff3e0; }
+        .info { border-left-color: #2196F3; background: #e3f2fd; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .loading { display: none; }
+        .loading.active { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .message-test {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🤖 AI Chat Functionality Test</h1>
+        <p>This page tests the AI chat functionality to identify and fix edge function errors.</p>
+
+        <div id="auth-section">
+            <h2>1. Authentication Test</h2>
+            <button onclick="testAuthentication()" id="auth-btn">Test Authentication</button>
+            <div id="auth-result"></div>
+        </div>
+
+        <div id="chat-section" style="display: none;">
+            <h2>2. AI Chat Test</h2>
+            <div class="message-test">
+                <label for="test-message">Test Message:</label>
+                <textarea id="test-message" placeholder="Enter a test message for the AI (e.g., 'I want to create a workflow that sends me a Slack notification every morning')">I want to create a workflow that sends me a Slack notification every morning at 9 AM with today's weather</textarea>
+                <button onclick="testAIChat()" id="chat-btn">Send Test Message</button>
+                <span class="loading" id="chat-loading">⏳</span>
+            </div>
+            <div id="chat-result"></div>
+        </div>
+
+        <div id="debug-section">
+            <h2>3. Debug Information</h2>
+            <button onclick="collectDebugInfo()">Collect Debug Info</button>
+            <div id="debug-result"></div>
+        </div>
+
+        <div id="recommendations">
+            <h2>4. Fix Recommendations</h2>
+            <div id="recommendations-content">
+                <p>Run tests above to get specific recommendations.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration (same as in app)
+        const SUPABASE_URL = 'https://zfbgdixbzezpxllkoyfc.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw';
+        const TEST_EMAIL = 'jayveedz19@gmail.com';
+        const TEST_PASSWORD = 'Goldyear2023#';
+
+        let supabaseClient;
+        let currentUser = null;
+
+        // Initialize Supabase (using CDN version for simplicity)
+        function initSupabase() {
+            if (typeof window.supabase !== 'undefined') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                return true;
+            }
+            return false;
+        }
+
+        function displayResult(elementId, type, title, message, details = null) {
+            const element = document.getElementById(elementId);
+            const detailsHtml = details ? `<pre>${JSON.stringify(details, null, 2)}</pre>` : '';
+            element.innerHTML = `
+                <div class="test-result ${type}">
+                    <strong>${title}</strong><br>
+                    ${message}
+                    ${detailsHtml}
+                </div>
+            `;
+        }
+
+        async function testAuthentication() {
+            const btn = document.getElementById('auth-btn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+
+            try {
+                // Try to load Supabase from CDN if not available
+                if (!supabaseClient && !initSupabase()) {
+                    // Load Supabase dynamically
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+                    document.head.appendChild(script);
+                    
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                    });
+                    
+                    if (!initSupabase()) {
+                        throw new Error('Failed to load Supabase client');
+                    }
+                }
+
+                // Test authentication
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: TEST_EMAIL,
+                    password: TEST_PASSWORD
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                currentUser = data.user;
+                displayResult('auth-result', 'success', '✅ Authentication Successful', 
+                    `Logged in as: ${data.user.email}`, {
+                        userId: data.user.id.substring(0, 8) + '***',
+                        email: data.user.email,
+                        emailConfirmed: !!data.user.email_confirmed_at
+                    });
+
+                // Show chat section
+                document.getElementById('chat-section').style.display = 'block';
+
+            } catch (error) {
+                displayResult('auth-result', 'error', '❌ Authentication Failed', 
+                    error.message, { error: error.message });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Test Authentication';
+            }
+        }
+
+        async function testAIChat() {
+            if (!currentUser) {
+                displayResult('chat-result', 'error', '❌ Authentication Required', 'Please authenticate first');
+                return;
+            }
+
+            const btn = document.getElementById('chat-btn');
+            const loading = document.getElementById('chat-loading');
+            const messageTextarea = document.getElementById('test-message');
+            const message = messageTextarea.value.trim();
+
+            if (!message) {
+                displayResult('chat-result', 'error', '❌ Message Required', 'Please enter a test message');
+                return;
+            }
+
+            btn.disabled = true;
+            loading.classList.add('active');
+            btn.textContent = 'Testing...';
+
+            try {
+                const payload = {
+                    message,
+                    user_id: currentUser.id,
+                    mode: 'workflow_creation'
+                };
+
+                console.log('Testing Edge Function with payload:', payload);
+
+                const { data, error } = await supabaseClient.functions.invoke('ai-chat-simple', {
+                    body: payload
+                });
+
+                if (error) {
+                    let errorType = 'error';
+                    let diagnosis = '';
+
+                    if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+                        diagnosis = '🔍 DIAGNOSIS: Edge Function not deployed to Supabase';
+                        errorType = 'warning';
+                    } else if (error.message?.includes('timeout')) {
+                        diagnosis = '🔍 DIAGNOSIS: Function timeout (likely OpenAI API issue)';
+                        errorType = 'warning';
+                    } else if (error.message?.includes('unauthorized')) {
+                        diagnosis = '🔍 DIAGNOSIS: Authentication issue with Edge Function';
+                        errorType = 'warning';
+                    }
+
+                    displayResult('chat-result', errorType, '❌ Edge Function Error', 
+                        `${error.message}<br><br>${diagnosis}`, {
+                            error: error.message,
+                            code: error.code,
+                            status: error.status,
+                            details: error.details
+                        });
+
+                    updateRecommendations('edge-function-error', error);
+                } else {
+                    displayResult('chat-result', 'success', '✅ AI Chat Working', 
+                        `AI Response received successfully!<br><br><strong>Response Preview:</strong><br>${data.response?.substring(0, 200) || 'No response content'}${data.response?.length > 200 ? '...' : ''}`, {
+                            phase: data.phase,
+                            needsMoreInfo: data.needs_more_info,
+                            readyForGeneration: data.ready_for_generation,
+                            workflowGenerated: data.workflow_generated,
+                            clarifyingQuestions: data.clarifying_questions?.length || 0,
+                            responseLength: data.response?.length || 0
+                        });
+
+                    updateRecommendations('success', data);
+                }
+
+            } catch (error) {
+                displayResult('chat-result', 'error', '❌ Chat Test Failed', 
+                    error.message, { error: error.message, stack: error.stack });
+                updateRecommendations('general-error', error);
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('active');
+                btn.textContent = 'Send Test Message';
+            }
+        }
+
+        async function collectDebugInfo() {
+            const debugInfo = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                currentUrl: window.location.href,
+                supabaseConfig: {
+                    url: SUPABASE_URL,
+                    hasAnonKey: !!SUPABASE_ANON_KEY,
+                    anonKeyPrefix: SUPABASE_ANON_KEY?.substring(0, 20) + '...'
+                },
+                authentication: {
+                    isAuthenticated: !!currentUser,
+                    userId: currentUser?.id?.substring(0, 8) + '***' || null,
+                    email: currentUser?.email || null
+                },
+                browser: {
+                    localStorage: typeof localStorage !== 'undefined',
+                    fetch: typeof fetch !== 'undefined',
+                    promises: typeof Promise !== 'undefined'
+                }
+            };
+
+            displayResult('debug-result', 'info', '🔍 Debug Information', 
+                'Debug information collected', debugInfo);
+        }
+
+        function updateRecommendations(type, data) {
+            const content = document.getElementById('recommendations-content');
+            let recommendations = '';
+
+            switch (type) {
+                case 'edge-function-error':
+                    recommendations = `
+                        <div class="test-result error">
+                            <strong>🚨 Edge Function Issues Detected</strong><br>
+                            <p><strong>Primary Issues:</strong></p>
+                            <ul>
+                                <li>Deploy the ai-chat-simple Edge Function to Supabase</li>
+                                <li>Configure OpenAI API key in Supabase project settings</li>
+                                <li>Ensure Edge Function has proper environment variables</li>
+                            </ul>
+                            <p><strong>Steps to Fix:</strong></p>
+                            <ol>
+                                <li>Run: <code>supabase functions deploy ai-chat-simple --project-ref zfbgdixbzezpxllkoyfc</code></li>
+                                <li>Add OPENAI_API_KEY in Supabase Edge Functions settings</li>
+                                <li>Verify N8N_API_URL and N8N_API_KEY are configured</li>
+                                <li>Check Supabase function logs for detailed errors</li>
+                            </ol>
+                        </div>
+                    `;
+                    break;
+                case 'success':
+                    recommendations = `
+                        <div class="test-result success">
+                            <strong>✅ AI Chat Functionality Working</strong><br>
+                            <p>The AI chat is functioning correctly! Users can:</p>
+                            <ul>
+                                <li>Send natural language workflow requests</li>
+                                <li>Receive AI-powered responses</li>
+                                <li>Create n8n workflows through conversation</li>
+                                <li>Get clarifying questions and guidance</li>
+                            </ul>
+                            <p><strong>Current Status:</strong></p>
+                            <ul>
+                                <li>Phase: ${data.phase || 'unknown'}</li>
+                                <li>Workflow Generation Ready: ${data.ready_for_generation ? 'Yes' : 'No'}</li>
+                                <li>Response Length: ${data.response?.length || 0} characters</li>
+                            </ul>
+                        </div>
+                    `;
+                    break;
+                default:
+                    recommendations = `
+                        <div class="test-result warning">
+                            <strong>⚠️ General Troubleshooting</strong><br>
+                            <p>If you're experiencing issues:</p>
+                            <ol>
+                                <li>Check browser console for errors</li>
+                                <li>Verify authentication is working</li>
+                                <li>Test Edge Function deployment</li>
+                                <li>Check Supabase project status</li>
+                                <li>Verify API keys and environment variables</li>
+                            </ol>
+                        </div>
+                    `;
+            }
+
+            content.innerHTML = recommendations;
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            console.log('AI Chat Test Page Loaded');
+            console.log('Ready to test chat functionality');
+        });
+    </script>
+
+    <!-- Load Supabase from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</body>
+</html>
