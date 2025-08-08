@@ -447,8 +447,52 @@ serve(async (req) => {
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
-        { 
+        {
           status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Validate authentication token
+    const authHeader = req.headers.get('authorization');
+    let authenticatedUser = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '');
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError) {
+          console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth validation failed:`, authError.message);
+          return new Response(
+            JSON.stringify({ error: 'Invalid authentication token' }),
+            {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+        authenticatedUser = user;
+        console.log(`✅ [AI-Chat-Simple] [${requestId}] User authenticated:`, {
+          userId: user?.id?.substring(0, 8) + '***',
+          email: user?.email
+        });
+      } catch (error) {
+        console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth token validation error:`, error.message);
+        return new Response(
+          JSON.stringify({ error: 'Authentication failed' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    } else {
+      console.log(`❌ [AI-Chat-Simple] [${requestId}] No authorization header provided`);
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -456,6 +500,21 @@ serve(async (req) => {
 
     const body = await req.json();
     const { message, user_id, session_id, mode = 'workflow_creation' } = body;
+
+    // Verify the user_id matches the authenticated user
+    if (user_id && authenticatedUser && user_id !== authenticatedUser.id) {
+      console.log(`❌ [AI-Chat-Simple] [${requestId}] User ID mismatch:`, {
+        providedUserId: user_id?.substring(0, 8) + '***',
+        authenticatedUserId: authenticatedUser.id?.substring(0, 8) + '***'
+      });
+      return new Response(
+        JSON.stringify({ error: 'User ID mismatch' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
 
     if (!message || typeof message !== 'string') {
       return new Response(
