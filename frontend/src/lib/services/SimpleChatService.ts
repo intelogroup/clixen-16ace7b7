@@ -7,6 +7,7 @@
 
 import { simpleWorkflowService as workflowService, WorkflowMessage } from './SimpleWorkflowService';
 import { fallbackChatService } from './FallbackChatService';
+import { supabase } from '../supabase';
 
 interface ChatResponse {
   response: string;
@@ -38,9 +39,9 @@ export class SimpleChatService {
           content: msg.content
         }));
 
-      // Use fallback service directly until Edge Functions are deployed
-      console.log('🔄 [CHAT] Using fallback service (Edge Functions disabled)');
-      const result = await fallbackChatService.processConversation(message, workflowMessages);
+      // Try to use real Edge Function first
+      console.log('🔄 [CHAT] Attempting to use ai-chat-simple Edge Function');
+      const result = await this.callAiChatEdgeFunction(message, workflowMessages);
 
       // Determine conversation mode based on content and history
       const mode = this.determineConversationMode(message, conversationHistory, result);
@@ -66,15 +67,68 @@ export class SimpleChatService {
       };
     } catch (error) {
       console.error('SimpleChatService error:', error);
-      
-      return {
-        response: 'I apologize, but I encountered an error. Please try again or rephrase your question.',
-        questions: [],
-        mode: 'greeting',
-        needsMoreInfo: false,
-        canProceed: false
-      };
+      console.log('🔄 [CHAT] Edge Function failed, falling back to demo service');
+
+      // Fallback to demo service if Edge Function fails
+      try {
+        const fallbackResult = await fallbackChatService.processConversation(message, workflowMessages);
+        return this.convertFallbackResponse(fallbackResult);
+      } catch (fallbackError) {
+        console.error('Fallback service also failed:', fallbackError);
+        return {
+          response: 'I apologize, but I encountered an error. Please try again or rephrase your question.',
+          questions: [],
+          mode: 'greeting',
+          needsMoreInfo: false,
+          canProceed: false
+        };
+      }
     }
+  }
+
+  /**
+   * Call the ai-chat-simple Edge Function
+   */
+  private async callAiChatEdgeFunction(message: string, conversationHistory: WorkflowMessage[]): Promise<any> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
+      body: {
+        message,
+        user_id: user.id,
+        conversation_history: conversationHistory,
+        mode: 'workflow_creation'
+      }
+    });
+
+    if (error) {
+      console.error('Edge Function error:', error);
+      throw new Error(`Edge Function failed: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Convert fallback service response to ChatResponse format
+   */
+  private convertFallbackResponse(fallbackResult: any): ChatResponse {
+    return {
+      response: fallbackResult.content,
+      questions: this.extractQuestions(fallbackResult.content),
+      mode: fallbackResult.workflowGenerated ? 'creating' : 'scoping',
+      needsMoreInfo: !fallbackResult.workflowGenerated,
+      canProceed: fallbackResult.workflowGenerated,
+      scopeStatus: fallbackResult.workflowGenerated ? {
+        generated: true,
+        validated: true,
+        workflow: fallbackResult.workflowData
+      } : undefined
+    };
   }
 
   /**
