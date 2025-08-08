@@ -599,7 +599,12 @@ Provide helpful, conversational response to guide the user through workflow crea
     );
 
   } catch (error) {
-    console.error('❌ [AI-Chat-Simple] Error:', error);
+    console.error(`❌ [AI-Chat-Simple] [${requestId}] Unexpected error:`, {
+      error: error.message || error,
+      stack: error.stack,
+      name: error.name,
+      timestamp: new Date().toISOString()
+    });
 
     return new Response(
       JSON.stringify({
@@ -608,9 +613,10 @@ Provide helpful, conversational response to guide the user through workflow crea
         phase: 'gathering',
         needs_more_info: true,
         ready_for_generation: false,
-        workflow_generated: false
+        workflow_generated: false,
+        request_id: requestId
       }),
-      { 
+      {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
