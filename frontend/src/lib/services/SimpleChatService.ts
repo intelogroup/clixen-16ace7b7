@@ -196,7 +196,7 @@ Please try your request again!`,
       headers: {
         'Authorization': session?.access_token ? `Bearer ${session.access_token}` : undefined,
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY
+        'apikey': supabaseConfig.anonKey
       }
     });
 
