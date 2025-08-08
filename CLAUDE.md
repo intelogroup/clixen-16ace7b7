@@ -469,20 +469,29 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 **Auto-Routing:** Claude Code automatically routes tasks to specialized subagents  
 **MCP Priority:** All subagents prioritize MCP tools over manual operations
 
-### 🎯 **Subagent Trigger Matrix**
+### 🎯 **Stack-Aware Subagent Routing**
 
-Claude Code uses these triggers to automatically route development tasks:
+**🔍 Detected Clixen Tech Stack:**
+- **Database**: Supabase PostgreSQL (15.6) with RLS policies
+- **Frontend**: React 18 + Vite 5 + TypeScript + Tailwind CSS 3  
+- **Backend**: Supabase Edge Functions + n8n Community Edition
+- **Deployment**: Netlify Static Hosting + CDN
+- **Testing**: Playwright + TestSprite + Jest
+- **Monitoring**: Sentry integration available
 
-| **Task Type** | **Subagent** | **MCP Tools Used** | **Auto-Trigger Keywords** |
-|---------------|-------------|-------------------|---------------------------|
-| Database queries, schema analysis, RLS | `database-architecture-agent` | PostgreSQL MCP, Supabase MCP | "database", "schema", "RLS", "query", "migration" |
-| Frontend performance, bundle analysis | `frontend-development-agent` | Lighthouse MCP, Browser Tools MCP | "frontend", "performance", "bundle", "lighthouse", "accessibility" |
-| End-to-end testing, browser automation | `testing-qa-agent` | TestSprite MCP, Playwright MCP | "test", "e2e", "browser", "automation", "quality" |
-| Code quality, linting, static analysis | `code-quality-agent` | ESLint MCP, Sequential Thinking MCP | "lint", "code quality", "static analysis", "refactor" |
-| Container management, K8s operations | `devops-deployment-agent` | Docker MCP, Kubernetes MCP, Terraform MCP | "docker", "kubernetes", "deploy", "infrastructure" |
-| API testing, integration checks | `api-integration-agent` | IT Tools MCP, Filesystem MCP | "api", "integration", "endpoint", "webhook" |
-| Documentation, knowledge management | `documentation-knowledge-agent` | Notion MCP, Storybook MCP | "docs", "documentation", "readme", "knowledge" |
-| Error monitoring, debugging | `analytics-monitoring-agent` | Sentry MCP, IT Tools MCP | "error", "monitoring", "debug", "sentry" |
+### **📋 Stack-Specific Subagent Matrix**
+
+| **Task Type** | **Subagent** | **Stack-Specific MCP Tools** | **CLI Tools & Scripts** | **Auto-Trigger Keywords** |
+|---------------|-------------|------------------------------|-------------------------|---------------------------|
+| **Database Operations** | `database-architecture-agent` | **🔧 PostgreSQL MCP** (primary)<br>**🔧 Supabase MCP** (management)<br>**🔧 Filesystem MCP** (migrations) | `supabase db push`<br>`supabase db reset`<br>`supabase migration new`<br>`supabase gen types typescript` | "database", "schema", "RLS", "supabase", "migration", "postgres", "sql" |
+| **Frontend Development** | `frontend-development-agent` | **🔧 Lighthouse MCP** (performance)<br>**🔧 Browser Tools MCP** (testing)<br>**🔧 ESLint MCP** (quality)<br>**🔧 Storybook MCP** (components) | `npm run build`<br>`npm run dev`<br>`npm run lint`<br>`vite build --analyze` | "frontend", "react", "vite", "bundle", "performance", "tailwind", "typescript" |
+| **Testing & QA** | `testing-qa-agent` | **🔧 Playwright MCP** (primary)<br>**🔧 TestSprite MCP** (autonomous)<br>**🔧 Browser Tools MCP** (analysis)<br>**🔧 IT Tools MCP** (utilities) | `playwright test`<br>`npm run test:headed`<br>`npm run test:mobile`<br>`npm run test:comprehensive` | "test", "playwright", "e2e", "mobile", "cross-browser", "automation", "quality" |
+| **Code Quality** | `code-quality-agent` | **🔧 ESLint MCP** (primary)<br>**🔧 Sequential Thinking MCP** (analysis)<br>**🔧 Filesystem MCP** (scanning) | `npm run lint`<br>`eslint . --fix`<br>`tsc --noEmit`<br>TypeScript strict checks | "lint", "typescript", "code quality", "eslint", "refactor", "clean code", "strict" |
+| **DevOps & Deployment** | `devops-deployment-agent` | **🔧 Netlify MCP** (deployment)<br>**🔧 Docker MCP** (containerization)<br>**🔧 IT Tools MCP** (utilities)<br>**🔧 Terraform MCP** (IaC) | `netlify deploy`<br>`supabase functions deploy`<br>`docker build`<br>`npm run build` | "deploy", "netlify", "docker", "infrastructure", "production", "build", "ci/cd" |
+| **API & Integration** | `api-integration-agent` | **🔧 Supabase MCP** (API management)<br>**🔧 IT Tools MCP** (testing)<br>**🔧 Filesystem MCP** (config)<br>**🔧 Sequential Thinking MCP** (logic) | `supabase functions invoke`<br>`curl` API testing<br>`supabase gen types`<br>`npm run test:api` | "api", "integration", "supabase", "edge functions", "webhook", "endpoint", "auth" |
+| **n8n Workflow Management** | `workflow-orchestration-agent` | **🔧 Clixen-n8n MCP** (custom)<br>**🔧 IT Tools MCP** (utilities)<br>**🔧 Sequential Thinking MCP** (logic)<br>**🔧 Filesystem MCP** (configs) | n8n API calls<br>Workflow deployment<br>User isolation scripts<br>`[USR-{userId}]` prefixing | "n8n", "workflow", "automation", "deployment", "orchestration", "isolation" |
+| **Documentation** | `documentation-knowledge-agent` | **🔧 Notion MCP** (management)<br>**🔧 Filesystem MCP** (local docs)<br>**🔧 Storybook MCP** (components)<br>**🔧 Sequential Thinking MCP** (structure) | Markdown generation<br>`storybook build`<br>Documentation updates<br>README maintenance | "docs", "documentation", "storybook", "readme", "knowledge", "guide", "specs" |
+| **Monitoring & Analytics** | `analytics-monitoring-agent` | **🔧 Sentry MCP** (error tracking)<br>**🔧 Browser Tools MCP** (performance)<br>**🔧 IT Tools MCP** (analysis)<br>**🔧 Lighthouse MCP** (metrics) | Performance monitoring<br>Error tracking<br>User analytics<br>Core Web Vitals | "monitoring", "sentry", "analytics", "performance", "errors", "metrics", "vitals" |
 
 ### 🚀 **Demonstrated Capabilities**
 
