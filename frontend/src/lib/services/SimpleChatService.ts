@@ -8,7 +8,6 @@
 import { simpleWorkflowService as workflowService, WorkflowMessage } from './SimpleWorkflowService';
 import { fallbackChatService } from './FallbackChatService';
 import { supabase } from '../supabase';
-import { supabaseConfig } from '../config/environment';
 import toast from 'react-hot-toast';
 
 interface ChatResponse {
@@ -66,7 +65,7 @@ export class SimpleChatService {
       let result;
       try {
         result = await this.callAiChatEdgeFunction(message, workflowMessages);
-        toast.success('�� AI service connected', { id: 'ai-service' });
+        toast.success('✅ AI service connected', { id: 'ai-service' });
       } catch (edgeError) {
         console.log('🔄 [CHAT] Edge Function failed, using fallback immediately');
         toast.dismiss('ai-service');
