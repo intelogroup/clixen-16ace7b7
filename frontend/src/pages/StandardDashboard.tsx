@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { WorkflowService, UserWorkflow } from '../lib/services/workflowService';
 import { 
   Plus, 
   MessageSquare, 
@@ -43,11 +44,15 @@ interface Project {
 interface Workflow {
   id: string;
   title: string;
-  status: 'active' | 'draft' | 'completed' | 'failed';
+  name?: string;
+  status: 'active' | 'draft' | 'deployed' | 'completed' | 'failed' | 'error';
   created_at: string;
   updated_at: string;
   workflow_generated: boolean;
   workflow_summary?: string;
+  n8n_workflow_id?: string;
+  webhook_url?: string;
+  execution_count?: number;
 }
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
