@@ -109,36 +109,38 @@ export class SimpleChatService {
       return chatResponse;
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error('❌ [CHAT] SimpleChatService error after', duration + 'ms:', {
+      console.error('❌ [CHAT] SimpleChatService unexpected error after', duration + 'ms:', {
         error: error.message || error,
         stack: error.stack,
         name: error.name,
         originalMessage: message.substring(0, 100) + '...',
         timestamp: new Date().toISOString()
       });
-      console.log('🔄 [CHAT] Edge Function failed, falling back to demo service');
-      toast.error('Using demo mode (Edge Function not available)', { id: 'ai-service' });
 
-      // Fallback to demo service if Edge Function fails
-      try {
-        const fallbackResult = await fallbackChatService.processConversation(message, workflowMessages);
-        return this.convertFallbackResponse(fallbackResult);
-      } catch (fallbackError) {
-        const duration = Date.now() - startTime;
-        console.error('💥 [CHAT] Fallback service also failed after', duration + 'ms:', {
-          error: fallbackError.message || fallbackError,
-          stack: fallbackError.stack,
-          originalError: error.message || error,
-          timestamp: new Date().toISOString()
-        });
-        return {
-          response: 'I apologize, but I encountered an error. Please try again or rephrase your question.',
-          questions: [],
-          mode: 'greeting',
-          needsMoreInfo: false,
-          canProceed: false
-        };
-      }
+      // Ultimate fallback if even the fallback service fails
+      toast.dismiss('ai-service');
+      toast.dismiss('fallback-service');
+      toast.error('Chat service temporarily unavailable');
+
+      return {
+        response: `I apologize, but I'm having trouble connecting right now.
+
+**Here's what you can try:**
+1. Refresh the page and try again
+2. Check your internet connection
+3. Try a simpler message first
+
+**In the meantime, here are some example automations I can help with:**
+- "Send me a Slack message every morning at 9 AM"
+- "When I receive an email, save the attachment to Google Drive"
+- "Create a webhook that processes form submissions"
+
+Please try your request again!`,
+        questions: [],
+        mode: 'greeting',
+        needsMoreInfo: false,
+        canProceed: false
+      };
     }
   }
 
