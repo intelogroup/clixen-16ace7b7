@@ -15,8 +15,8 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-// import { simpleChatService } from '../lib/services/SimpleChatService';
-// import toast from 'react-hot-toast';
+import { simpleChatService } from '../lib/services/SimpleChatService';
+import toast from 'react-hot-toast';
 
 export default function ModernChat() {
   const [messages, setMessages] = useState([
@@ -67,26 +67,49 @@ What would you like to automate today?`,
     setInputValue('');
     setIsLoading(true);
 
-    // Temporary simple simulation for testing
-    setTimeout(() => {
-      const responses = [
-        "Great! I'll help you create that automation. Let me break this down into a workflow...",
-        "Perfect! This sounds like a job for n8n. I'll design a workflow that handles this automatically.",
-        "Excellent idea! I can create a workflow that will automate this process for you.",
-        "That's a fantastic use case! Let me create an intelligent workflow to handle this."
-      ];
+    // Use real AI chat service
+    try {
+      // Convert message format for SimpleChatService
+      const conversationHistory = messages.map(msg => ({
+        type: msg.role as 'user' | 'assistant',
+        content: msg.content
+      }));
+
+      const result = await simpleChatService.handleNaturalConversation(
+        userMessage.content,
+        conversationHistory
+      );
 
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant' as const,
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: result.response,
         timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Update workflow status based on AI response
+      if (result.scopeStatus?.generated) {
+        setWorkflowStatus('generated');
+        toast.success('🎉 Workflow generated successfully!');
+      } else if (result.mode === 'validating') {
+        setWorkflowStatus('validating');
+      }
+
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant' as const,
+        content: 'I apologize, but I encountered an error. Please try again or rephrase your question.',
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to process message');
+    } finally {
       setIsLoading(false);
-      setWorkflowStatus('generated');
-    }, 2000);
+    }
   };
 
   const getStatusConfig = (status: string) => {

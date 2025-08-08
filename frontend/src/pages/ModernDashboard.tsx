@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart3, 
   CheckCircle, 
@@ -18,6 +19,7 @@ import {
 
 export default function ModernDashboard() {
   const [selectedProject, setSelectedProject] = useState(0);
+  const navigate = useNavigate();
 
   const projects = [
     { 
@@ -172,7 +174,10 @@ export default function ModernDashboard() {
               Here's what's happening with your workflows today.
             </p>
           </div>
-          <button className="btn-clean btn-primary">
+          <button
+            className="btn-clean btn-primary"
+            onClick={() => navigate('/chat')}
+          >
             <Plus className="w-4 h-4" />
             New Workflow
           </button>
@@ -340,6 +345,11 @@ export default function ModernDashboard() {
             return (
               <button
                 key={index}
+                onClick={() => {
+                  if (action.title === 'AI Assistant' || action.title === 'Design Workflow') {
+                    navigate('/chat');
+                  }
+                }}
                 className="text-left p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all duration-200 group"
               >
                 <div className={`w-12 h-12 rounded-lg ${getColorClasses(action.color)} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
