@@ -162,4 +162,252 @@ export class WorkflowService {
       return false;
     }
   }
+
+  /**
+   * Sync user workflows with n8n (2-way sync implementation)
+   * Calls the workflow-sync Edge Function to update execution data
+   */
+  static async syncUserWorkflows(): Promise<{
+    success: boolean;
+    summary?: any;
+    error?: string;
+  }> {
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      // Call workflow-sync Edge Function
+      const { data, error } = await supabase.functions.invoke('workflow-sync', {
+        body: {
+          action: 'sync_user_workflows',
+          user_id: user.id
+        }
+      });
+
+      if (error) {
+        console.error('Sync function error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Workflow sync completed:', data.summary);
+      return { success: true, summary: data.summary };
+
+    } catch (error) {
+      console.error('Error syncing workflows:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Start real-time sync for workflow updates
+   * Sets up Supabase Realtime subscription for workflow changes
+   */
+  static setupRealtimeSync(onUpdate: (workflow: UserWorkflow) => void): () => void {
+    let retryCount = 0;
+    const maxRetries = 3;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const setupSubscription = (): (() => void) => {
+      try {
+        console.log(`Setting up realtime subscription (attempt ${retryCount + 1})`);
+
+        // Subscribe to workflow updates for the current user
+        const subscription = supabase
+          .channel(`workflow_changes_${Date.now()}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+              schema: 'public',
+              table: 'mvp_workflows'
+            },
+            (payload) => {
+              console.log('Realtime workflow update:', payload);
+              
+              try {
+                // Transform the updated data to match our UserWorkflow interface
+                if (payload.new) {
+                  const workflow: UserWorkflow = {
+                    id: payload.new.id,
+                    name: payload.new.name,
+                    description: payload.new.description,
+                    status: payload.new.status,
+                    n8n_workflow_id: payload.new.n8n_workflow_id,
+                    webhook_url: payload.new.webhook_url,
+                    created_at: payload.new.created_at,
+                    last_accessed_at: payload.new.last_accessed_at,
+                    execution_count: payload.new.execution_count,
+                    is_active: payload.new.is_active,
+                    project_id: payload.new.project_id
+                  };
+
+                  onUpdate(workflow);
+                }
+              } catch (updateError) {
+                console.error('Error processing realtime update:', updateError);
+                // Continue processing despite individual update errors
+              }
+            }
+          )
+          .subscribe((status) => {
+            console.log('Realtime subscription status:', status);
+            
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Realtime sync connected');
+              retryCount = 0; // Reset retry count on successful connection
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.warn('❌ Realtime sync error, will retry...', status);
+              
+              if (retryCount < maxRetries) {
+                retryCount++;
+                retryTimeout = setTimeout(() => {
+                  console.log(`Retrying realtime connection (${retryCount}/${maxRetries})`);
+                  cleanup();
+                  setupSubscription();
+                }, Math.pow(2, retryCount) * 1000); // Exponential backoff
+              } else {
+                console.error('❌ Realtime sync failed after maximum retries');
+              }
+            }
+          });
+
+        // Return cleanup function
+        return () => {
+          console.log('Cleaning up realtime subscription');
+          if (retryTimeout) {
+            clearTimeout(retryTimeout);
+            retryTimeout = null;
+          }
+          supabase.removeChannel(subscription);
+        };
+
+      } catch (error) {
+        console.error('Error setting up realtime sync:', error);
+        
+        // Retry with exponential backoff if we haven't exceeded max retries
+        if (retryCount < maxRetries) {
+          retryCount++;
+          retryTimeout = setTimeout(() => {
+            console.log(`Retrying realtime setup (${retryCount}/${maxRetries})`);
+            setupSubscription();
+          }, Math.pow(2, retryCount) * 1000);
+        }
+        
+        return () => {
+          if (retryTimeout) {
+            clearTimeout(retryTimeout);
+            retryTimeout = null;
+          }
+        }; // Return no-op cleanup function
+      }
+    };
+
+    // Initial setup
+    const cleanup = setupSubscription();
+
+    // Return main cleanup function
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+        retryTimeout = null;
+      }
+      cleanup();
+    };
+  }
+
+  /**
+   * Force refresh workflow data from n8n
+   * Triggers a sync and returns updated workflow data
+   */
+  static async refreshWorkflowData(workflowId: string): Promise<{
+    success: boolean;
+    workflow?: UserWorkflow;
+    error?: string;
+  }> {
+    try {
+      // First trigger a sync
+      const syncResult = await this.syncUserWorkflows();
+      
+      if (!syncResult.success) {
+        return { success: false, error: syncResult.error };
+      }
+
+      // Then fetch the updated workflow
+      const { data, error } = await supabase
+        .from('mvp_workflows')
+        .select('*')
+        .eq('id', workflowId)
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const workflow: UserWorkflow = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        n8n_workflow_id: data.n8n_workflow_id,
+        webhook_url: data.webhook_url,
+        created_at: data.created_at,
+        last_accessed_at: data.last_accessed_at,
+        execution_count: data.execution_count,
+        is_active: data.is_active,
+        project_id: data.project_id
+      };
+
+      return { success: true, workflow };
+
+    } catch (error) {
+      console.error('Error refreshing workflow data:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get workflow execution statistics
+   */
+  static async getWorkflowExecutionStats(workflowId: string): Promise<{
+    success: boolean;
+    stats?: {
+      total: number;
+      successful: number;
+      failed: number;
+      lastExecution?: string;
+      lastExecutionStatus?: string;
+    };
+    error?: string;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('mvp_workflows')
+        .select('execution_count, successful_executions, failed_executions, last_execution_at, last_execution_status')
+        .eq('id', workflowId)
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        stats: {
+          total: data.execution_count || 0,
+          successful: data.successful_executions || 0,
+          failed: data.failed_executions || 0,
+          lastExecution: data.last_execution_at,
+          lastExecutionStatus: data.last_execution_status
+        }
+      };
+
+    } catch (error) {
+      console.error('Error getting execution stats:', error);
+      return { success: false, error: error.message };
+    }
+  }
 }

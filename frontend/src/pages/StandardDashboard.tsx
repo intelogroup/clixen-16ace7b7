@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { WorkflowService, UserWorkflow } from '../lib/services/workflowService';
+import { Dropdown } from '../components/ui/Dropdown';
 import { 
   Plus, 
   MessageSquare, 
@@ -25,7 +26,14 @@ import {
   Workflow,
   Globe,
   Star,
-  ArrowUpRight
+  ArrowUpRight,
+  MoreVertical,
+  Edit3,
+  Archive,
+  Trash2,
+  Play,
+  Link,
+  BarChart
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { designTokens } from '../styles/design-tokens';
@@ -152,10 +160,78 @@ export default function StandardDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [realTimeEnabled, setRealTimeEnabled] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Set up real-time sync for workflow updates
+  useEffect(() => {
+    console.log('Setting up real-time workflow sync...');
+    
+    const cleanup = WorkflowService.setupRealtimeSync((updatedWorkflow) => {
+      console.log('Received real-time workflow update:', updatedWorkflow);
+      
+      // Update workflows list if this workflow belongs to the selected project
+      if (selectedProject && updatedWorkflow.project_id === selectedProject.id) {
+        setWorkflows(prevWorkflows => {
+          // Find and update the existing workflow, or add new one
+          const existingIndex = prevWorkflows.findIndex(w => w.id === updatedWorkflow.id);
+          
+          if (existingIndex >= 0) {
+            // Update existing workflow
+            const newWorkflows = [...prevWorkflows];
+            newWorkflows[existingIndex] = {
+              ...newWorkflows[existingIndex],
+              title: updatedWorkflow.name,
+              name: updatedWorkflow.name,
+              status: updatedWorkflow.status === 'deployed' ? 'active' : updatedWorkflow.status,
+              updated_at: updatedWorkflow.last_accessed_at || updatedWorkflow.created_at,
+              workflow_summary: updatedWorkflow.description,
+              n8n_workflow_id: updatedWorkflow.n8n_workflow_id,
+              webhook_url: updatedWorkflow.webhook_url,
+              execution_count: updatedWorkflow.execution_count
+            };
+            return newWorkflows;
+          } else {
+            // Add new workflow
+            const newWorkflow: Workflow = {
+              id: updatedWorkflow.id,
+              title: updatedWorkflow.name,
+              name: updatedWorkflow.name,
+              status: updatedWorkflow.status === 'deployed' ? 'active' : updatedWorkflow.status,
+              created_at: updatedWorkflow.created_at,
+              updated_at: updatedWorkflow.last_accessed_at || updatedWorkflow.created_at,
+              workflow_generated: updatedWorkflow.status !== 'draft',
+              workflow_summary: updatedWorkflow.description,
+              n8n_workflow_id: updatedWorkflow.n8n_workflow_id,
+              webhook_url: updatedWorkflow.webhook_url,
+              execution_count: updatedWorkflow.execution_count
+            };
+            return [...prevWorkflows, newWorkflow];
+          }
+        });
+
+        // Show notification for status changes
+        if (updatedWorkflow.status === 'deployed') {
+          toast.success(`Workflow "${updatedWorkflow.name}" deployed successfully!`);
+        } else if (updatedWorkflow.status === 'error') {
+          toast.error(`Workflow "${updatedWorkflow.name}" encountered an error`);
+        }
+      }
+    });
+
+    setRealTimeEnabled(true);
+
+    // Cleanup on unmount
+    return () => {
+      console.log('Cleaning up real-time workflow sync...');
+      cleanup();
+      setRealTimeEnabled(false);
+    };
+  }, [selectedProject]);
 
   const loadData = async () => {
     setLoading(true);
@@ -174,44 +250,40 @@ export default function StandardDashboard() {
 
   const loadProjects = async () => {
     try {
+      // Load real projects from projects table
       const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
+        .from('projects')
+        .select(`
+          id,
+          name,
+          description,
+          created_at,
+          updated_at
+        `)
         .eq('user_id', user?.id)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
-      const projectMap = new Map<string, Project>();
-      
-      data?.forEach((conv) => {
-        const projectName = conv.title || 'Default Project';
-        const projectId = `project-${projectName.replace(/\s+/g, '-').toLowerCase()}`;
-        
-        if (!projectMap.has(projectId)) {
-          projectMap.set(projectId, {
-            id: projectId,
-            name: projectName,
-            description: `Project containing workflow: ${conv.title}`,
-            created_at: conv.created_at,
-            updated_at: conv.updated_at,
-            workflow_count: 0
-          });
-        }
-        
-        const project = projectMap.get(projectId)!;
-        project.workflow_count = (project.workflow_count || 0) + 1;
-        if (new Date(conv.updated_at) > new Date(project.updated_at)) {
-          project.updated_at = conv.updated_at;
-        }
-      });
+      // Get workflow counts for each project
+      const projectsWithCounts = await Promise.all(
+        (data || []).map(async (project) => {
+          const workflows = await WorkflowService.getProjectWorkflows(project.id);
+          return {
+            ...project,
+            workflow_count: workflows.length
+          };
+        })
+      );
 
-      const projectList = Array.from(projectMap.values());
-      setProjects(projectList);
+      setProjects(projectsWithCounts);
 
-      if (projectList.length > 0 && !selectedProject) {
-        setSelectedProject(projectList[0]);
-        await loadWorkflows(projectList[0].id);
+      if (projectsWithCounts.length > 0 && !selectedProject) {
+        setSelectedProject(projectsWithCounts[0]);
+        await loadWorkflows(projectsWithCounts[0].id);
+      } else if (projectsWithCounts.length === 0) {
+        // Create a default project if none exist
+        await createDefaultProject();
       }
 
     } catch (error) {
@@ -220,30 +292,49 @@ export default function StandardDashboard() {
     }
   };
 
-  const loadWorkflows = async (projectId: string) => {
+  const createDefaultProject = async () => {
     try {
       const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('updated_at', { ascending: false });
+        .from('projects')
+        .insert({
+          user_id: user?.id,
+          name: 'My First Project',
+          description: 'Default project for your workflows'
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      const projectWorkflows = data?.filter(conv => {
-        const convProjectName = conv.title || 'Default Project';
-        const convProjectId = `project-${convProjectName.replace(/\s+/g, '-').toLowerCase()}`;
-        return convProjectId === projectId;
-      }) || [];
+      const projectWithCount = {
+        ...data,
+        workflow_count: 0
+      };
 
-      const workflowList: Workflow[] = projectWorkflows.map(conv => ({
-        id: conv.id,
-        title: conv.title || 'Untitled Workflow',
-        status: conv.workflow_generated ? 'completed' : conv.status || 'draft',
-        created_at: conv.created_at,
-        updated_at: conv.updated_at,
-        workflow_generated: conv.workflow_generated || false,
-        workflow_summary: conv.workflow_summary
+      setProjects([projectWithCount]);
+      setSelectedProject(projectWithCount);
+    } catch (error) {
+      console.error('Error creating default project:', error);
+      toast.error('Failed to create default project');
+    }
+  };
+
+  const loadWorkflows = async (projectId: string) => {
+    try {
+      const userWorkflows = await WorkflowService.getProjectWorkflows(projectId);
+      
+      const workflowList: Workflow[] = userWorkflows.map(workflow => ({
+        id: workflow.id,
+        title: workflow.name,
+        name: workflow.name,
+        status: workflow.status === 'deployed' ? 'active' : workflow.status,
+        created_at: workflow.created_at,
+        updated_at: workflow.last_accessed_at || workflow.created_at,
+        workflow_generated: workflow.status !== 'draft',
+        workflow_summary: workflow.description,
+        n8n_workflow_id: workflow.n8n_workflow_id,
+        webhook_url: workflow.webhook_url,
+        execution_count: workflow.execution_count
       }));
 
       setWorkflows(workflowList);
@@ -259,6 +350,38 @@ export default function StandardDashboard() {
     await loadWorkflows(project.id);
   };
 
+  const handleCreateNewProject = async () => {
+    const projectName = prompt('Enter project name:');
+    if (projectName && projectName.trim()) {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            user_id: user?.id,
+            name: projectName.trim(),
+            description: `Project created on ${new Date().toLocaleDateString()}`
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        const newProject = {
+          ...data,
+          workflow_count: 0
+        };
+
+        setProjects(prev => [newProject, ...prev]);
+        setSelectedProject(newProject);
+        await loadWorkflows(newProject.id);
+        toast.success('Project created successfully!');
+      } catch (error) {
+        console.error('Error creating project:', error);
+        toast.error('Failed to create project');
+      }
+    }
+  };
+
   const handleNewWorkflow = () => {
     navigate('/chat');
   };
@@ -267,11 +390,156 @@ export default function StandardDashboard() {
     navigate(`/chat/${workflow.id}`);
   };
 
+  const handleArchiveWorkflow = async (workflowId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const success = await WorkflowService.archiveWorkflow(workflowId);
+      if (success) {
+        toast.success('Workflow archived successfully');
+        if (selectedProject) {
+          await loadWorkflows(selectedProject.id);
+        }
+      } else {
+        toast.error('Failed to archive workflow');
+      }
+    } catch (error) {
+      console.error('Error archiving workflow:', error);
+      toast.error('Failed to archive workflow');
+    }
+  };
+
+  const handleTestWorkflow = async (workflow: Workflow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (workflow.webhook_url) {
+      window.open(workflow.webhook_url, '_blank');
+      toast.success('Opening workflow webhook URL');
+    } else {
+      toast.error('No webhook URL available for testing');
+    }
+  };
+
+  const handleEditWorkflow = (workflow: Workflow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/chat/${workflow.id}`);
+  };
+
+  const getWorkflowActions = (workflow: Workflow) => [
+    {
+      id: 'edit',
+      label: 'Edit Workflow',
+      icon: <Edit3 className="w-4 h-4" />,
+      onClick: (e: React.MouseEvent) => handleEditWorkflow(workflow, e)
+    },
+    {
+      id: 'test',
+      label: 'Test Workflow',
+      icon: <Play className="w-4 h-4" />,
+      onClick: (e: React.MouseEvent) => handleTestWorkflow(workflow, e),
+      disabled: !workflow.webhook_url || workflow.status !== 'active'
+    },
+    {
+      id: 'copy-url',
+      label: 'Copy Webhook URL',
+      icon: <Link className="w-4 h-4" />,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (workflow.webhook_url) {
+          navigator.clipboard.writeText(workflow.webhook_url);
+          toast.success('Webhook URL copied to clipboard');
+        } else {
+          toast.error('No webhook URL available');
+        }
+      },
+      disabled: !workflow.webhook_url
+    },
+    {
+      id: 'archive',
+      label: 'Archive Workflow',
+      icon: <Archive className="w-4 h-4" />,
+      onClick: (e: React.MouseEvent) => handleArchiveWorkflow(workflow.id, e),
+      variant: 'danger' as const
+    }
+  ];
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
     toast.success('Dashboard refreshed');
+  };
+
+  const handleSyncWorkflows = async () => {
+    setSyncing(true);
+    try {
+      // Show loading toast for longer operations
+      const loadingToast = toast.loading('Syncing workflows with n8n...');
+      
+      const syncResult = await WorkflowService.syncUserWorkflows();
+      
+      toast.dismiss(loadingToast);
+      
+      if (syncResult.success) {
+        const summary = syncResult.summary;
+        if (summary) {
+          const message = summary.successful > 0 
+            ? `✅ Synced ${summary.successful} workflows${summary.executionsUpdated > 0 ? `, updated ${summary.executionsUpdated} execution counts` : ''}`
+            : summary.totalWorkflows > 0 
+              ? '✅ All workflows are up to date'
+              : '📝 No workflows to sync';
+          
+          toast.success(message);
+          
+          // Only reload if we actually updated something
+          if (summary.successful > 0) {
+            await loadData();
+          }
+        } else {
+          toast.success('Workflows synced successfully');
+          await loadData();
+        }
+      } else {
+        // Handle different types of sync errors gracefully
+        const errorMsg = syncResult.error || 'Unknown sync error';
+        
+        if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+          toast.error('🔗 Network error - workflows will sync when connection is restored', { duration: 5000 });
+        } else if (errorMsg.includes('n8n') || errorMsg.includes('API')) {
+          toast.error('🔧 n8n service temporarily unavailable - workflows will sync automatically', { duration: 5000 });
+        } else if (errorMsg.includes('auth')) {
+          toast.error('🔑 Authentication error - please try signing in again');
+        } else {
+          toast.error(`⚠️ Sync failed: ${errorMsg}`, { duration: 5000 });
+        }
+        
+        // Still try to reload local data even if sync failed
+        console.warn('Sync failed, reloading local data:', errorMsg);
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      
+      // Graceful error handling with specific messages
+      const isNetworkError = error.message?.includes('fetch') || error.message?.includes('network');
+      const isTimeoutError = error.message?.includes('timeout');
+      
+      if (isNetworkError) {
+        toast.error('🔗 Connection lost - workflows will auto-sync when reconnected', { duration: 6000 });
+      } else if (isTimeoutError) {
+        toast.error('⏱️ Sync timeout - please try again in a moment', { duration: 4000 });
+      } else {
+        toast.error('❌ Sync service temporarily unavailable', { duration: 4000 });
+      }
+      
+      // Always try to show local data even if sync fails
+      try {
+        await loadData();
+      } catch (loadError) {
+        console.error('Failed to load local data after sync error:', loadError);
+        toast.error('Unable to load workflows - please refresh the page');
+      }
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -370,8 +638,23 @@ export default function StandardDashboard() {
                 disabled={refreshing}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Refresh dashboard"
               >
                 <RefreshCw className={`w-5 h-5 text-gray-300 ${refreshing ? 'animate-spin' : ''}`} />
+              </motion.button>
+
+              <motion.button
+                onClick={handleSyncWorkflows}
+                className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 backdrop-blur-sm relative"
+                disabled={syncing}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Sync workflows with n8n"
+              >
+                <Activity className={`w-5 h-5 text-blue-400 ${syncing ? 'animate-pulse' : ''}`} />
+                {realTimeEnabled && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                )}
               </motion.button>
 
               <motion.button
@@ -472,10 +755,34 @@ export default function StandardDashboard() {
           >
             <div className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
               <div className="p-6 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-                <h2 className="font-semibold text-white text-lg flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-400" />
-                  Projects
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-semibold text-white text-lg flex items-center gap-2">
+                    <Star className="w-5 h-5 text-yellow-400" />
+                    Projects
+                  </h2>
+                  {projects.length > 0 && (
+                    <Dropdown
+                      trigger={
+                        <motion.button
+                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Plus className="w-4 h-4 text-gray-300" />
+                        </motion.button>
+                      }
+                      options={[
+                        {
+                          id: 'new-project',
+                          label: 'New Project',
+                          icon: <Plus className="w-4 h-4" />,
+                          onClick: () => handleCreateNewProject()
+                        }
+                      ]}
+                      align="right"
+                    />
+                  )}
+                </div>
               </div>
               
               {projects.length === 0 ? (
@@ -658,7 +965,38 @@ export default function StandardDashboard() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              <ArrowUpRight className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors" />
+                              {/* Workflow stats */}
+                              <div className="text-right text-xs text-gray-500 mr-3">
+                                {workflow.execution_count !== undefined && (
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <BarChart className="w-3 h-3" />
+                                    <span>{workflow.execution_count} runs</span>
+                                  </div>
+                                )}
+                                {workflow.webhook_url && (
+                                  <div className="flex items-center gap-1 text-blue-400">
+                                    <Link className="w-3 h-3" />
+                                    <span>Webhook</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Actions dropdown */}
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <Dropdown
+                                  trigger={
+                                    <motion.button
+                                      className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all duration-300"
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                    >
+                                      <MoreVertical className="w-4 h-4 text-gray-400" />
+                                    </motion.button>
+                                  }
+                                  options={getWorkflowActions(workflow)}
+                                  align="right"
+                                />
+                              </div>
                             </div>
                           </div>
                         </motion.button>

@@ -30,7 +30,8 @@ import {
   Download,
   ChevronDown,
   Mic,
-  MicOff
+  MicOff,
+  Globe
 } from 'lucide-react';
 import { designTokens } from '../styles/design-tokens';
 
@@ -153,9 +154,11 @@ const WorkflowActionCard: React.FC<{
   workflow: WorkflowState;
   onSave: () => void;
   onDeploy: () => void;
+  onTestWorkflow: () => void;
+  onWorkflowNameChange: (name: string) => void;
   isSaving: boolean;
   isDeploying: boolean;
-}> = ({ workflow, onSave, onDeploy, isSaving, isDeploying }) => {
+}> = ({ workflow, onSave, onDeploy, onTestWorkflow, onWorkflowNameChange, isSaving, isDeploying }) => {
   const getStatusIcon = () => {
     switch (workflow.status) {
       case 'generated':
@@ -223,10 +226,10 @@ const WorkflowActionCard: React.FC<{
         
         <motion.button
           onClick={onDeploy}
-          disabled={workflow.status === 'draft' || workflow.status === 'deployed' || isDeploying}
+          disabled={workflow.status === 'draft' || workflow.status === 'deployed' || isDeploying || !workflow.name.trim()}
           className="w-full p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 disabled:from-gray-500/20 disabled:to-gray-600/20 border border-purple-500/30 disabled:border-gray-500/30 text-white rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying ? 1.02 : 1 }}
-          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying ? 0.98 : 1 }}
+          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying && workflow.name.trim() ? 1.02 : 1 }}
+          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying && workflow.name.trim() ? 0.98 : 1 }}
         >
           {isDeploying ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -235,23 +238,77 @@ const WorkflowActionCard: React.FC<{
           )}
           {workflow.status === 'deployed' ? 'Deployed' : 'Deploy to n8n'}
         </motion.button>
+        
+        {!workflow.name.trim() && workflow.status === 'generated' && (
+          <p className="text-xs text-yellow-400 mt-2 text-center">
+            ⚠️ Please enter a workflow name before deploying
+          </p>
+        )}
       </div>
 
-      {workflow.name && (
+      {/* Workflow Name Input */}
+      <motion.div 
+        className="mt-6 pt-4 border-t border-white/10"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+          <Star className="w-4 h-4 text-yellow-400" />
+          Workflow Name
+        </h4>
+        <input
+          type="text"
+          value={workflow.name}
+          onChange={(e) => onWorkflowNameChange(e.target.value)}
+          placeholder="Enter workflow name..."
+          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 backdrop-blur-sm transition-all duration-300"
+        />
+        {workflow.description && (
+          <p className="text-xs text-gray-400 mt-2">{workflow.description}</p>
+        )}
+      </motion.div>
+
+      {/* Webhook URL Display */}
+      {workflow.status === 'deployed' && workflow.n8n_workflow_id && (
         <motion.div 
-          className="mt-6 pt-4 border-t border-white/10"
+          className="mt-4 p-4 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
         >
-          <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-            <Star className="w-4 h-4 text-yellow-400" />
-            Current Workflow
-          </h4>
-          <p className="text-sm text-white font-medium">{workflow.name}</p>
-          {workflow.description && (
-            <p className="text-xs text-gray-400 mt-1">{workflow.description}</p>
-          )}
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-blue-400 flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              Webhook URL
+            </h4>
+            <motion.button
+              onClick={onTestWorkflow}
+              className="px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 text-green-400 text-xs rounded-lg font-medium transition-all duration-300 flex items-center gap-1"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Play className="w-3 h-3" />
+              Test
+            </motion.button>
+          </div>
+          <div className="flex items-center gap-2">
+            <code className="text-xs text-gray-300 bg-black/20 px-2 py-1 rounded flex-1 truncate">
+              {`https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`}
+            </code>
+            <motion.button
+              onClick={() => {
+                const webhookUrl = `https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`;
+                navigator.clipboard.writeText(webhookUrl);
+                toast.success('Webhook URL copied to clipboard');
+              }}
+              className="p-1 hover:bg-white/10 rounded transition-colors"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Copy className="w-3 h-3 text-gray-400" />
+            </motion.button>
+          </div>
         </motion.div>
       )}
     </motion.div>
@@ -267,6 +324,7 @@ export default function StandardChat() {
     name: '',
     status: 'draft'
   });
+  const [workflowName, setWorkflowName] = useState('');
   const [user, setUser] = useState<any>(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -555,6 +613,22 @@ What would you like to automate today?`,
     }
   };
 
+  // Handle workflow name change
+  const handleWorkflowNameChange = (name: string) => {
+    setWorkflow(prev => ({ ...prev, name }));
+  };
+
+  // Handle testing workflow
+  const handleTestWorkflow = () => {
+    if (workflow.n8n_workflow_id) {
+      const webhookUrl = `https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`;
+      window.open(webhookUrl, '_blank');
+      toast.success('Opening workflow test URL');
+    } else {
+      toast.error('No workflow ID available for testing');
+    }
+  };
+
   // Handle starting new chat
   const handleNewChat = async () => {
     try {
@@ -731,6 +805,8 @@ What would you like to automate today?`,
               workflow={workflow}
               onSave={handleSaveWorkflow}
               onDeploy={handleDeployWorkflow}
+              onTestWorkflow={handleTestWorkflow}
+              onWorkflowNameChange={handleWorkflowNameChange}
               isSaving={isSaving}
               isDeploying={isDeploying}
             />
