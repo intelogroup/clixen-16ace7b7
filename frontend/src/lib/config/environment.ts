@@ -77,9 +77,10 @@ class EnvironmentService {
         jwtSecret: env.SUPABASE_JWT_SECRET,
       },
 
-      // OpenAI configuration
+      // OpenAI configuration - REMOVED FOR SECURITY
+      // OpenAI API should only be called from backend/edge functions
       openai: {
-        apiKey: env.VITE_OPENAI_API_KEY,
+        apiKey: undefined, // Never expose API keys in frontend code
       },
 
       // n8n configuration
@@ -125,9 +126,7 @@ class EnvironmentService {
       console.warn('VITE_N8N_API_KEY is not set - n8n integration may not work');
     }
 
-    if (!this.config.openai.apiKey || this.config.openai.apiKey === 'your-openai-api-key-here' || this.config.openai.apiKey.includes('placeholder')) {
-      console.warn('VITE_OPENAI_API_KEY is not properly configured - AI features will be limited');
-    }
+    // OpenAI API key validation removed - AI features use edge functions
 
     if (errors.length > 0) {
       console.error('Environment configuration errors:', errors);
@@ -166,8 +165,7 @@ class EnvironmentService {
   public isFeatureEnabled(feature: string): boolean {
     switch (feature) {
       case 'openai':
-        return !!(this.config.openai.apiKey && 
-                 this.config.openai.apiKey !== 'your-openai-api-key-here');
+        return false; // OpenAI is handled through edge functions only
       case 'n8n':
         return !!(this.config.n8n.apiUrl && this.config.n8n.apiKey);
       case 'supabase':

@@ -40,15 +40,9 @@ class OpenAIService {
    * Log current environment status for debugging
    */
   private logEnvironmentStatus(): void {
-    const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-    const hasEnvKey = !!(envKey && envKey !== 'your-openai-api-key-here' && envKey.startsWith('sk-'));
-    
-    console.log('[OpenAIService] Environment status:', {
-      hasViteKey: hasEnvKey,
-      keyPreview: envKey ? `${envKey.substring(0, 10)}...` : 'Not set',
-      environment: import.meta.env.MODE || 'unknown',
-      supabaseMode: true // Always prefer Supabase Edge Functions
-    });
+    // OpenAI API key removed from frontend for security
+    console.log('[OpenAIService] SECURITY: OpenAI API calls should only be made from edge functions');
+    console.log('[OpenAIService] This service is deprecated - use edge functions instead');
   }
 
   /**
@@ -70,19 +64,8 @@ class OpenAIService {
         return supabaseKey;
       }
 
-      // Fallback to environment variable
-      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (envKey &&
-          envKey !== 'your-openai-api-key-here' &&
-          envKey !== 'sk-placeholder-replace-with-your-actual-openai-api-key' &&
-          !envKey.includes('placeholder') &&
-          envKey.startsWith('sk-') &&
-          envKey.length > 30) {
-        this.cachedKey = envKey;
-        this.keyTimestamp = Date.now();
-        console.log('[OpenAIService] ✅ Using OpenAI key from environment variables');
-        return envKey;
-      }
+      // Environment variable access removed for security
+      // OpenAI API keys should never be in frontend code
 
       console.warn('[OpenAIService] ⚠️ No valid OpenAI API key found in Supabase or environment');
       return null;
@@ -120,14 +103,9 @@ class OpenAIService {
         };
       }
 
-      // Check environment
-      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (envKey &&
-          envKey !== 'your-openai-api-key-here' &&
-          envKey !== 'sk-placeholder-replace-with-your-actual-openai-api-key' &&
-          !envKey.includes('placeholder') &&
-          envKey.startsWith('sk-') &&
-          envKey.length > 30) {
+      // Environment check removed for security
+      const hasValidKey = false;
+      if (hasValidKey) {
         return {
           isConfigured: true,
           source: 'environment',

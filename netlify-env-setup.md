@@ -17,9 +17,13 @@ To complete the deployment, you need to set the following environment variables 
 - `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key  
 - `VITE_N8N_API_URL` - Your n8n instance API URL
 - `VITE_N8N_API_KEY` - Your n8n API key
-- `VITE_OPENAI_API_KEY` - Your OpenAI API key
 
-**Values:** Refer to the CLAUDE.md file for the actual values to use.
+**Important Security Note:**
+- DO NOT set `VITE_OPENAI_API_KEY` in Netlify environment variables
+- OpenAI API key should only be configured in Supabase Edge Functions
+- This prevents API key exposure in frontend code
+
+**Values:** Refer to the CLAUDE.md file for the actual values to use (except OpenAI key).
 
 ### Step 3: Deploy Contexts
 Set these variables for all deploy contexts:

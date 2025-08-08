@@ -21,16 +21,10 @@ class OpenAIConfigService {
         return this.cachedKey;
       }
 
-      // For MVP: prioritize environment variables (simpler setup)
-      const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-      if (envKey && 
-          envKey !== 'your-openai-api-key-here' && 
-          envKey.startsWith('sk-') && 
-          envKey.length > 30) {
-        this.cachedKey = envKey;
-        this.keyTimestamp = Date.now();
-        return envKey;
-      }
+      // Environment API key access REMOVED for security
+      // OpenAI API keys should NEVER be in frontend code
+      // Use Supabase Edge Functions for all OpenAI calls
+      console.warn('[OpenAIConfigService] SECURITY: Direct OpenAI access disabled - use edge functions');
 
       // Fallback: try to get from Supabase configuration if available
       try {

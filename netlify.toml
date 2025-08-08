@@ -42,7 +42,7 @@
 # - VITE_SUPABASE_ANON_KEY
 # - VITE_N8N_API_URL
 # - VITE_N8N_API_KEY
-# - VITE_OPENAI_API_KEY
+# Note: DO NOT set VITE_OPENAI_API_KEY (OpenAI is handled by Supabase Edge Functions)
 
 # Function redirects removed - using database-driven approach
 
