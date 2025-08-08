@@ -67,6 +67,7 @@ export class SimpleChatService {
     } catch (error) {
       console.error('SimpleChatService error:', error);
       console.log('🔄 [CHAT] Edge Function failed, falling back to demo service');
+      toast.error('Using demo mode (Edge Function not available)', { id: 'ai-service' });
 
       // Fallback to demo service if Edge Function fails
       try {
