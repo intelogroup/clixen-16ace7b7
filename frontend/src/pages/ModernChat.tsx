@@ -25,21 +25,22 @@ export default function ModernChat() {
       role: 'assistant',
       content: `👋 **Welcome to Clixen AI!**
 
-I'm your intelligent workflow automation assistant. I help you create powerful n8n workflows using simple, natural language.
+I'm your intelligent workflow automation assistant. I can help with general questions and create powerful n8n workflows using natural conversation.
 
 **What I can help you with:**
-🔄 Automate repetitive tasks
+💬 Answer questions and have natural conversations
+🔄 Automate repetitive tasks and workflows
 🔗 Connect different services and APIs
 ⏰ Create scheduled workflows
 🪝 Set up webhooks and triggers
 📊 Build data processing pipelines
 
-**To get started**, just tell me what you'd like to automate! For example:
-- "Send me a Slack message every morning at 9 AM"
-- "When I receive an email, save the attachment to Google Drive"
-- "Create a webhook that processes form submissions"
+**Examples of what you can ask:**
+- General questions: "What is 2+3?" or "How does automation work?"
+- Automation requests: "Send me a Slack message every morning at 9 AM"
+- Workflow ideas: "Help me automate email processing"
 
-What would you like to automate today?`,
+Feel free to ask me anything or tell me about a task you'd like to automate!`,
       timestamp: new Date().toISOString()
     }
   ]);
