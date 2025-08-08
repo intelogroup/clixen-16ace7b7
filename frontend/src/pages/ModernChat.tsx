@@ -53,8 +53,25 @@ What would you like to automate today?`,
   }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
+    const sendMessageStart = Date.now();
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+
+    console.log('🚀 [MODERN-CHAT] handleSendMessage triggered', {
+      inputLength: inputValue.length,
+      inputPreview: inputValue.substring(0, 50) + (inputValue.length > 50 ? '...' : ''),
+      isLoading,
+      messagesCount: messages.length,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!inputValue.trim() || isLoading) {
+      console.log('⚠️ [MODERN-CHAT] handleSendMessage blocked:', {
+        reason: !inputValue.trim() ? 'empty input' : 'already loading',
+        inputValue: inputValue,
+        isLoading
+      });
+      return;
+    }
 
     const userMessage = {
       id: Date.now().toString(),
@@ -62,6 +79,12 @@ What would you like to automate today?`,
       content: inputValue.trim(),
       timestamp: new Date().toISOString()
     };
+
+    console.log('📝 [MODERN-CHAT] Adding user message:', {
+      messageId: userMessage.id,
+      content: userMessage.content.substring(0, 100) + '...',
+      contentLength: userMessage.content.length
+    });
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
@@ -75,10 +98,27 @@ What would you like to automate today?`,
         content: msg.content
       }));
 
+      console.log('🤖 [MODERN-CHAT] Calling SimpleChatService:', {
+        userMessage: userMessage.content.substring(0, 100) + '...',
+        historyLength: conversationHistory.length,
+        timestamp: new Date().toISOString()
+      });
+
       const result = await simpleChatService.handleNaturalConversation(
         userMessage.content,
         conversationHistory
       );
+
+      console.log('✅ [MODERN-CHAT] SimpleChatService response received:', {
+        hasResponse: !!result.response,
+        responseLength: result.response?.length || 0,
+        mode: result.mode,
+        needsMoreInfo: result.needsMoreInfo,
+        canProceed: result.canProceed,
+        questionsCount: result.questions?.length || 0,
+        hasScopeStatus: !!result.scopeStatus,
+        workflowGenerated: result.scopeStatus?.generated || false
+      });
 
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
@@ -87,18 +127,39 @@ What would you like to automate today?`,
         timestamp: new Date().toISOString()
       };
 
+      console.log('🤖 [MODERN-CHAT] Adding assistant message:', {
+        messageId: assistantMessage.id,
+        contentLength: assistantMessage.content.length,
+        contentPreview: assistantMessage.content.substring(0, 100) + '...'
+      });
+
       setMessages(prev => [...prev, assistantMessage]);
 
       // Update workflow status based on AI response
       if (result.scopeStatus?.generated) {
+        console.log('🎉 [MODERN-CHAT] Workflow generated!', {
+          workflowName: result.scopeStatus.workflow?.name,
+          workflowNodes: result.scopeStatus.workflow?.nodes?.length || 0
+        });
         setWorkflowStatus('generated');
         toast.success('🎉 Workflow generated successfully!');
       } else if (result.mode === 'validating') {
+        console.log('🔍 [MODERN-CHAT] Moving to validation phase');
         setWorkflowStatus('validating');
+      } else {
+        console.log('🔄 [MODERN-CHAT] Staying in current workflow status:', workflowStatus);
       }
 
     } catch (error) {
-      console.error('Chat error:', error);
+      const duration = Date.now() - sendMessageStart;
+      console.error('❌ [MODERN-CHAT] Chat error after', duration + 'ms:', {
+        error: error.message || error,
+        stack: error.stack,
+        userMessage: userMessage.content.substring(0, 100) + '...',
+        messagesCount: messages.length,
+        timestamp: new Date().toISOString()
+      });
+
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant' as const,
@@ -108,6 +169,12 @@ What would you like to automate today?`,
       setMessages(prev => [...prev, errorMessage]);
       toast.error('Failed to process message');
     } finally {
+      const totalDuration = Date.now() - sendMessageStart;
+      console.log('🏁 [MODERN-CHAT] handleSendMessage completed', {
+        duration: `${totalDuration}ms`,
+        finalMessagesCount: messages.length + 2, // +1 user +1 assistant
+        success: true
+      });
       setIsLoading(false);
     }
   };
@@ -247,7 +314,15 @@ What would you like to automate today?`,
           <div className="flex gap-3">
             <input
               value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                console.log('📝 [MODERN-CHAT] Input changed:', {
+                  from: inputValue.length,
+                  to: newValue.length,
+                  preview: newValue.substring(0, 20) + (newValue.length > 20 ? '...' : '')
+                });
+                setInputValue(newValue);
+              }}
               placeholder="Describe the workflow you want to create..."
               disabled={isLoading}
               className="input-clean flex-1"
