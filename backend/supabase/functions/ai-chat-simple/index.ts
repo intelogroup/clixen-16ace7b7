@@ -430,10 +430,16 @@ const analyzeConversation = (messages: ChatMessage[]): {
 
 // Main request handler
 serve(async (req) => {
-  console.log(`🚀 [AI-Chat-Simple] ${req.method} ${req.url}`);
+  const requestId = crypto.randomUUID().substring(0, 8);
+  console.log(`🚀 [AI-Chat-Simple] [${requestId}] ${req.method} ${req.url}`, {
+    userAgent: req.headers.get('user-agent'),
+    origin: req.headers.get('origin'),
+    authHeader: req.headers.get('authorization') ? 'present' : 'missing'
+  });
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
+    console.log(`✅ [AI-Chat-Simple] [${requestId}] CORS preflight handled`);
     return new Response(null, { headers: corsHeaders });
   }
 
