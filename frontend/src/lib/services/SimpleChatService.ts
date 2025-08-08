@@ -193,8 +193,9 @@ Please try your request again!`,
     const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
       body: requestPayload,
       headers: {
-        Authorization: session?.access_token ? `Bearer ${session.access_token}` : undefined,
-        'Content-Type': 'application/json'
+        'Authorization': session?.access_token ? `Bearer ${session.access_token}` : undefined,
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
       }
     });
 
