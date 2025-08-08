@@ -11,15 +11,15 @@ To complete the deployment, you need to set the following environment variables 
 
 ### Step 2: Add Required Variables
 
-Set the following environment variables:
+**Required Environment Variables:**
 
-```bash
-VITE_SUPABASE_URL="https://zfbgdixbzezpxllkoyfc.supabase.co"
-VITE_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw"
-VITE_N8N_API_URL="http://18.221.12.50:5678/api/v1"
-VITE_N8N_API_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU"
-VITE_OPENAI_API_KEY="your-openai-api-key-here"
-```
+- `VITE_SUPABASE_URL` - Your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` - Your Supabase anonymous key  
+- `VITE_N8N_API_URL` - Your n8n instance API URL
+- `VITE_N8N_API_KEY` - Your n8n API key
+- `VITE_OPENAI_API_KEY` - Your OpenAI API key
+
+**Values:** Refer to the CLAUDE.md file for the actual values to use.
 
 ### Step 3: Deploy Contexts
 Set these variables for all deploy contexts:
