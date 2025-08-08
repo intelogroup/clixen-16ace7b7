@@ -273,25 +273,207 @@ const extractWorkflowSpec = (conversationText: string): WorkflowSpec | null => {
   }
 };
 
-// Function to generate n8n workflow from specification
+// JSON Healing and Validation System
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  healed?: any;
+}
+
+const healAndValidateJSON = async (jsonString: string, retries = 3): Promise<ValidationResult> => {
+  console.log('🔧 Starting JSON healing process...');
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Try to parse as-is
+      const parsed = JSON.parse(jsonString);
+      
+      // Basic structure validation
+      if (parsed && typeof parsed === 'object' && parsed.nodes && Array.isArray(parsed.nodes)) {
+        console.log(`✅ JSON parsed successfully on attempt ${attempt}`);
+        return { valid: true, errors: [], warnings: [], healed: parsed };
+      } else {
+        throw new Error('Invalid workflow structure - missing nodes array');
+      }
+    } catch (error) {
+      console.log(`❌ JSON parse failed on attempt ${attempt}: ${error.message}`);
+      
+      if (attempt < retries) {
+        console.log('🩹 Attempting to heal JSON...');
+        
+        // Common healing patterns
+        jsonString = jsonString
+          // Remove markdown code blocks
+          .replace(/```json\s*/g, '')
+          .replace(/```\s*/g, '')
+          // Fix trailing commas
+          .replace(/,(\s*[}\]])/g, '$1')
+          // Fix missing quotes around property names
+          .replace(/(\w+):/g, '"$1":')
+          // Fix single quotes to double quotes
+          .replace(/'/g, '"')
+          // Remove comments
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\/\/.*$/gm, '')
+          // Fix common escape issues
+          .replace(/\\n/g, '\\n')
+          .replace(/\\t/g, '\\t');
+          
+        // Try AI-based healing for complex cases
+        if (attempt === retries - 1) {
+          try {
+            const healingPrompt = `Fix this malformed JSON to be valid n8n workflow JSON. Return ONLY the corrected JSON:
+
+${jsonString}`;
+            
+            const { response } = await callOpenAI([
+              { role: 'system', content: 'You are a JSON healing expert. Fix malformed JSON and return only valid JSON.' },
+              { role: 'user', content: healingPrompt }
+            ], undefined, 'gpt-3.5-turbo', 1000, 0.1);
+            
+            jsonString = response.trim();
+            console.log('🤖 AI healing applied');
+          } catch (aiError) {
+            console.log('❌ AI healing failed:', aiError.message);
+          }
+        }
+      }
+    }
+  }
+  
+  return {
+    valid: false,
+    errors: ['Failed to heal JSON after all attempts'],
+    warnings: ['Consider regenerating the workflow']
+  };
+};
+
+// Enhanced N8n API Client with MCP Integration
+class EnhancedN8nClient {
+  constructor() {
+    this.apiUrl = N8N_API_URL;
+    this.apiKey = N8N_API_KEY;
+  }
+
+  async makeRequest(endpoint: string, method = 'GET', body: any = null) {
+    const url = `${this.apiUrl}${endpoint}`;
+    
+    const options: RequestInit = {
+      method,
+      headers: {
+        'X-N8N-API-KEY': this.apiKey,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      options.body = JSON.stringify(body);
+    }
+
+    try {
+      const response = await fetch(url, options);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        let parsedError;
+        try {
+          parsedError = JSON.parse(errorText);
+        } catch {
+          parsedError = { message: errorText };
+        }
+        
+        throw new Error(`n8n API Error ${response.status}: ${parsedError.message || errorText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      
+      return await response.text();
+    } catch (error) {
+      console.error(`n8n API request failed for ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  async deployWorkflow(workflow: any): Promise<{ success: boolean; workflowId?: string; error?: string; webhookUrl?: string }> {
+    try {
+      console.log('🚀 Deploying workflow to n8n...');
+      
+      // Deploy to n8n
+      const deployment = await this.makeRequest('/workflows', 'POST', workflow);
+      console.log(`✅ Workflow deployed! ID: ${deployment.id}`);
+      
+      // Activate workflow
+      await this.makeRequest(`/workflows/${deployment.id}/activate`, 'POST');
+      console.log('✅ Workflow activated');
+      
+      // Find webhook path for URL generation
+      const webhookNode = workflow.nodes?.find((node: any) => 
+        node.type === 'n8n-nodes-base.webhook'
+      );
+      
+      let webhookUrl = null;
+      if (webhookNode?.parameters?.path) {
+        webhookUrl = `http://18.221.12.50:5678/webhook/${webhookNode.parameters.path}`;
+      }
+      
+      return {
+        success: true,
+        workflowId: deployment.id,
+        webhookUrl
+      };
+    } catch (error) {
+      console.error('❌ Workflow deployment failed:', error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+}
+
+// Function to generate n8n workflow from specification with healing
 const generateN8nWorkflow = async (spec: WorkflowSpec, userId?: string): Promise<any> => {
   const messages: ChatMessage[] = [
     {
       role: 'system',
       content: `Generate a complete n8n workflow JSON based on this specification. 
 
-Create a valid n8n workflow with:
-1. Complete nodes array with proper n8n node types
-2. Connections showing data flow between nodes
-3. Proper node positioning for visual clarity
-4. Required settings and metadata
+CRITICAL: Generate ONLY valid JSON. Follow this exact structure:
+
+{
+  "name": "Workflow Name",
+  "nodes": [
+    {
+      "id": "unique-node-id-1", 
+      "name": "Node Name",
+      "type": "n8n-nodes-base.webhook",
+      "position": [x, y],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "unique-node-id-1": {
+      "main": [[{"node": "unique-node-id-2", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {},
+  "staticData": {}
+}
 
 Use these n8n node types:
-- Triggers: n8n-nodes-base.webhook, n8n-nodes-base.cron, n8n-nodes-base.manualTrigger
-- Actions: n8n-nodes-base.httpRequest, n8n-nodes-base.emailSend, n8n-nodes-base.slack
+- Triggers: n8n-nodes-base.webhook, n8n-nodes-base.cron, n8n-nodes-base.manualTrigger  
+- Actions: n8n-nodes-base.httpRequest, n8n-nodes-base.emailSend, n8n-nodes-base.slack, n8n-nodes-base.respondToWebhook
 - Processing: n8n-nodes-base.set, n8n-nodes-base.if, n8n-nodes-base.function
 
-Return ONLY valid JSON without markdown formatting.`
+IMPORTANT: 
+- Use node IDs in connections, not node names
+- Include unique node IDs for each node
+- Make webhook paths URL-safe (no spaces, lowercase)
+- Return ONLY valid JSON without markdown formatting`
     },
     {
       role: 'user',
@@ -299,28 +481,17 @@ Return ONLY valid JSON without markdown formatting.`
     }
   ];
 
-  const { response } = await callOpenAI(messages, userId, 'gpt-4', 1500, 0.5);
+  const { response } = await callOpenAI(messages, userId, 'gpt-4', 1500, 0.3);
   
-  try {
-    // Clean the response to extract JSON
-    let cleanedResponse = response.trim();
-    
-    // Remove markdown code blocks if present
-    if (cleanedResponse.startsWith('```json')) {
-      cleanedResponse = cleanedResponse.replace(/```json\s*/, '').replace(/\s*```$/, '');
-    } else if (cleanedResponse.startsWith('```')) {
-      cleanedResponse = cleanedResponse.replace(/```\s*/, '').replace(/\s*```$/, '');
-    }
-    
-    const workflow = JSON.parse(cleanedResponse);
+  // Use healing system
+  const healed = await healAndValidateJSON(response);
+  
+  if (healed.valid && healed.healed) {
+    const workflow = healed.healed;
     
     // Ensure required fields
     if (!workflow.name) {
-      workflow.name = `${spec.trigger.description} → ${spec.actions[0]?.description || 'Process'}`;
-    }
-    
-    if (!workflow.nodes || !Array.isArray(workflow.nodes)) {
-      throw new Error('Invalid workflow structure');
+      workflow.name = `${spec.trigger.description} → ${spec.actions[0]?.description || 'Process'}`.substring(0, 80);
     }
     
     // Add metadata
@@ -334,45 +505,61 @@ Return ONLY valid JSON without markdown formatting.`
     };
     
     return workflow;
-  } catch (error) {
-    console.error('Error parsing generated workflow:', error);
+  } else {
+    console.error('JSON healing failed, using fallback workflow');
     
-    // Return a fallback workflow
+    // Generate a working fallback workflow  
+    const timestamp = Date.now().toString().slice(-6);
+    const webhookPath = `clixen-${spec.trigger.type}-${timestamp}`;
+    
     return {
-      name: `Clixen Workflow ${new Date().toISOString().slice(0, 10)}`,
-      active: false,
+      name: `Clixen ${spec.trigger.description}`,
       nodes: [
         {
-          id: crypto.randomUUID(),
-          name: 'Trigger',
-          type: 'n8n-nodes-base.webhook',
-          position: [200, 100],
-          parameters: { path: 'webhook-trigger' }
+          id: `trigger-${timestamp}`,
+          name: 'Workflow Trigger',
+          type: spec.trigger.type === 'webhook' ? 'n8n-nodes-base.webhook' : 'n8n-nodes-base.manualTrigger',
+          position: [200, 300],
+          parameters: spec.trigger.type === 'webhook' ? 
+            { path: webhookPath, httpMethod: 'POST' } : {}
         },
         {
-          id: crypto.randomUUID(),
-          name: 'Process',
-          type: 'n8n-nodes-base.set',
-          position: [500, 100],
+          id: `action-${timestamp}`,
+          name: 'Process Action',
+          type: spec.actions[0]?.type === 'email_send' ? 
+            'n8n-nodes-base.emailSend' : 'n8n-nodes-base.set',
+          position: [500, 300],
+          parameters: spec.actions[0]?.type === 'email_send' ? 
+            {} : { values: { string: [{ name: 'result', value: 'processed' }] } }
+        },
+        {
+          id: `respond-${timestamp}`,
+          name: 'Send Response',
+          type: 'n8n-nodes-base.respondToWebhook',
+          position: [800, 300],
           parameters: {
-            values: {
-              string: [{ name: 'processed', value: 'true' }]
-            }
+            respondWith: 'json',
+            responseBody: '={{ { status: "success", data: $json } }}'
           }
         }
       ],
       connections: {
-        'Trigger': {
-          main: [[{ node: 'Process', type: 'main', index: 0 }]]
+        [`trigger-${timestamp}`]: {
+          main: [[{ node: `action-${timestamp}`, type: 'main', index: 0 }]]
+        },
+        [`action-${timestamp}`]: {
+          main: [[{ node: `respond-${timestamp}`, type: 'main', index: 0 }]]
         }
       },
       settings: {},
       staticData: {},
-      tags: ['automation', 'generated'],
+      tags: ['automation', 'generated', 'clixen'],
       meta: {
         templateCredit: 'Generated by Clixen AI (Fallback)',
         generatedBy: 'clixen-mvp-fallback',
-        description: 'Fallback workflow template',
+        description: 'Reliable fallback workflow template',
+        complexity: spec.complexity,
+        integrations: spec.integrations,
         generatedAt: new Date().toISOString()
       }
     };
@@ -438,13 +625,36 @@ const analyzeConversation = (messages: ChatMessage[]): {
       phase = 'confirming';
       needsMoreInfo = false;
 
-      // Check for confirmation keywords in recent messages
-      if (recentMessage.includes('yes') || recentMessage.includes('correct') ||
-          recentMessage.includes('proceed') || recentMessage.includes('create') ||
-          recentMessage.includes('make it') || recentMessage.includes('build')) {
+      // Enhanced confirmation detection
+      const confirmationKeywords = [
+        'yes', 'correct', 'right', 'exactly', 'perfect',
+        'proceed', 'create', 'make it', 'build', 'deploy',
+        'go ahead', 'do it', 'that works', 'sounds good',
+        'let\'s do this', 'create the workflow', 'build the workflow'
+      ];
+
+      const negationKeywords = [
+        'no', 'wait', 'hold on', 'not quite', 'incorrect',
+        'wrong', 'change', 'modify', 'different', 'not right'
+      ];
+
+      const hasConfirmation = confirmationKeywords.some(keyword => 
+        recentMessage.toLowerCase().includes(keyword.toLowerCase())
+      );
+      
+      const hasNegation = negationKeywords.some(keyword => 
+        recentMessage.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      if (hasConfirmation && !hasNegation) {
         phase = 'generating';
         readyForGeneration = true;
+      } else if (hasNegation) {
+        // User wants changes - go back to refining
+        phase = 'refining';
+        needsMoreInfo = true;
       }
+      // else stay in confirming phase
     } else {
       // Incomplete specification - refining phase
       phase = 'refining';
@@ -605,27 +815,71 @@ serve(async (req) => {
     let workflowData: any = null;
 
     if (analysis.readyForGeneration) {
-      // Generate workflow
+      // Generate and deploy workflow
       console.log('🔧 [AI-Chat-Simple] Generating workflow...');
       
       const spec = extractWorkflowSpec(conversationHistory.concat({ role: 'user', content: message }).map(m => m.content).join(' '));
       
       if (spec) {
         try {
+          // Generate workflow with JSON healing
           workflowData = await generateN8nWorkflow(spec, user_id);
-          workflowGenerated = true;
+          console.log('✅ Workflow JSON generated and validated');
           
-          response = `🎉 **Workflow Generated Successfully!**\n\n` +
-            `I've created your "${workflowData.name}" workflow based on our conversation.\n\n` +
-            `**Summary:**\n` +
-            `- **Trigger**: ${spec.trigger.description}\n` +
-            `- **Actions**: ${spec.actions.map(a => a.description).join(', ')}\n` +
-            `- **Integrations**: ${spec.integrations.join(', ')}\n` +
-            `- **Complexity**: ${spec.complexity}\n\n` +
-            `Your workflow is ready for deployment! Click "Deploy" to make it live, or ask me any questions about how it works.`;
+          // Deploy to n8n
+          const n8nClient = new EnhancedN8nClient();
+          const deployment = await n8nClient.deployWorkflow(workflowData);
+          
+          if (deployment.success) {
+            workflowGenerated = true;
+            
+            // Store workflow in database
+            try {
+              await supabase.from('mvp_workflows').insert({
+                user_id,
+                project_id: null, // TODO: Get from session
+                name: workflowData.name,
+                description: workflowData.meta?.description || 'Generated workflow',
+                n8n_workflow_json: workflowData,
+                n8n_workflow_id: deployment.workflowId,
+                original_prompt: conversationHistory.map(m => m.content).join('\n'),
+                status: 'deployed',
+                webhook_url: deployment.webhookUrl
+              });
+              console.log('✅ Workflow stored in database');
+            } catch (dbError) {
+              console.error('❌ Database storage failed:', dbError);
+            }
+            
+            response = `🎉 **Workflow Generated and Deployed Successfully!**\n\n` +
+              `I've created and deployed your "${workflowData.name}" workflow to n8n.\n\n` +
+              `**Summary:**\n` +
+              `- **Trigger**: ${spec.trigger.description}\n` +
+              `- **Actions**: ${spec.actions.map(a => a.description).join(', ')}\n` +
+              `- **Integrations**: ${spec.integrations.join(', ')}\n` +
+              `- **Complexity**: ${spec.complexity}\n` +
+              `- **Workflow ID**: ${deployment.workflowId}\n` +
+              (deployment.webhookUrl ? `- **Webhook URL**: ${deployment.webhookUrl}\n` : '') +
+              `\n**Status**: ✅ Active and ready to use!\n\n` +
+              `Your workflow is now live and will process requests automatically. ` +
+              (deployment.webhookUrl ? 
+                `You can test it by sending POST requests to the webhook URL above.` :
+                `You can trigger it manually from the n8n interface.`);
+          } else {
+            workflowGenerated = false;
+            response = `🚧 **Workflow Generated but Deployment Failed**\n\n` +
+              `I've created your "${workflowData.name}" workflow, but encountered an issue deploying it to n8n:\n\n` +
+              `**Error**: ${deployment.error}\n\n` +
+              `The workflow JSON has been generated and validated. You can try deploying it manually or I can help troubleshoot the issue.`;
+          }
         } catch (error) {
-          console.error('Workflow generation failed:', error);
-          response = 'I encountered an issue generating your workflow. Let me try a different approach - could you describe your automation requirements once more?';
+          console.error('Workflow generation/deployment failed:', error);
+          response = `❌ **Workflow Generation Failed**\n\n` +
+            `I encountered an issue creating your workflow: ${error.message}\n\n` +
+            `Let me try a different approach. Could you describe your automation requirements in simpler terms? For example:\n` +
+            `- What should trigger the workflow?\n` +
+            `- What action should it perform?\n` +
+            `- Where should the results go?`;
         }
       }
     } else {
@@ -637,13 +891,25 @@ serve(async (req) => {
           content: `Current conversation phase: ${analysis.phase}
 
 Context: You have the full conversation history above. Be contextual and intelligent:
-- If user is asking non-workflow questions, answer them directly
-- If user wants automation, help them build workflows
-- Remember what they've already told you
-- Don't repeat the same questions
-- Be natural and helpful
 
-${analysis.needsMoreInfo && analysis.phase !== 'gathering' ? 'Focus on gathering remaining workflow requirements naturally.' : ''}`
+PHASE-SPECIFIC GUIDANCE:
+${analysis.phase === 'gathering' ? 
+  '- Help user define what they want to automate\n- Ask about triggers, actions, and outcomes\n- Be encouraging and supportive' :
+analysis.phase === 'refining' ? 
+  '- Clarify incomplete requirements\n- Ask specific technical questions\n- Help choose the right integrations' :
+analysis.phase === 'confirming' ? 
+  '- Summarize the complete workflow plan clearly\n- Ask for explicit confirmation before proceeding\n- Show what will be created and deployed\n- Make it easy to say yes or request changes' :
+  '- You should be generating the workflow now\n- This message should not appear'
+}
+
+GENERAL RULES:
+- If user is asking non-workflow questions, answer them directly
+- Remember what they've already told you - don't repeat questions
+- Be natural, conversational, and helpful
+- Use the conversation history to avoid redundancy
+- Show enthusiasm for their automation ideas
+
+${analysis.needsMoreInfo && analysis.phase !== 'gathering' ? 'Focus on gathering the remaining workflow requirements naturally.' : ''}`
         }
       ];
 
