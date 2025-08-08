@@ -42,7 +42,9 @@ export class SimpleChatService {
 
       // Try to use real Edge Function first
       console.log('🔄 [CHAT] Attempting to use ai-chat-simple Edge Function');
+      toast.loading('Connecting to AI service...', { id: 'ai-service' });
       const result = await this.callAiChatEdgeFunction(message, workflowMessages);
+      toast.success('✅ AI service connected', { id: 'ai-service' });
 
       // The ai-chat-simple edge function returns data in this format:
       // { response, phase, needs_more_info, ready_for_generation, clarifying_questions, workflow_generated, workflow_data }
