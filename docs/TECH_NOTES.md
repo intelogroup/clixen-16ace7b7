@@ -48,6 +48,27 @@
 - **Runtime toggles**: Control experimental features (e.g. JSON self-healing, version rollback) via environment-driven flags in Edge Functions or Supabase config.
 - **Rollout strategy**: Enable features for internal users before broader release.
 
+## 12. User Isolation in n8n Community Edition (MVP)
+- **Workflow Naming Convention**: All workflows prefixed with `[USR-{userId}]` for identification and cleanup
+- **Webhook Security**: Unique webhook paths per user: `webhook/{userHash}/{timestamp}/{random}`
+- **Data Flow**: Frontend → Supabase (RLS) → Edge Functions → n8n; Dashboard queries only from Supabase
+- **Cleanup Strategy**: Soft delete in Supabase, hard delete in n8n via cleanup script
+- **Quota Management**: 10 workflows per user (configurable), enforced at Supabase level
+
+## 13. 2-Way Synchronization Architecture
+- **Sync Service**: Edge Function polling n8n execution status every 30 seconds
+- **State Management**: Supabase as source of truth for workflow metadata
+- **Real-time Updates**: Supabase Realtime subscriptions for dashboard updates
+- **Error Recovery**: Failed deployments queued for retry with exponential backoff
+- **Consistency**: Periodic reconciliation job to ensure Supabase/n8n alignment
+
+## 14. MVP Security Considerations
+- **Accepted Risks**: Shared n8n instance with user prefixing (not true isolation)
+- **Mitigations**: RLS in Supabase, unguessable webhook URLs, user quotas
+- **User Agreement**: Clear disclaimer about shared infrastructure for 50-user trial
+- **Future Path**: Migrate to n8n Enterprise or container-per-user at scale
+- **GDPR Compliance**: User data deletion script with full cleanup capability
+
 ## 12. Data Retention & Cleanup
 - **Retention policy**: Archive or delete workflow versions and execution records older than 30 days via a scheduled Edge Function or Supabase scheduled trigger.
 - **Cleanup jobs**: Automate pruning of stale records to maintain database performance.

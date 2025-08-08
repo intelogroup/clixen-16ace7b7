@@ -7,7 +7,7 @@ import { NotificationProvider, ErrorBoundary } from './components/Notifications'
 
 // Modern MVP components
 const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
-const ModernDashboard = React.lazy(() => import('./pages/ModernDashboard'));
+const StandardDashboard = React.lazy(() => import('./pages/StandardDashboard'));
 const ModernChat = React.lazy(() => import('./pages/ModernChat'));
 const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
@@ -71,7 +71,7 @@ function AppContent() {
               path="/dashboard"
               element={
                 <React.Suspense fallback={<PageLoading message="Loading dashboard..." />}>
-                  <ModernDashboard />
+                  <StandardDashboard />
                 </React.Suspense>
               }
             />
