@@ -383,9 +383,9 @@ What would you like to automate today?`,
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: result.content,
+        content: result.response,
         timestamp: new Date().toISOString(),
-        metadata: result.workflowData
+        metadata: result.scopeStatus?.workflow
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -406,8 +406,12 @@ What would you like to automate today?`,
                 session_id: sessionId,
                 user_id: user.id,
                 role: 'assistant',
-                content: result.content,
-                metadata: result.workflowData ? { workflow_generated: true } : null
+                content: result.response,
+                metadata: result.scopeStatus ? {
+                  workflow_generated: result.scopeStatus.generated,
+                  mode: result.mode,
+                  questions: result.questions
+                } : null
               }
             ]);
         } catch (dbError) {
@@ -416,12 +420,12 @@ What would you like to automate today?`,
       }
 
       // If workflow was generated, update state
-      if (result.workflowGenerated && result.workflowData) {
+      if (result.scopeStatus?.generated && result.scopeStatus?.workflow) {
         setWorkflow({
-          name: result.workflowData.name || 'Generated Workflow',
-          description: result.workflowData.meta?.description,
+          name: result.scopeStatus.workflow.name || 'Generated Workflow',
+          description: result.scopeStatus.workflow.meta?.description,
           status: 'generated',
-          json_config: result.workflowData
+          json_config: result.scopeStatus.workflow
         });
         toast.success('Workflow generated successfully!');
 
@@ -430,7 +434,7 @@ What would you like to automate today?`,
           await supabase
             .from('ai_chat_sessions')
             .update({
-              title: result.workflowData.name || 'Generated Workflow',
+              title: result.scopeStatus.workflow.name || 'Generated Workflow',
               metadata: { workflow_generated: true }
             })
             .eq('id', sessionId);
