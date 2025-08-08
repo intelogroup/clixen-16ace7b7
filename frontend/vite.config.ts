@@ -4,13 +4,14 @@ import path from 'path'
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
+  root: path.resolve(__dirname, 'frontend'),
   plugins: [
     react(),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, 'frontend/src')
     }
   },
   server: {
@@ -139,7 +140,7 @@ export default defineConfig(({ mode }) => ({
     // Optimize for modern browsers
     cssCodeSplit: true,
   },
-  publicDir: 'public',
+  publicDir: path.resolve(__dirname, 'frontend/public'),
   envPrefix: 'VITE_',
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
