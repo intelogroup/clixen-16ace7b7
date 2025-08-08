@@ -15,8 +15,8 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-import { simpleChatService } from '../lib/services/SimpleChatService';
-import toast from 'react-hot-toast';
+// import { simpleChatService } from '../lib/services/SimpleChatService';
+// import toast from 'react-hot-toast';
 
 export default function ModernChat() {
   const [messages, setMessages] = useState([
