@@ -6,8 +6,8 @@ import { AppLoading, PageLoading } from './components/LoadingStates';
 import { NotificationProvider, ErrorBoundary } from './components/Notifications';
 
 // Modern MVP components
-const ModernAuth = React.lazy(() => import('./pages/ModernAuth'));
-const StandardDashboard = React.lazy(() => import('./pages/StandardDashboard'));
+const CleanAuth = React.lazy(() => import('./pages/CleanAuth'));
+const CleanDashboard = React.lazy(() => import('./pages/CleanDashboard'));
 const ModernChat = React.lazy(() => import('./pages/ModernChat'));
 const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
@@ -60,21 +60,21 @@ function AppContent() {
         {/* Public routes */}
         <Route path="/auth" element={
           <React.Suspense fallback={<AppLoading />}>
-            <ModernAuth />
+            <CleanAuth />
           </React.Suspense>
         } />
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <React.Suspense fallback={<PageLoading message="Loading dashboard..." />}>
+                <CleanDashboard />
+              </React.Suspense>
+            }
+          />
           <Route element={<Layout />}>
-            <Route
-              path="/dashboard"
-              element={
-                <React.Suspense fallback={<PageLoading message="Loading dashboard..." />}>
-                  <StandardDashboard />
-                </React.Suspense>
-              }
-            />
             <Route
               path="/chat"
               element={
