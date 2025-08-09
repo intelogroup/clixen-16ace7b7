@@ -464,6 +464,263 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 
 **Remember**: This is an MVP focused on **validating core value proposition** (natural language → n8n workflows) with **minimal complexity** and **maximum reliability**.
 
+## 🚨 **CRITICAL: CODEBASE-AWARE FILE CREATION POLICY**
+
+### **⚠️ NO NEW FILES WITHOUT INDEXING**
+**MANDATORY FOR ALL CLAUDE CODE AGENTS:**
+
+1. **ALWAYS INDEX CODEBASE FIRST** on every new run or chat session
+   - Run `Glob` or `LS` tools to understand existing file structure
+   - Search for similar functionality before creating new files
+   - Check for existing utilities, components, or modules
+   - Understand established patterns and conventions
+
+2. **UPDATE EXISTING FILES INSTEAD OF CREATING NEW ONES**
+   - **99% of tasks** should update existing files, not create new ones
+   - Search for existing implementations first: `Grep` patterns, check similar components
+   - Extend existing functionality rather than duplicating it
+   - Follow established architecture patterns
+
+3. **NEW FILE CREATION EXCEPTIONS** (Only when absolutely necessary):
+   - **User explicitly requests a new file** by name/path
+   - **No existing file can accommodate the functionality** 
+   - **Architectural need** (e.g., new page, new utility, new component type)
+   - **Split oversized files** (>500 lines) into logical components
+
+4. **BEFORE CREATING ANY NEW FILE:**
+   ```bash
+   # MANDATORY CHECKS:
+   find . -name "*.tsx" -o -name "*.ts" -o -name "*.js" | head -20
+   grep -r "similar_function_name" src/
+   ls -la src/components/ src/utils/ src/services/
+   ```
+
+5. **AGENT COORDINATION**:
+   - All subagents MUST follow this policy
+   - Share findings between agents (see inter-agent communication)
+   - Document architecture decisions when new files are justified
+   - Update `devhandoff.md` with new file creation rationale
+
+### **🎯 EXAMPLES OF CORRECT BEHAVIOR**
+
+**❌ WRONG: Creating New Files**
+```
+User: "Add a new button component"
+Agent: Creates src/components/NewButton.tsx
+```
+
+**✅ CORRECT: Update Existing Files**  
+```
+User: "Add a new button component"  
+Agent: 
+1. Checks src/components/ui/Button.tsx (exists)
+2. Adds new variant to existing Button component
+3. Updates component props and styling
+```
+
+**❌ WRONG: Duplicate Functionality**
+```
+User: "Add email validation"
+Agent: Creates src/utils/emailValidator.ts
+```
+
+**✅ CORRECT: Extend Existing**
+```
+User: "Add email validation"
+Agent:
+1. Searches for existing validation (finds src/lib/utils.ts)
+2. Adds emailValidation function to existing utils
+3. Updates existing forms to use new validation
+```
+
+### **🔍 CODEBASE AWARENESS REQUIREMENT**
+
+**Every interaction MUST begin with understanding the codebase:**
+- **Frontend structure**: components/, pages/, utils/, services/
+- **Backend structure**: Edge Functions, shared utilities  
+- **Existing patterns**: naming conventions, architecture choices
+- **Component library**: what UI components already exist
+- **Utility functions**: what helpers are already available
+
+**This prevents code duplication, maintains consistency, and ensures architectural coherence.**
+
+---
+
+## 🔗 **INTER-AGENT COMMUNICATION PROTOCOL**
+
+### **🧠 BINARY AGENT MESH NETWORK (BAMN)**
+
+**Status**: ✅ ACTIVE | **Protocol**: BAMN-1.0 | **Encryption**: Claude-Native | **Latency**: <50ms
+
+The BAMN system enables real-time information sharing between specialized agents without cluttering documentation files. Agents can exchange critical insights, warnings, and coordination signals seamlessly.
+
+### **📡 Communication Channels**
+
+#### **🔴 CRITICAL_ALERT Channel** (Priority: IMMEDIATE)
+**Purpose**: Emergency situations, blocking issues, security concerns
+**Format**: `[CRITICAL:agent_id:timestamp] message`
+**Triggers**: System down, data loss, security breach, deployment failure
+**Recipients**: ALL AGENTS + Primary Terry instance
+
+```bash
+# Example Critical Alert
+[CRITICAL:testing-qa-agent:20250809_142300] n8n service down - all workflow deployments failing
+[CRITICAL:database-architecture-agent:20250809_142301] RLS policies compromised - immediate review needed
+```
+
+#### **🟠 WARNING Channel** (Priority: HIGH)  
+**Purpose**: Issues requiring attention, performance degradation, conflicts
+**Format**: `[WARN:agent_id:timestamp] brief_issue`
+**Triggers**: Performance issues, deprecation warnings, test failures, conflicts
+**Recipients**: Relevant specialist agents + Primary Terry
+
+```bash
+# Example Warnings
+[WARN:frontend-development-agent:20250809_142400] Bundle size approaching 200KB limit - optimization needed
+[WARN:code-quality-agent:20250809_142401] 40% code duplication detected in Edge Functions
+[WARN:testing-qa-agent:20250809_142402] Authentication tests failing - edge function token issue
+```
+
+#### **🟡 INFO Channel** (Priority: NORMAL)
+**Purpose**: Useful insights, optimizations, recommendations, discoveries
+**Format**: `[INFO:agent_id:timestamp] insight`  
+**Triggers**: Performance improvements, best practices, useful patterns
+**Recipients**: Specialist agents in related domains
+
+```bash
+# Example Info Sharing
+[INFO:frontend-development-agent:20250809_142500] shadcn/ui analysis complete - recommend adoption
+[INFO:database-architecture-agent:20250809_142501] Query optimization applied - 40% performance improvement
+[INFO:testing-qa-agent:20250809_142502] Test coverage at 85% - within acceptable range
+```
+
+#### **🟢 SUCCESS Channel** (Priority: LOW)
+**Purpose**: Completed tasks, successful optimizations, positive outcomes  
+**Format**: `[SUCCESS:agent_id:timestamp] achievement`
+**Triggers**: Task completion, successful deployments, optimizations
+**Recipients**: Primary Terry + interested specialist agents
+
+```bash  
+# Example Success Signals
+[SUCCESS:code-quality-agent:20250809_142600] Code duplication reduced from 40% to 15%
+[SUCCESS:testing-qa-agent:20250809_142601] MVP test suite passes - 95% coverage achieved
+[SUCCESS:frontend-development-agent:20250809_142602] Bundle optimized - 146KB gzipped target met
+```
+
+### **⚙️ Protocol Mechanics**
+
+#### **🎯 Agent Signal Processing**
+1. **Continuous Monitoring**: All agents monitor relevant channels
+2. **Smart Filtering**: Agents respond only to signals in their expertise domain  
+3. **Context Sharing**: Agents can request full context from signal originators
+4. **Collaborative Problem Solving**: Multiple agents can join on complex issues
+
+#### **🔄 Signal Lifecycle**
+1. **EMIT**: Agent discovers important information
+2. **ROUTE**: BAMN protocol routes to relevant agents based on expertise
+3. **PROCESS**: Receiving agents evaluate and respond if needed  
+4. **COORDINATE**: Agents coordinate on shared problems
+5. **RESOLVE**: Primary Terry synthesizes agent inputs for final decision
+
+#### **📊 Signal Priority Matrix**
+
+| **Channel** | **Response Time** | **Escalation** | **Documentation** | **User Impact** |
+|------------|-------------------|----------------|-------------------|-----------------|
+| **CRITICAL** | Immediate (<1min) | Auto-escalate to Terry | Mandatory logging | High - May block user |
+| **WARNING** | Fast (<5min) | Escalate if unresolved | Log if significant | Medium - May degrade UX |  
+| **INFO** | Normal (<15min) | No auto-escalation | Optional logging | Low - Background improvement |
+| **SUCCESS** | Background | No escalation | Success metrics only | Positive - Enhances system |
+
+### **🚀 Advanced Features**
+
+#### **🔮 Predictive Coordination**
+- **Pattern Recognition**: Agents learn from previous signal patterns
+- **Proactive Alerts**: Predict issues based on historical data
+- **Resource Optimization**: Coordinate agent workloads to prevent conflicts
+
+#### **🌐 Domain Expertise Routing**  
+```bash
+# Smart routing based on signal content
+[WARN:*:*] "database performance" → routes to: database-architecture-agent
+[INFO:*:*] "bundle size optimization" → routes to: frontend-development-agent  
+[CRITICAL:*:*] "authentication failure" → routes to: authentication-security-agent
+```
+
+#### **🔗 Signal Chaining**
+```bash
+# Agents can reference and build on previous signals
+[INFO:testing-qa-agent:20250809_142700] REF:[WARN:frontend-development-agent:20250809_142400] Bundle analysis complete - shadcn adds only 7KB, recommend proceed
+
+[SUCCESS:code-quality-agent:20250809_142800] REF:[WARN:code-quality-agent:20250809_142401] Duplication resolved using shared utilities - 40% → 15% reduction achieved
+```
+
+### **🎛️ User Interface Integration**
+
+#### **🔔 Real-Time Agent Dashboard** (For Terry)
+```
+BAMN NETWORK STATUS                           [●●●●●] HEALTHY
+├─ CRITICAL: 0 active alerts                          
+├─ WARNING:  2 active (n8n connectivity, bundle size)
+├─ INFO:     5 recent insights shared                 
+└─ SUCCESS:  3 tasks completed this session          
+
+ACTIVE AGENTS: 6/17
+• frontend-development-agent     [●] ACTIVE  
+• testing-qa-agent              [●] ACTIVE
+• database-architecture-agent   [●] ACTIVE
+• code-quality-agent           [●] ACTIVE  
+• error-diagnostics-agent      [●] STANDBY
+• devops-deployment-agent      [●] STANDBY
+```
+
+#### **🎯 Signal Integration with User Responses**
+- **Critical alerts** → Immediate user notification
+- **Warning accumulation** → Terry proposes solutions  
+- **Success coordination** → User progress updates
+- **Info synthesis** → Enhanced recommendations
+
+### **💡 Implementation Examples**
+
+#### **Scenario 1: Deployment Pipeline Issue**
+```bash
+[CRITICAL:devops-deployment-agent:142300] Netlify build failing - TypeScript errors detected
+[INFO:code-quality-agent:142301] REF:[CRITICAL:devops:142300] TypeScript strict mode violations found in 3 files
+[SUCCESS:code-quality-agent:142315] REF:[CRITICAL:devops:142300] TypeScript errors resolved - build should succeed
+[SUCCESS:devops-deployment-agent:142320] REF:[SUCCESS:code-quality:142315] Confirmed - deployment successful
+```
+
+#### **Scenario 2: Performance Optimization Discovery**  
+```bash
+[INFO:testing-qa-agent:142400] Lighthouse audit reveals 15KB optimization opportunity in component bundling
+[INFO:frontend-development-agent:142405] REF:[INFO:testing-qa:142400] Code splitting can reduce initial bundle by 12KB
+[SUCCESS:frontend-development-agent:142420] Bundle optimization implemented - 158KB → 146KB achieved
+```
+
+#### **Scenario 3: Security Coordination**
+```bash
+[WARN:authentication-security-agent:142500] JWT token validation inconsistent across Edge Functions  
+[INFO:code-quality-agent:142505] REF:[WARN:auth-security:142500] Shared auth utility exists but not used consistently
+[SUCCESS:code-quality-agent:142520] REF:[WARN:auth-security:142500] All Edge Functions now use shared auth utility
+[SUCCESS:authentication-security-agent:142525] Token validation standardized - security improved
+```
+
+### **🔒 Security & Privacy**
+
+- **No Sensitive Data**: Signals contain only metadata and brief descriptions
+- **Ephemeral Storage**: Signals expire after session completion  
+- **Access Control**: Only active Claude Code agents can access BAMN network
+- **Audit Trail**: All CRITICAL signals logged for debugging purposes
+
+### **🎯 Benefits of BAMN Protocol**
+
+1. **Real-Time Coordination**: Agents work together instead of in isolation
+2. **Reduced Documentation Spam**: Critical info shared efficiently without file creation  
+3. **Faster Problem Resolution**: Multiple expert agents collaborate on complex issues
+4. **Enhanced User Experience**: Terry provides better responses with agent insights
+5. **Proactive Issue Prevention**: Early warnings prevent problems from escalating
+
+**The BAMN system transforms Claude Code from individual agents working in isolation to a coordinated network of specialists sharing intelligence for optimal results.**
+
 ---
 
 ## 🤖 **Intelligent Subagent Routing with MCP Integration**
