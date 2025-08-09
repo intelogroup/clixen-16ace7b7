@@ -33,7 +33,8 @@ import {
   Trash2,
   Play,
   Link,
-  BarChart
+  BarChart,
+  Search
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { designTokens } from '../styles/design-tokens';
@@ -162,6 +163,9 @@ export default function StandardDashboard() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [realTimeEnabled, setRealTimeEnabled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft' | 'error'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   useEffect(() => {
     loadData();
@@ -573,6 +577,45 @@ export default function StandardDashboard() {
     return formatDate(dateString);
   };
 
+  const filteredWorkflows = workflows.filter(workflow => {
+    // Search filter
+    const matchesSearch = searchQuery === '' || 
+      workflow.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      workflow.workflow_summary?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Status filter
+    const matchesStatus = filterStatus === 'all' || workflow.status === filterStatus;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const workflowTemplates = [
+    {
+      id: 'data-processing',
+      name: 'Data Processing Pipeline',
+      description: 'Automate data collection, transformation, and storage',
+      icon: <BarChart3 className="w-5 h-5" />,
+      gradient: 'from-blue-500 to-cyan-500',
+      popular: true
+    },
+    {
+      id: 'email-automation',
+      name: 'Email Automation',
+      description: 'Send personalized emails based on triggers',
+      icon: <MessageSquare className="w-5 h-5" />,
+      gradient: 'from-purple-500 to-pink-500',
+      popular: true
+    },
+    {
+      id: 'social-media',
+      name: 'Social Media Manager',
+      description: 'Schedule and post content across platforms',
+      icon: <Globe className="w-5 h-5" />,
+      gradient: 'from-green-500 to-emerald-500',
+      popular: false
+    }
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
@@ -657,15 +700,6 @@ export default function StandardDashboard() {
                 )}
               </motion.button>
 
-              <motion.button
-                onClick={handleNewWorkflow}
-                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-2"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Plus className="w-5 h-5" />
-                New Workflow
-              </motion.button>
 
               {/* Enhanced User Menu */}
               <div className="relative">
@@ -786,23 +820,70 @@ export default function StandardDashboard() {
               </div>
               
               {projects.length === 0 ? (
-                <div className="p-6 text-center">
+                <div className="p-8 text-center">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.6 }}
+                    className="space-y-6"
                   >
-                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400 mb-4">No projects yet</p>
-                    <Button
-                      onClick={handleNewWorkflow}
-                      variant="primary"
-                      size="sm"
-                      fullWidth
-                      leftIcon={<Plus className="w-4 h-4" />}
-                    >
-                      Create First Project
-                    </Button>
+                    <div className="relative">
+                      <motion.div
+                        className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center mx-auto mb-4"
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          rotate: [0, 2, -2, 0]
+                        }}
+                        transition={{ 
+                          duration: 3, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Activity className="w-10 h-10 text-purple-400" />
+                      </motion.div>
+                      <motion.div
+                        className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-400 rounded-full opacity-80"
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold text-white">Ready to Start Building?</h3>
+                      <p className="text-sm text-gray-400 max-w-sm mx-auto leading-relaxed">
+                        Projects help you organize your AI workflows. Create your first project to begin automating tasks.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Button
+                        onClick={handleCreateNewProject}
+                        variant="primary"
+                        size="sm"
+                        fullWidth
+                        leftIcon={<Plus className="w-4 h-4" />}
+                      >
+                        Create First Project
+                      </Button>
+                      
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
+                          <span>Organize workflows</span>
+                        </div>
+                        <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                        <div className="flex items-center gap-1">
+                          <Zap className="w-3 h-3" />
+                          <span>AI-powered</span>
+                        </div>
+                        <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                        <div className="flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          <span>Easy setup</span>
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
                 </div>
               ) : (
@@ -881,15 +962,67 @@ export default function StandardDashboard() {
                 {/* Enhanced Workflows List */}
                 <div className="rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
                   <div className="p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-white text-lg flex items-center gap-2">
                         <Workflow className="w-5 h-5 text-blue-400" />
                         Workflows
                       </h3>
-                      <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
-                        {workflows.length} total
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-400 bg-white/10 px-3 py-1 rounded-full">
+                          {filteredWorkflows.length} of {workflows.length}
+                        </span>
+                        <div className="flex items-center gap-1 p-1 bg-white/10 rounded-lg">
+                          <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}
+                            title="List view"
+                          >
+                            <BarChart className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}
+                            title="Grid view"
+                          >
+                            <BarChart3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                    
+                    {/* Search and Filter Controls */}
+                    {workflows.length > 0 && (
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="w-4 h-4 text-gray-400" />
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Search workflows..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {(['all', 'active', 'draft', 'error'] as const).map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => setFilterStatus(status)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                filterStatus === status
+                                  ? 'bg-purple-500 text-white shadow-lg'
+                                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+                              }`}
+                            >
+                              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {workflows.length === 0 ? (
@@ -899,26 +1032,160 @@ export default function StandardDashboard() {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.8 }}
                     >
-                      <Bot className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <div className="relative mb-8">
+                        <motion.div
+                          className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center mx-auto"
+                          animate={{ 
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 3, -3, 0]
+                          }}
+                          transition={{ 
+                            duration: 4, 
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <Bot className="w-12 h-12 text-blue-400" />
+                        </motion.div>
+                        <motion.div
+                          className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full flex items-center justify-center"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          <Sparkles className="w-3 h-3 text-white" />
+                        </motion.div>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        <div>
+                          <h4 className="text-2xl font-bold text-white mb-3">
+                            Ready to Create Magic? ✨
+                          </h4>
+                          <p className="text-gray-400 mb-6 max-w-lg mx-auto leading-relaxed">
+                            Transform your ideas into powerful AI workflows. Simply describe what you want to automate, and watch as intelligent agents bring it to life.
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-8">
+                          <div className="text-center p-3 rounded-xl bg-white/5 border border-white/10">
+                            <MessageSquare className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                            <p className="text-xs text-gray-400">Describe</p>
+                          </div>
+                          <div className="text-center p-3 rounded-xl bg-white/5 border border-white/10">
+                            <ArrowUpRight className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+                            <p className="text-xs text-gray-400">Generate</p>
+                          </div>
+                          <div className="text-center p-3 rounded-xl bg-white/5 border border-white/10">
+                            <CheckCircle className="w-6 h-6 text-green-400 mx-auto mb-2" />
+                            <p className="text-xs text-gray-400">Deploy</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <motion.button
+                            onClick={handleNewWorkflow}
+                            className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto text-lg"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <Plus className="w-6 h-6" />
+                            Start Creating
+                          </motion.button>
+                          
+                          {/* Workflow Templates */}
+                          <div className="mt-8 space-y-4">
+                            <h5 className="text-sm font-medium text-white text-center">
+                              Or choose from templates
+                            </h5>
+                            <div className="grid gap-3 max-w-lg mx-auto">
+                              {workflowTemplates.map((template, index) => (
+                                <motion.button
+                                  key={template.id}
+                                  onClick={() => navigate(`/chat?template=${template.id}`)}
+                                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-left"
+                                  whileHover={{ x: 4 }}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 1.2 + index * 0.1 }}
+                                >
+                                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${template.gradient} flex items-center justify-center flex-shrink-0`}>
+                                    {template.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-white text-sm">{template.name}</p>
+                                      {template.popular && (
+                                        <span className="px-2 py-0.5 bg-yellow-400/20 text-yellow-400 text-xs rounded-full">
+                                          Popular
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-400">{template.description}</p>
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                                </motion.button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-center gap-4 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>2 min setup</span>
+                            </div>
+                            <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                            <div className="flex items-center gap-1">
+                              <Zap className="w-3 h-3" />
+                              <span>AI-powered</span>
+                            </div>
+                            <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                            <div className="flex items-center gap-1">
+                              <Globe className="w-3 h-3" />
+                              <span>Deploy anywhere</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : filteredWorkflows.length === 0 ? (
+                    <motion.div 
+                      className="p-12 text-center"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Search className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                       <h4 className="text-xl font-medium text-white mb-2">
-                        No workflows yet
+                        No workflows found
                       </h4>
-                      <p className="text-gray-400 mb-6 max-w-md mx-auto">
-                        Create your first AI-powered workflow to automate tasks and boost productivity.
+                      <p className="text-gray-400 mb-6">
+                        {searchQuery 
+                          ? `No workflows match "${searchQuery}"`
+                          : `No workflows with status "${filterStatus}"`
+                        }
                       </p>
-                      <motion.button
-                        onClick={handleNewWorkflow}
-                        className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Plus className="w-5 h-5" />
-                        Create Workflow
-                      </motion.button>
+                      <div className="flex gap-3 justify-center">
+                        {searchQuery && (
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 rounded-lg transition-colors"
+                          >
+                            Clear search
+                          </button>
+                        )}
+                        {filterStatus !== 'all' && (
+                          <button
+                            onClick={() => setFilterStatus('all')}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-300 rounded-lg transition-colors"
+                          >
+                            Show all
+                          </button>
+                        )}
+                      </div>
                     </motion.div>
                   ) : (
                     <div className="divide-y divide-white/10">
-                      {workflows.map((workflow, index) => (
+                      {filteredWorkflows.map((workflow, index) => (
                         <motion.button
                           key={workflow.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -1032,18 +1299,61 @@ export default function StandardDashboard() {
                 <h3 className="text-2xl font-semibold text-white mb-3">
                   Welcome to Clixen AI
                 </h3>
-                <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg">
-                  Select a project from the sidebar to view workflows, or create your first AI-powered automation to get started.
+                <p className="text-gray-400 mb-8 max-w-lg mx-auto text-lg leading-relaxed">
+                  Your AI workflow automation platform is ready. Select a project from the sidebar to view workflows, or create your first intelligent automation.
                 </p>
-                <motion.button
-                  onClick={handleNewWorkflow}
-                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto text-lg"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Plus className="w-6 h-6" />
-                  Create Your First Workflow
-                </motion.button>
+                
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-2xl mx-auto mb-8">
+                  <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <Globe className="w-8 h-8 text-blue-400 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-white mb-1">Projects</p>
+                    <p className="text-xs text-gray-400">Organize workflows</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <Bot className="w-8 h-8 text-purple-400 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-white mb-1">AI Workflows</p>
+                    <p className="text-xs text-gray-400">Smart automation</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <Activity className="w-8 h-8 text-green-400 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-white mb-1">Real-time</p>
+                    <p className="text-xs text-gray-400">Live monitoring</p>
+                  </div>
+                  <div className="text-center p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <Zap className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-white mb-1">Deploy</p>
+                    <p className="text-xs text-gray-400">One-click launch</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <motion.button
+                    onClick={handleNewWorkflow}
+                    className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-3 mx-auto text-lg"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Plus className="w-6 h-6" />
+                    Create Your First Workflow
+                  </motion.button>
+                  
+                  <div className="flex items-center justify-center gap-6 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>No coding required</span>
+                    </div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="w-3 h-3" />
+                      <span>Natural language</span>
+                    </div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full" />
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      <span>Instant results</span>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             )}
           </div>
