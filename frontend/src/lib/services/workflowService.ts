@@ -22,10 +22,10 @@ export interface UserWorkflow {
 
 export class WorkflowService {
   /**
-   * Fetch all workflows for the current authenticated user
+   * Fetch all workflows for a specific user ID
    * Uses Supabase RLS to ensure user isolation
    */
-  static async getUserWorkflows(): Promise<UserWorkflow[]> {
+  static async getUserWorkflows(userId?: string): Promise<UserWorkflow[]> {
     try {
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -408,6 +408,72 @@ export class WorkflowService {
     } catch (error) {
       console.error('Error getting execution stats:', error);
       return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delete a workflow (hard delete)
+   */
+  static async deleteWorkflow(workflowId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('mvp_workflows')
+        .delete()
+        .eq('id', workflowId);
+
+      if (error) {
+        console.error('Error deleting workflow:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Duplicate a workflow
+   */
+  static async duplicateWorkflow(workflowId: string): Promise<boolean> {
+    try {
+      // Get the original workflow
+      const { data: originalWorkflow, error: fetchError } = await supabase
+        .from('mvp_workflows')
+        .select('*')
+        .eq('id', workflowId)
+        .single();
+
+      if (fetchError || !originalWorkflow) {
+        console.error('Error fetching workflow to duplicate:', fetchError);
+        return false;
+      }
+
+      // Create a copy
+      const { error: insertError } = await supabase
+        .from('mvp_workflows')
+        .insert({
+          ...originalWorkflow,
+          id: undefined, // Let Supabase generate new ID
+          name: `${originalWorkflow.name} (Copy)`,
+          status: 'draft', // New workflows start as draft
+          n8n_workflow_id: null, // Will be assigned when deployed
+          webhook_url: null, // Will be generated when deployed
+          created_at: new Date().toISOString(),
+          last_accessed_at: new Date().toISOString(),
+          execution_count: 0,
+        });
+
+      if (insertError) {
+        console.error('Error duplicating workflow:', insertError);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error duplicating workflow:', error);
+      return false;
     }
   }
 }
