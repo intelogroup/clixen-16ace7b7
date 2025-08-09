@@ -3,7 +3,8 @@
 ## 🎯 **SIMPLIFIED NATURAL-LANGUAGE WORKFLOW CREATOR**
 
 **🌐 Live URLs:**
-- **Frontend App**: http://18.221.12.50 ✅ (HTTPS-ready)
+- **Frontend App**: https://clixen.app ✅ (Netlify Production)
+- **Alternative URL**: http://18.221.12.50 ✅ (Direct server access)
 - **Authentication**: Working with real credentials ✅
 - **Supabase Backend**: https://zfbgdixbzezpxllkoyfc.supabase.co ✅
 - **n8n Interface**: http://18.221.12.50:5678 ✅
