@@ -1,6 +1,6 @@
 {
   "name": "clixen-frontend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Clixen AI platform frontend",
   "type": "module",
   "scripts": {
