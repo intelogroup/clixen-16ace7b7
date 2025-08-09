@@ -1,852 +1,418 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
-import { simpleChatService } from '../lib/services/SimpleChatService';
-import { 
-  Send, 
-  ArrowLeft, 
-  RotateCcw, 
-  Save, 
-  Upload, 
-  User, 
-  Bot, 
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Sparkles,
-  Wand2,
-  Zap,
-  MessageSquare,
-  Clock,
-  Star,
-  Workflow,
-  Play,
-  Copy,
-  Download,
-  ChevronDown,
-  Mic,
-  MicOff,
-  Globe
-} from 'lucide-react';
-import { designTokens } from '../styles/design-tokens';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { LoadingButton } from '../components/LoadingButton';
+import { ArrowLeft, Plus, Send, MessageCircle, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
-  metadata?: any;
+  status?: 'sending' | 'sent' | 'error';
 }
 
-interface WorkflowState {
-  id?: string;
+interface Workflow {
+  id: string;
   name: string;
-  description?: string;
-  status: 'draft' | 'generated' | 'saved' | 'deployed' | 'error';
-  json_config?: any;
-  n8n_workflow_id?: string;
+  status: 'draft' | 'deployed' | 'error' | 'generating';
+  webhook_url?: string;
+  created_at: string;
 }
 
-const MessageBubble: React.FC<{ 
-  message: Message; 
-  index: number;
-  isTyping?: boolean;
-}> = ({ message, index, isTyping = false }) => {
-  const isUser = message.role === 'user';
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success('Copied to clipboard');
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
-      className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} group`}
-    >
-      {!isUser && (
-        <motion.div 
-          className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Bot className="w-5 h-5 text-white" />
-        </motion.div>
-      )}
-      
-      <div className={`max-w-[80%] ${isUser ? 'order-1' : 'order-2'}`}>
-        <motion.div 
-          className={`relative p-4 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 group-hover:shadow-xl ${
-            isUser 
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-500/30 rounded-br-sm' 
-              : 'bg-white/10 text-white border-white/20 rounded-bl-sm'
-          }`}
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Copy button */}
-          <motion.button
-            onClick={handleCopy}
-            className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg ${
-              isUser ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'
-            }`}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            {copied ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          </motion.button>
-
-          <div className="pr-8">
-            {isTyping ? (
-              <motion.div 
-                className="flex items-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.2 }}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-gray-400">AI is thinking...</span>
-              </motion.div>
-            ) : (
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-            )}
-          </div>
-        </motion.div>
-        
-        <div className={`mt-2 text-xs text-gray-400 ${isUser ? 'text-right' : 'text-left'}`}>
-          {new Date(message.timestamp).toLocaleTimeString()}
-        </div>
-      </div>
-
-      {isUser && (
-        <motion.div 
-          className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg"
-          whileHover={{ scale: 1.1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <User className="w-5 h-5 text-white" />
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
-const WorkflowActionCard: React.FC<{
-  workflow: WorkflowState;
-  onSave: () => void;
-  onDeploy: () => void;
-  onTestWorkflow: () => void;
-  onWorkflowNameChange: (name: string) => void;
-  isSaving: boolean;
-  isDeploying: boolean;
-}> = ({ workflow, onSave, onDeploy, onTestWorkflow, onWorkflowNameChange, isSaving, isDeploying }) => {
-  const getStatusIcon = () => {
-    switch (workflow.status) {
-      case 'generated':
-        return <CheckCircle className="w-5 h-5 text-green-400" />;
-      case 'saved':
-        return <Save className="w-5 h-5 text-blue-400" />;
-      case 'deployed':
-        return <Upload className="w-5 h-5 text-purple-400" />;
-      case 'error':
-        return <XCircle className="w-5 h-5 text-red-400" />;
-      default:
-        return <AlertCircle className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (workflow.status) {
-      case 'generated':
-        return 'from-green-500/20 to-emerald-500/20 border-green-500/30';
-      case 'saved':
-        return 'from-blue-500/20 to-cyan-500/20 border-blue-500/30';
-      case 'deployed':
-        return 'from-purple-500/20 to-pink-500/20 border-purple-500/30';
-      case 'error':
-        return 'from-red-500/20 to-rose-500/20 border-red-500/30';
-      default:
-        return 'from-gray-500/20 to-slate-500/20 border-gray-500/30';
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-          <Workflow className="w-6 h-6 text-white" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-white text-lg">Workflow Actions</h3>
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-sm bg-gradient-to-r ${getStatusColor()} mt-1`}>
-            {getStatusIcon()}
-            <span className="capitalize">{workflow.status}</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="space-y-3">
-        <motion.button
-          onClick={onSave}
-          disabled={workflow.status === 'draft' || workflow.status === 'saved' || isSaving}
-          className="w-full p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30 disabled:from-gray-500/20 disabled:to-gray-600/20 border border-blue-500/30 disabled:border-gray-500/30 text-white rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'saved' && !isSaving ? 1.02 : 1 }}
-          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'saved' && !isSaving ? 0.98 : 1 }}
-        >
-          {isSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {workflow.status === 'saved' ? 'Saved' : 'Save Workflow'}
-        </motion.button>
-        
-        <motion.button
-          onClick={onDeploy}
-          disabled={workflow.status === 'draft' || workflow.status === 'deployed' || isDeploying || !workflow.name.trim()}
-          className="w-full p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 disabled:from-gray-500/20 disabled:to-gray-600/20 border border-purple-500/30 disabled:border-gray-500/30 text-white rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-          whileHover={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying && workflow.name.trim() ? 1.02 : 1 }}
-          whileTap={{ scale: workflow.status !== 'draft' && workflow.status !== 'deployed' && !isDeploying && workflow.name.trim() ? 0.98 : 1 }}
-        >
-          {isDeploying ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Upload className="w-4 h-4" />
-          )}
-          {workflow.status === 'deployed' ? 'Deployed' : 'Deploy to n8n'}
-        </motion.button>
-        
-        {!workflow.name.trim() && workflow.status === 'generated' && (
-          <p className="text-xs text-yellow-400 mt-2 text-center">
-            ⚠️ Please enter a workflow name before deploying
-          </p>
-        )}
-      </div>
-
-      {/* Workflow Name Input */}
-      <motion.div 
-        className="mt-6 pt-4 border-t border-white/10"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <h4 className="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
-          <Star className="w-4 h-4 text-yellow-400" />
-          Workflow Name
-        </h4>
-        <input
-          type="text"
-          value={workflow.name}
-          onChange={(e) => onWorkflowNameChange(e.target.value)}
-          placeholder="Enter workflow name..."
-          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 backdrop-blur-sm transition-all duration-300"
-        />
-        {workflow.description && (
-          <p className="text-xs text-gray-400 mt-2">{workflow.description}</p>
-        )}
-      </motion.div>
-
-      {/* Webhook URL Display */}
-      {workflow.status === 'deployed' && workflow.n8n_workflow_id && (
-        <motion.div 
-          className="mt-4 p-4 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-sm font-medium text-blue-400 flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              Webhook URL
-            </h4>
-            <motion.button
-              onClick={onTestWorkflow}
-              className="px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-500/30 text-green-400 text-xs rounded-lg font-medium transition-all duration-300 flex items-center gap-1"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Play className="w-3 h-3" />
-              Test
-            </motion.button>
-          </div>
-          <div className="flex items-center gap-2">
-            <code className="text-xs text-gray-300 bg-black/20 px-2 py-1 rounded flex-1 truncate">
-              {`https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`}
-            </code>
-            <motion.button
-              onClick={() => {
-                const webhookUrl = `https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`;
-                navigator.clipboard.writeText(webhookUrl);
-                toast.success('Webhook URL copied to clipboard');
-              }}
-              className="p-1 hover:bg-white/10 rounded transition-colors"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <Copy className="w-3 h-3 text-gray-400" />
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
-export default function StandardChat() {
+const StandardChat: React.FC = () => {
   const navigate = useNavigate();
+  const { projectId, conversationId } = useParams();
+  const { user } = useAuth();
+  
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [workflow, setWorkflow] = useState<WorkflowState>({
-    name: '',
-    status: 'draft'
-  });
-  const [workflowName, setWorkflowName] = useState('');
-  const [user, setUser] = useState<any>(null);
-  const [isDeploying, setIsDeploying] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
-  const [isListening, setIsListening] = useState(false);
+  const [isGeneratingWorkflow, setIsGeneratingWorkflow] = useState(false);
+  const [currentWorkflow, setCurrentWorkflow] = useState<Workflow | null>(null);
+  const [conversationTitle, setConversationTitle] = useState('New Conversation');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Get current user
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (!user) {
-        navigate('/auth');
-      }
-    };
-    getCurrentUser();
-  }, [navigate]);
-
-  // Auto-scroll to bottom when new messages arrive
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize chat session and welcome message
+  // Focus input on mount
   useEffect(() => {
-    const initializeSession = async () => {
-      if (user && !sessionId) {
-        try {
-          const { data, error } = await supabase
-            .from('ai_chat_sessions')
-            .insert({
-              user_id: user.id,
-              title: 'New Workflow Chat',
-              is_active: true
-            })
-            .select()
-            .single();
+    inputRef.current?.focus();
+  }, []);
 
-          if (error) throw error;
-          setSessionId(data.id);
+  // Load conversation history
+  useEffect(() => {
+    const loadConversation = async () => {
+      if (!user || !conversationId || conversationId === 'new') return;
 
-          if (messages.length === 0) {
-            const welcomeMessage: Message = {
-              id: '1',
-              role: 'assistant',
-              content: `👋 **Welcome to Clixen AI!**
+      try {
+        const { data: conversation } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('id', conversationId)
+          .eq('user_id', user.id)
+          .single();
 
-I'm your intelligent workflow automation assistant. I help you create powerful n8n workflows using simple, natural language.
-
-**What I can help you with:**
-🔄 Automate repetitive tasks
-🔗 Connect different services and APIs
-⏰ Create scheduled workflows
-🪝 Set up webhooks and triggers
-📊 Build data processing pipelines
-
-**To get started**, just tell me what you'd like to automate! For example:
-- "Send me a Slack message every morning at 9 AM"
-- "When I receive an email, save the attachment to Google Drive"
-- "Create a webhook that processes form submissions"
-
-What would you like to automate today?`,
-              timestamp: new Date().toISOString()
-            };
-            setMessages([welcomeMessage]);
-
-            await supabase
-              .from('ai_chat_messages')
-              .insert({
-                session_id: data.id,
-                user_id: user.id,
-                role: 'assistant',
-                content: welcomeMessage.content
-              });
+        if (conversation) {
+          setConversationTitle(conversation.title || 'Workflow Chat');
+          setMessages(conversation.messages || []);
+          
+          // Load associated workflow if exists
+          if (conversation.workflow_id) {
+            const { data: workflow } = await supabase
+              .from('workflows')
+              .select('*')
+              .eq('id', conversation.workflow_id)
+              .single();
+            
+            if (workflow) {
+              setCurrentWorkflow(workflow);
+            }
           }
-        } catch (error) {
-          console.error('Error initializing session:', error);
         }
+      } catch (error) {
+        console.error('Error loading conversation:', error);
       }
     };
 
-    initializeSession();
-  }, [user, messages.length, sessionId]);
+    loadConversation();
+  }, [conversationId, user]);
 
-  // Handle sending messages
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading || !user) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date().toISOString()
+      content: inputMessage.trim(),
+      timestamp: new Date().toISOString(),
+      status: 'sending'
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+    setInputMessage('');
     setIsLoading(true);
 
     try {
-      const conversationHistory = messages.map(msg => ({
-        type: msg.role as 'user' | 'assistant',
-        content: msg.content
-      }));
+      // Mark user message as sent
+      setMessages(prev => prev.map(msg => 
+        msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
+      ));
 
-      const result = await simpleChatService.handleNaturalConversation(
-        userMessage.content,
-        conversationHistory
-      );
+      // Call the workflow generator
+      const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
+        body: {
+          message: userMessage.content,
+          conversationHistory: messages,
+          userId: user.id,
+          projectId,
+          conversationId: conversationId === 'new' ? null : conversationId
+        }
+      });
+
+      if (error) throw error;
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
-        content: result.response,
+        content: data.response,
         timestamp: new Date().toISOString(),
-        metadata: result.scopeStatus?.workflow
+        status: 'sent'
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Save messages to database
-      if (sessionId && user) {
-        try {
-          await supabase
-            .from('ai_chat_messages')
-            .insert([
-              {
-                session_id: sessionId,
-                user_id: user.id,
-                role: 'user',
-                content: userMessage.content
-              },
-              {
-                session_id: sessionId,
-                user_id: user.id,
-                role: 'assistant',
-                content: result.response,
-                metadata: result.scopeStatus ? {
-                  workflow_generated: result.scopeStatus.generated,
-                  mode: result.mode,
-                  questions: result.questions
-                } : null
-              }
-            ]);
-        } catch (dbError) {
-          console.error('Error saving messages:', dbError);
-        }
-      }
-
-      // If workflow was generated, update state
-      if (result.scopeStatus?.generated && result.scopeStatus?.workflow) {
-        setWorkflow({
-          name: result.scopeStatus.workflow.name || 'Generated Workflow',
-          description: result.scopeStatus.workflow.meta?.description,
-          status: 'generated',
-          json_config: result.scopeStatus.workflow
+      // If workflow was generated
+      if (data.workflowGenerated) {
+        setIsGeneratingWorkflow(true);
+        setCurrentWorkflow({
+          id: data.workflowId,
+          name: data.workflowName,
+          status: 'generating',
+          created_at: new Date().toISOString()
         });
-        toast.success('Workflow generated successfully!');
 
-        // Update session title with workflow name
-        if (sessionId) {
-          await supabase
-            .from('ai_chat_sessions')
-            .update({
-              title: result.scopeStatus.workflow.name || 'Generated Workflow',
-              metadata: { workflow_generated: true }
-            })
-            .eq('id', sessionId);
+        // Update conversation title if it's a new conversation
+        if (conversationId === 'new' && data.conversationId) {
+          setConversationTitle(data.workflowName || 'Workflow Chat');
+          navigate(`/projects/${projectId}/chat/${data.conversationId}`, { replace: true });
         }
       }
 
-    } catch (error: any) {
-      console.error('Error processing message:', error);
+      // If workflow was deployed
+      if (data.workflowDeployed && data.webhookUrl) {
+        setCurrentWorkflow(prev => prev ? {
+          ...prev,
+          status: 'deployed',
+          webhook_url: data.webhookUrl
+        } : null);
+
+        const deploymentMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'system',
+          content: `✅ Workflow deployed successfully! Your webhook URL is ready.`,
+          timestamp: new Date().toISOString(),
+          status: 'sent'
+        };
+
+        setMessages(prev => [...prev, deploymentMessage]);
+      }
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I apologize, but I encountered an error processing your request: ${error.message}. Please try again or rephrase your request.`,
-        timestamp: new Date().toISOString()
+        id: crypto.randomUUID(),
+        role: 'system',
+        content: 'Sorry, I encountered an error processing your message. Please try again.',
+        timestamp: new Date().toISOString(),
+        status: 'sent'
       };
+
       setMessages(prev => [...prev, errorMessage]);
-      toast.error('Failed to process message');
+      
+      // Mark user message as error
+      setMessages(prev => prev.map(msg => 
+        msg.id === userMessage.id ? { ...msg, status: 'error' } : msg
+      ));
     } finally {
       setIsLoading(false);
+      setIsGeneratingWorkflow(false);
     }
   };
 
-  // Handle saving workflow
-  const handleSaveWorkflow = async () => {
-    if (!user || !workflow.json_config) {
-      toast.error('No workflow to save');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      let conversationId: string;
-
-      const { data: convData, error: convError } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          title: workflow.name || 'Untitled Workflow',
-          status: 'completed',
-          workflow_confirmed: true,
-          workflow_summary: workflow.description,
-          messages: messages
-        })
-        .select()
-        .single();
-
-      if (convError) throw convError;
-      conversationId = convData.id;
-
-      const { data, error } = await supabase
-        .from('workflows')
-        .insert({
-          user_id: user.id,
-          name: workflow.name,
-          description: workflow.description,
-          json_config: workflow.json_config,
-          status: 'saved',
-          user_intent: messages.find(m => m.role === 'user')?.content || ''
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await supabase
-        .from('user_workflows')
-        .insert({
-          user_id: user.id,
-          workflow_name: workflow.name,
-          n8n_workflow_id: workflow.n8n_workflow_id || data.id.toString(),
-          status: 'saved',
-          workflow_type: 'generated'
-        });
-
-      setWorkflow(prev => ({ ...prev, id: data.id, status: 'saved' }));
-      toast.success('Workflow saved successfully!');
-
-      await supabase
-        .from('usage_tracking')
-        .insert({
-          user_id: user.id,
-          event_type: 'workflow_saved',
-          workflow_id: data.id.toString(),
-          metadata: { conversation_id: conversationId }
-        });
-
-    } catch (error: any) {
-      console.error('Error saving workflow:', error);
-      toast.error('Failed to save workflow');
-    } finally {
-      setIsSaving(false);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
-  // Handle deploying to n8n
-  const handleDeployWorkflow = async () => {
-    if (!user || !workflow.json_config) {
-      toast.error('No workflow to deploy');
-      return;
-    }
-
-    setIsDeploying(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setWorkflow(prev => ({
-        ...prev,
-        status: 'deployed',
-        n8n_workflow_id: 'demo-' + Math.random().toString(36).slice(2)
-      }));
-      toast.success('Workflow deployed successfully!');
-
-    } catch (error: any) {
-      console.error('Error deploying workflow:', error);
-      toast.error('Failed to deploy workflow');
-      setWorkflow(prev => ({ ...prev, status: 'error' }));
-    } finally {
-      setIsDeploying(false);
-    }
+  const startNewChat = () => {
+    navigate(`/projects/${projectId}/chat/new`);
+    setMessages([]);
+    setCurrentWorkflow(null);
+    setConversationTitle('New Conversation');
+    inputRef.current?.focus();
   };
 
-  // Handle workflow name change
-  const handleWorkflowNameChange = (name: string) => {
-    setWorkflow(prev => ({ ...prev, name }));
-  };
-
-  // Handle testing workflow
-  const handleTestWorkflow = () => {
-    if (workflow.n8n_workflow_id) {
-      const webhookUrl = `https://your-n8n-instance.com/webhook/${workflow.n8n_workflow_id}`;
-      window.open(webhookUrl, '_blank');
-      toast.success('Opening workflow test URL');
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else {
-      toast.error('No workflow ID available for testing');
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
   };
 
-  // Handle starting new chat
-  const handleNewChat = async () => {
-    try {
-      if (sessionId) {
-        await supabase
-          .from('ai_chat_sessions')
-          .update({ is_active: false })
-          .eq('id', sessionId);
-      }
-
-      setMessages([]);
-      setWorkflow({ name: '', status: 'draft' });
-      setSessionId('');
-      toast.success('New chat started');
-    } catch (error) {
-      console.error('Error starting new chat:', error);
-      setMessages([]);
-      setWorkflow({ name: '', status: 'draft' });
-      setSessionId('');
-      toast.success('New chat started');
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'sending':
+        return <Loader2 className="h-3 w-3 animate-spin text-gray-400" />;
+      case 'sent':
+        return <CheckCircle className="h-3 w-3 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-3 w-3 text-red-500" />;
+      default:
+        return null;
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent"></div>
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]"></div>
-      
-      {/* Floating Orbs */}
-      <motion.div 
-        className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
-        animate={{
-          x: [0, 100, 0],
-          y: [0, -50, 0],
-          scale: [1, 1.2, 1],
-        }}
-        transition={{
-          duration: 15,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-
-      {/* Header */}
-      <motion.header 
-        className="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10 shadow-2xl"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <motion.button
-              onClick={() => navigate('/dashboard')}
-              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 flex items-center gap-2 text-gray-300 hover:text-white"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </motion.button>
-            
-            <div className="h-6 w-px bg-white/20" />
-            
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                <MessageSquare className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-white">AI Workflow Chat</h1>
-                <p className="text-sm text-gray-400">Create workflows with natural language</p>
-              </div>
-            </div>
-          </div>
-          
-          <motion.button
-            onClick={handleNewChat}
-            className="p-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 transition-all duration-300 flex items-center gap-2 text-gray-300 hover:text-white"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <RotateCcw className="w-5 h-5" />
-            <span className="hidden sm:inline">New Chat</span>
-          </motion.button>
+  const EmptyState = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="text-center max-w-md">
+        <div className="mb-4">
+          <MessageCircle className="h-12 w-12 text-gray-300 mx-auto" />
         </div>
-      </motion.header>
-
-      <div className="max-w-6xl mx-auto px-4 py-6 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-12rem)]">
-          {/* Chat Area */}
-          <div className="lg:col-span-3 flex flex-col">
-            <motion.div 
-              className="flex-1 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl flex flex-col overflow-hidden"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <AnimatePresence>
-                  {messages.map((message, index) => (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      index={index}
-                    />
-                  ))}
-                </AnimatePresence>
-                
-                {isLoading && (
-                  <MessageBubble
-                    message={{
-                      id: 'typing',
-                      role: 'assistant',
-                      content: '',
-                      timestamp: new Date().toISOString()
-                    }}
-                    index={messages.length}
-                    isTyping={true}
-                  />
-                )}
-                
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input Form */}
-              <div className="border-t border-white/10 p-6 bg-white/5">
-                <form onSubmit={handleSendMessage} className="flex gap-3">
-                  <div className="flex-1 relative">
-                    <input
-                      ref={inputRef}
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Describe the workflow you want to create..."
-                      disabled={isLoading}
-                      className="w-full pl-4 pr-12 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 backdrop-blur-sm transition-all duration-300"
-                    />
-                    <motion.button
-                      type="button"
-                      onClick={() => setIsListening(!isListening)}
-                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all duration-300 ${
-                        isListening ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-gray-400 hover:text-white'
-                      }`}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    </motion.button>
-                  </div>
-                  
-                  <motion.button
-                    type="submit"
-                    disabled={!inputValue.trim() || isLoading}
-                    className="px-6 py-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-2xl font-medium shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center gap-2"
-                    whileHover={{ scale: !inputValue.trim() || isLoading ? 1 : 1.05 }}
-                    whileTap={{ scale: !inputValue.trim() || isLoading ? 1 : 0.95 }}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                    <span className="hidden sm:inline">Send</span>
-                  </motion.button>
-                </form>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Workflow Actions Sidebar */}
-          <div className="space-y-6">
-            <WorkflowActionCard
-              workflow={workflow}
-              onSave={handleSaveWorkflow}
-              onDeploy={handleDeployWorkflow}
-              onTestWorkflow={handleTestWorkflow}
-              onWorkflowNameChange={handleWorkflowNameChange}
-              isSaving={isSaving}
-              isDeploying={isDeploying}
-            />
-
-            {/* Tips */}
-            <motion.div 
-              className="p-6 rounded-2xl backdrop-blur-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 shadow-xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                  <Wand2 className="w-5 h-5 text-white" />
-                </div>
-                <h4 className="font-medium text-white">Pro Tips</h4>
-              </div>
-              
-              <ul className="text-sm space-y-2 text-gray-300">
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
-                  Be specific about data sources and formats
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full mt-2 flex-shrink-0" />
-                  Mention timing and scheduling requirements
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0" />
-                  Include conditions and error handling
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 bg-pink-400 rounded-full mt-2 flex-shrink-0" />
-                  Specify desired output destinations
-                </li>
-              </ul>
-            </motion.div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Start a conversation
+        </h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Describe the workflow you'd like to create using natural language. I'll ask clarifying questions and help you build it.
+        </p>
+        <div className="space-y-2">
+          <p className="text-xs text-gray-400 font-medium">Try asking:</p>
+          <div className="space-y-1 text-xs text-gray-500">
+            <p>"Create a workflow that sends me an email when someone fills out my contact form"</p>
+            <p>"Set up automated social media posting from my blog RSS feed"</p>
+            <p>"Build a data sync between my CRM and email marketing tool"</p>
           </div>
         </div>
       </div>
     </div>
   );
-}
+
+  const ChatMessage = ({ message }: { message: Message }) => {
+    const isUser = message.role === 'user';
+    const isSystem = message.role === 'system';
+
+    return (
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
+        <div className={`max-w-[80%] sm:max-w-[70%] ${isUser ? 'order-2' : 'order-1'}`}>
+          <div
+            className={`
+              px-4 py-3 rounded-2xl text-sm leading-relaxed
+              ${isUser 
+                ? 'bg-blue-500 text-white rounded-br-md' 
+                : isSystem
+                ? 'bg-green-50 text-green-800 border border-green-200 rounded-bl-md'
+                : 'bg-gray-100 text-gray-800 rounded-bl-md'
+              }
+            `}
+          >
+            {message.content}
+          </div>
+          <div className={`flex items-center gap-2 mt-1 px-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <span className="text-xs text-gray-400">
+              {formatTimestamp(message.timestamp)}
+            </span>
+            {isUser && getStatusIcon(message.status)}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const WorkflowStatus = () => {
+    if (!currentWorkflow) return null;
+
+    return (
+      <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`
+              h-2 w-2 rounded-full 
+              ${currentWorkflow.status === 'deployed' ? 'bg-green-500' : 
+                currentWorkflow.status === 'generating' ? 'bg-yellow-500 animate-pulse' : 
+                currentWorkflow.status === 'error' ? 'bg-red-500' : 'bg-gray-300'}
+            `} />
+            <div>
+              <p className="text-sm font-medium text-gray-900">{currentWorkflow.name}</p>
+              <p className="text-xs text-gray-500 capitalize">
+                {currentWorkflow.status === 'generating' ? 'Generating workflow...' : 
+                 currentWorkflow.status === 'deployed' ? 'Deployed' : 
+                 currentWorkflow.status}
+              </p>
+            </div>
+          </div>
+          {currentWorkflow.webhook_url && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigator.clipboard.writeText(currentWorkflow.webhook_url!)}
+              className="text-xs"
+            >
+              Copy Webhook
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-screen flex flex-col bg-white">
+      {/* Header */}
+      <div className="border-b border-gray-200 bg-white px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/projects/${projectId}`)}
+              className="p-1"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900 truncate">
+                {conversationTitle}
+              </h1>
+              <p className="text-xs text-gray-500">Workflow Assistant</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={startNewChat}
+            className="flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New Chat</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Workflow Status */}
+      <WorkflowStatus />
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="p-4 space-y-1">
+            {messages.map((message) => (
+              <ChatMessage key={message.id} message={message} />
+            ))}
+            {isGeneratingWorkflow && (
+              <div className="flex justify-start mb-4">
+                <div className="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3 max-w-[70%]">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      Generating your workflow...
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t border-gray-200 bg-white px-4 py-3">
+        <div className="flex items-end space-x-3">
+          <div className="flex-1 relative">
+            <Input
+              ref={inputRef}
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Describe the workflow you want to create..."
+              className="pr-12 resize-none min-h-[44px] rounded-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+          <LoadingButton
+            onClick={handleSendMessage}
+            loading={isLoading}
+            disabled={!inputMessage.trim() || isLoading}
+            className="rounded-full h-11 w-11 p-0 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300"
+          >
+            <Send className="h-5 w-5" />
+          </LoadingButton>
+        </div>
+        <p className="text-xs text-gray-400 mt-2 px-1">
+          Press Enter to send, Shift+Enter for new line
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default StandardChat;
