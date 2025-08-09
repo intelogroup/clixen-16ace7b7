@@ -22,22 +22,17 @@
     "playwright:install": "playwright install"
   },
   "dependencies": {
-    "@heroicons/react": "^2.0.18",
     "@supabase/auth-ui-react": "^0.4.6",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.53.0",
     "clsx": "^2.0.0",
-    "date-fns": "^4.1.0",
     "framer-motion": "^10.18.0",
     "lovable-tagger": "^1.1.9",
     "lucide-react": "^0.292.0",
-    "openai": "^5.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
-    "react-markdown": "^9.0.0",
-    "react-router-dom": "^6.20.0",
-    "zod": "^3.25.76"
+    "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",

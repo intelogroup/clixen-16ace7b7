@@ -3,17 +3,17 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { 
-  Home, 
-  MessageSquare, 
+  House, 
+  MessageCircle, 
   LogOut,
-  Menu,
+  AlignJustify,
   X,
-  BarChart3,
-  FileText,
-  Settings,
-  User,
-  Bell,
-  Search
+  TrendingUp,
+  FileCode,
+  Cog,
+  UserRound,
+  BellRing,
+  Scan
 } from 'lucide-react';
 
 export default function Layout() {
@@ -45,25 +45,25 @@ export default function Layout() {
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: Home,
+      icon: House,
       current: location.pathname === '/dashboard'
     },
     {
       name: 'Create Workflow',
       href: '/chat',
-      icon: MessageSquare,
+      icon: MessageCircle,
       current: location.pathname === '/chat' || location.pathname === '/advanced-chat'
     },
     {
       name: 'Analytics',
       href: '/analytics',
-      icon: BarChart3,
+      icon: TrendingUp,
       current: location.pathname === '/analytics'
     },
     {
       name: 'Documentation',
       href: '/docs',
-      icon: FileText,
+      icon: FileCode,
       current: location.pathname === '/docs'
     }
   ];
@@ -106,11 +106,11 @@ export default function Layout() {
             })}
           </nav>
           
-          {/* User Section */}
+          {/* UserRound Section */}
           <div className="flex-shrink-0 border-t border-gray-200 p-4">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
+                <UserRound className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
@@ -180,11 +180,11 @@ export default function Layout() {
               })}
             </nav>
             
-            {/* Mobile User Section */}
+            {/* Mobile UserRound Section */}
             <div className="flex-shrink-0 border-t border-gray-200 p-4">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
+                  <UserRound className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -216,33 +216,33 @@ export default function Layout() {
             className="lg:hidden p-2 text-gray-400 hover:text-gray-600 rounded-md"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-6 w-6" />
+            <AlignJustify className="h-6 w-6" />
           </button>
           
           <div className="flex-1 lg:hidden" />
           
           <div className="flex items-center space-x-4">
-            {/* Search */}
+            {/* Scan */}
             <div className="hidden sm:block relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
+                <Scan className="h-4 w-4 text-gray-400" />
               </div>
               <input
                 type="text"
-                placeholder="Search workflows..."
+                placeholder="Scan workflows..."
                 className="input-clean pl-10 w-64"
               />
             </div>
             
             {/* Notifications */}
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md relative">
-              <Bell className="h-5 w-5" />
+              <BellRing className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-400 rounded-full"></span>
             </button>
             
-            {/* Settings */}
+            {/* Cog */}
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md">
-              <Settings className="h-5 w-5" />
+              <Cog className="h-5 w-5" />
             </button>
           </div>
         </div>

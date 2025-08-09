@@ -4,14 +4,14 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { WorkflowService } from '../lib/services/workflowService';
 import { 
-  Plus, 
-  Search,
-  MoreHorizontal,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  User,
+  PlusSquare, 
+  Scan,
+  MoreVertical,
+  Timer,
+  CheckSquare,
+  XSquare,
+  AlertTriangle,
+  UserRound,
   LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -33,10 +33,10 @@ interface Workflow {
 const StatusIcon: React.FC<{ status: string }> = ({ status }) => {
   const iconClass = "w-4 h-4";
   switch (status) {
-    case 'active': return <CheckCircle className={`${iconClass} text-green-600`} />;
-    case 'failed': case 'error': return <XCircle className={`${iconClass} text-red-600`} />;
-    case 'draft': return <Clock className={`${iconClass} text-yellow-600`} />;
-    default: return <AlertCircle className={`${iconClass} text-gray-400`} />;
+    case 'active': return <CheckSquare className={`${iconClass} text-green-600`} />;
+    case 'failed': case 'error': return <XSquare className={`${iconClass} text-red-600`} />;
+    case 'draft': return <Timer className={`${iconClass} text-yellow-600`} />;
+    default: return <AlertTriangle className={`${iconClass} text-gray-400`} />;
   }
 };
 
@@ -179,7 +179,7 @@ export default function CleanDashboard() {
                 onClick={handleNewWorkflow}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium flex items-center space-x-2"
               >
-                <Plus className="w-4 h-4" />
+                <PlusSquare className="w-4 h-4" />
                 <span>New Workflow</span>
               </button>
               <div className="relative">
@@ -187,7 +187,7 @@ export default function CleanDashboard() {
                   onClick={handleSignOut}
                   className="bg-gray-100 hover:bg-gray-200 p-2 rounded-md"
                 >
-                  <User className="w-5 h-5 text-gray-600" />
+                  <UserRound className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
             </div>
@@ -254,10 +254,10 @@ export default function CleanDashboard() {
                     </div>
                     {workflows.length > 0 && (
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Scan className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
-                          placeholder="Search workflows..."
+                          placeholder="Scan workflows..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-600 focus:border-blue-600"
@@ -269,7 +269,7 @@ export default function CleanDashboard() {
                   {workflows.length === 0 ? (
                     <div className="p-8 text-center">
                       <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Plus className="w-6 h-6 text-gray-400" />
+                        <PlusSquare className="w-6 h-6 text-gray-400" />
                       </div>
                       <h4 className="text-lg font-medium text-gray-900 mb-2">No workflows yet</h4>
                       <p className="text-gray-500 mb-4">
@@ -309,7 +309,7 @@ export default function CleanDashboard() {
                               </div>
                             </div>
                             <button className="p-1 hover:bg-gray-200 rounded">
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              <MoreVertical className="w-4 h-4 text-gray-400" />
                             </button>
                           </div>
                         </div>

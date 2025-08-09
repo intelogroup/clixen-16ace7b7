@@ -6,22 +6,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Root configuration for flat light theme */
+/* Minimal light theme configuration */
 :root {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  line-height: 1.5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  line-height: 1.6;
   font-weight: 400;
-  font-feature-settings: 'cv02','cv03','cv04','cv11';
-
-  color-scheme: light;
-  color: #111827;
-  background-color: #ffffff;
+  
+  color-scheme: light only;
+  color: #1f2937;
+  background-color: #fefefe;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-size-adjust: 100%;
 }
 
 /* Clean scrollbar for light theme */

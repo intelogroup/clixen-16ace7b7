@@ -1,19 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send,
-  MessageSquare,
-  Save,
-  Rocket,
+  SendHorizontal,
+  MessageCircle,
+  BookmarkCheck,
+  Zap,
   Lightbulb,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  User,
+  Timer,
+  CheckSquare,
+  AlertTriangle,
+  UserRound,
   Bot,
   Sparkles,
   Target,
   Settings,
-  FileText
+  FileCode
 } from 'lucide-react';
 import { WorkflowService } from '../lib/services/workflowService';
 import { supabase } from '../lib/supabase';
@@ -193,31 +193,31 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
         return {
           label: 'Refining',
           className: 'badge-warning',
-          icon: <Clock className="w-3 h-3" />
+          icon: <Timer className="w-3 h-3" />
         };
       case 'generated':
         return {
           label: 'Generated',
           className: 'badge-success',
-          icon: <CheckCircle className="w-3 h-3" />
+          icon: <CheckSquare className="w-3 h-3" />
         };
       case 'saved':
         return {
           label: 'Saved', 
           className: 'badge-info',
-          icon: <Save className="w-3 h-3" />
+          icon: <BookmarkCheck className="w-3 h-3" />
         };
       case 'deployed':
         return { 
           label: 'Deployed', 
           className: 'badge-success',
-          icon: <Rocket className="w-3 h-3" />
+          icon: <Zap className="w-3 h-3" />
         };
       default:
         return { 
           label: 'Draft', 
           className: 'badge-warning',
-          icon: <Clock className="w-3 h-3" />
+          icon: <Timer className="w-3 h-3" />
         };
     }
   };
@@ -240,7 +240,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-white" />
+                <MessageCircle className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">AI Workflow Chat</h1>
@@ -248,7 +248,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               </div>
             </div>
             <button className="btn-clean btn-secondary text-sm">
-              <Settings className="w-4 h-4" />
+              <Cog className="w-4 h-4" />
               New Chat
             </button>
           </div>
@@ -286,7 +286,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
 
               {message.role === 'user' && (
                 <div className="w-8 h-8 bg-gray-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <User className="w-4 h-4 text-white" />
+                  <UserRound className="w-4 h-4 text-white" />
                 </div>
               )}
             </div>
@@ -347,7 +347,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               {isLoading ? (
                 <div className="spinner-clean" />
               ) : (
-                <Send className="w-4 h-4" />
+                <SendHorizontal className="w-4 h-4" />
               )}
               Send
             </button>
@@ -380,7 +380,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               }`}
               disabled={workflowStatus === 'draft'}
             >
-              <Save className="w-4 h-4" />
+              <BookmarkCheck className="w-4 h-4" />
               Save Workflow
             </button>
             
@@ -392,7 +392,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               }`}
               disabled={workflowStatus === 'draft'}
             >
-              <Rocket className="w-4 h-4" />
+              <Zap className="w-4 h-4" />
               Deploy to n8n
             </button>
           </div>
@@ -411,7 +411,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               <span>Be specific about data sources and formats</span>
             </li>
             <li className="flex items-start space-x-2">
-              <Clock className="w-4 h-4 mt-0.5 text-blue-600 flex-shrink-0" />
+              <Timer className="w-4 h-4 mt-0.5 text-blue-600 flex-shrink-0" />
               <span>Mention timing and scheduling requirements</span>
             </li>
             <li className="flex items-start space-x-2">
@@ -419,7 +419,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
               <span>Include conditions and error handling</span>
             </li>
             <li className="flex items-start space-x-2">
-              <FileText className="w-4 h-4 mt-0.5 text-blue-600 flex-shrink-0" />
+              <FileCode className="w-4 h-4 mt-0.5 text-blue-600 flex-shrink-0" />
               <span>Specify desired output destinations</span>
             </li>
           </ul>

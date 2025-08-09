@@ -1,31 +1,31 @@
-// Design System Tokens for MVP Consistency
-// Simple, professional design system focusing on usability and consistency
+// Minimal Light Theme Design System
+// Ultra-clean, minimal design focusing on simplicity and readability
 
 export const designTokens = {
-  // Color System - Professional and minimal
+  // Color System - Minimal light theme
   colors: {
-    // Primary brand colors - consistent purple theme
+    // Primary brand colors - soft blue-gray
     primary: {
-      50: '#f8f7ff',
-      100: '#f0edff', 
-      500: '#8b5cf6',  // Main purple
-      600: '#7c3aed',  // Darker purple for hover
-      700: '#6d28d9',  // Dark purple
-      900: '#4c1d95',  // Very dark
+      50: '#f8fafc',
+      100: '#f1f5f9', 
+      500: '#64748b',  // Main slate
+      600: '#475569',  // Darker slate for hover  
+      700: '#334155',  // Dark slate
+      900: '#0f172a',  // Very dark
     },
     
-    // Neutral grays - simplified palette
+    // Neutral grays - ultra minimal
     gray: {
-      50: '#f9fafb',
-      100: '#f3f4f6', 
-      200: '#e5e7eb',
-      300: '#d1d5db',
-      400: '#9ca3af',
-      500: '#6b7280',
-      600: '#4b5563',
-      700: '#374151',
-      800: '#1f2937',
-      900: '#111827',
+      50: '#fefefe',
+      100: '#f8f9fa', 
+      200: '#e9ecef',
+      300: '#dee2e6',
+      400: '#adb5bd',
+      500: '#6c757d',
+      600: '#495057',
+      700: '#343a40',
+      800: '#212529',
+      900: '#121212',
     },
     
     // Semantic colors
