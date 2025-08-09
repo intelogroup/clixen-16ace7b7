@@ -13,6 +13,44 @@
 
 ---
 
+## 🎯 **CRITICAL: AGENT DEPLOYMENT SUCCESS PATTERNS**
+
+**⚠️ MANDATORY FOR ALL CLAUDE CODE AGENTS:**
+
+### **✅ SQL MIGRATIONS - PROVEN METHOD**
+```bash
+# ALWAYS use direct PostgreSQL connection with Node.js
+const { Client } = require('pg');
+const client = new Client({
+  connectionString: 'postgresql://postgres.zfbgdixbzezpxllkoyfc:Goldyear2023#@aws-0-us-east-1.pooler.supabase.com:6543/postgres',
+  ssl: { rejectUnauthorized: false }
+});
+await client.connect();
+await client.query(migrationSQL);
+await client.end();
+```
+
+### **✅ EDGE FUNCTION DEPLOYMENT - WORKING APPROACH**
+```bash
+# 1. Check existing deployments first
+curl -s https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
+
+# 2. Use MCP tools via specialized agents
+# 3. Test with API calls, not CLI commands
+# 4. Set environment variables via Supabase dashboard
+```
+
+### **❌ WHAT NEVER WORKS** (Don't waste time)
+- `supabase` CLI - Not installed
+- `psql` commands - Not available  
+- `docker` deployment - Not accessible
+- Package installations - Not persistent
+
+### **📚 SUCCESS REFERENCE**
+See `/root/repo/AGENTS_DEPLOYMENT_SUCCESS_GUIDE.md` for complete details and working examples from verified successful implementations.
+
+---
+
 ## 📋 **MVP Specification Overview**
 
 Clixen is a **natural-language workflow creator** that transforms user prompts into executable n8n workflows. This MVP focuses on delivering a **simple, reliable experience** for developers to define and deploy automation pipelines using conversational instructions.
