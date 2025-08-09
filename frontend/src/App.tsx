@@ -9,7 +9,6 @@ import { NotificationProvider, ErrorBoundary } from './components/Notifications'
 const CleanAuth = React.lazy(() => import('./pages/CleanAuth'));
 const CleanDashboard = React.lazy(() => import('./pages/CleanDashboard'));
 const ModernChat = React.lazy(() => import('./pages/ModernChat'));
-const TestEdgeFunction = React.lazy(() => import('./pages/TestEdgeFunction'));
 
 // Basic components
 import Layout from './components/Layout';
@@ -88,14 +87,6 @@ function AppContent() {
               element={
                 <React.Suspense fallback={<PageLoading message="Loading chat..." />}>
                   <ModernChat />
-                </React.Suspense>
-              }
-            />
-            <Route
-              path="/test"
-              element={
-                <React.Suspense fallback={<PageLoading message="Loading test..." />}>
-                  <TestEdgeFunction />
                 </React.Suspense>
               }
             />

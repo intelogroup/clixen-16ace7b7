@@ -15,7 +15,8 @@ import {
   Settings,
   FileText
 } from 'lucide-react';
-import { simpleChatService } from '../lib/services/SimpleChatService';
+import { WorkflowService } from '../lib/services/workflowService';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function ModernChat() {
@@ -105,10 +106,16 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
         timestamp: new Date().toISOString()
       });
 
-      const result = await simpleChatService.handleNaturalConversation(
-        userMessage.content,
-        conversationHistory
-      );
+      // Simplified chat - call Supabase Edge Function directly
+      const { data, error } = await supabase.functions.invoke('ai-chat-simple', {
+        body: {
+          message: userMessage.content,
+          history: conversationHistory
+        }
+      });
+      
+      if (error) throw error;
+      const result = data;
 
       console.log('✅ [MODERN-CHAT] SimpleChatService response received:', {
         hasResponse: !!result.response,
