@@ -3,16 +3,16 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { 
-  House, 
+  Home, 
   MessageCircle, 
   LogOut,
   AlignJustify,
   X,
   TrendingUp,
   FileCode,
-  Cog,
-  UserRound,
-  BellRing,
+  Settings,
+  User,
+  Bell,
   Scan
 } from 'lucide-react';
 
@@ -45,7 +45,7 @@ export default function Layout() {
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: House,
+      icon: Home,
       current: location.pathname === '/dashboard'
     },
     {
@@ -106,11 +106,11 @@ export default function Layout() {
             })}
           </nav>
           
-          {/* UserRound Section */}
+          {/* User Section */}
           <div className="flex-shrink-0 border-t border-gray-200 p-4">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                <UserRound className="w-4 h-4 text-white" />
+                <User className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
@@ -180,11 +180,11 @@ export default function Layout() {
               })}
             </nav>
             
-            {/* Mobile UserRound Section */}
+            {/* Mobile User Section */}
             <div className="flex-shrink-0 border-t border-gray-200 p-4">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center">
-                  <UserRound className="w-4 h-4 text-white" />
+                  <User className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
@@ -236,13 +236,13 @@ export default function Layout() {
             
             {/* Notifications */}
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md relative">
-              <BellRing className="h-5 w-5" />
+              <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-400 rounded-full"></span>
             </button>
             
-            {/* Cog */}
+            {/* Settings */}
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-md">
-              <Cog className="h-5 w-5" />
+              <Settings className="h-5 w-5" />
             </button>
           </div>
         </div>

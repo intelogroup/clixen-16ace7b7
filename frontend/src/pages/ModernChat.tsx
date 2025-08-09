@@ -8,7 +8,7 @@ import {
   Timer,
   CheckSquare,
   AlertTriangle,
-  UserRound,
+  User,
   Bot,
   Sparkles,
   Target,
@@ -286,7 +286,7 @@ Feel free to ask me anything or tell me about a task you'd like to automate!`,
 
               {message.role === 'user' && (
                 <div className="w-8 h-8 bg-gray-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <UserRound className="w-4 h-4 text-white" />
+                  <User className="w-4 h-4 text-white" />
                 </div>
               )}
             </div>

@@ -11,7 +11,7 @@ import {
   CheckSquare,
   XSquare,
   AlertTriangle,
-  UserRound,
+  User,
   LogOut
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -187,7 +187,7 @@ export default function CleanDashboard() {
                   onClick={handleSignOut}
                   className="bg-gray-100 hover:bg-gray-200 p-2 rounded-md"
                 >
-                  <UserRound className="w-5 h-5 text-gray-600" />
+                  <User className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
             </div>
