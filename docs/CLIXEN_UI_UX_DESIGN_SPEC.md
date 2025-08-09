@@ -1,6 +1,26 @@
- # Clixen UI/UX & Product Design Specification
+# Clixen UI/UX & Product Design Specification - Complete User Journey
 
- This document defines the UI/UX and product design requirements for the Clixen MVP, following the BMAD framework to align with stakeholder goals and ensure a coherent design vision.
+This document defines the comprehensive UI/UX and product design requirements for the Clixen MVP's workflow-centric architecture, with complete visual mockups, missing UI transitions, and interaction patterns for the full user lifecycle from landing to advanced usage.
+
+## 📋 **MISSING ELEMENTS ANALYSIS & ENHANCEMENTS**
+
+Based on analysis of existing documentation, the following critical UI/UX elements were identified as missing or needing enhancement for a complete user experience:
+
+### **🔍 Identified Gaps:**
+1. **Profile Management UI** - User profile editing, preferences, API keys
+2. **Billing Settings & Subscription Management** - Payment methods, plan changes, usage limits
+3. **Access Permission Modals** - OAuth flows, API key management, service connections
+4. **Advanced Chat Elements** - File attachments, rich text formatting, workflow sharing
+5. **Transition Screens** - Loading states between major sections, error recovery flows
+6. **Interactive Components** - Tooltips, guided tours, contextual help
+7. **Notification System** - In-app notifications, alert management, system status
+8. **Settings Hierarchy** - Organization of all user preferences and system controls
+
+### **🎯 Enhancement Strategy:**
+- **Maintain MVP Simplicity** while adding essential missing pieces
+- **Mobile-First Design** for all new components
+- **Consistent Visual Language** with existing mockups
+- **Progressive Disclosure** to avoid overwhelming users
 
  ## 1. Business Goals
  - **Accelerate adoption**: Deliver an intuitive, minimalistic interface that reduces time-to-first-workflow and lowers the learning curve.
@@ -22,14 +42,17 @@
  - **Responsiveness**: Mobile-first layout, fluid grids, and breakpoints aligned to screenshot assets.
  - **Accessibility**: High-contrast colors, keyboard navigability, ARIA labels.
 
- ### 3.2 Core Screens & Components
- | Screen / Component    | Purpose                                         | Requirements                                       |
- |-----------------------|-------------------------------------------------|----------------------------------------------------|
-| **Auth Page**         | Sign up / Sign in                                | Email/password fields, inline error validation styling, swift feedback |
-| **Project Dashboard** | List and select workflows and projects           | Card or table view with 'Create New Project' entry; project/workflow name, status, creation date; empty-state placeholder when no items; pagination or infinite scroll |
-| **Chat Interface**    | Define workflows via natural language            | Chat bubbles, timestamped history, "New Chat" button, loading spinner; empty-state placeholder prompting to start a new conversation |
- | **Deployment Status** | Monitor workflow deployment                      | Inline status badges (pending, success, failure), retry action |
- | **Global Header**     | Navigation and user menu                         | Logo, project selector, profile menu, logout       |
+### 3.2 Core Screens & Components (Workflow-Centric)
+| Screen / Component    | Purpose                                         | Requirements | Mockup Reference |
+|-----------------------|-------------------------------------------------|----------------------------------------------------|------------------|
+| **Auth Page**         | Sign up / Sign in with smooth onboarding | Email/password fields, inline validation, test credentials | `/docs/ONBOARDING_FLOW_MOCKUP.md` |
+| **Workflow Dashboard** | Central hub for all workflow operations | Grid/list view, search, filters, tags, bulk actions, analytics | `/docs/PROJECT_WORKFLOW_MANAGEMENT_MOCKUP.md` |
+| **Chat Interface**    | AI-powered workflow creation | Natural language processing, clarifying questions, progress indicators | `/docs/CHAT_INTERACTION_PATTERNS_MOCKUP.md` |
+| **Deployment Monitor** | Real-time deployment and execution tracking | Progress bars, status updates, error recovery, health monitoring | `/docs/DEPLOYMENT_STATUS_MONITORING_MOCKUP.md` |
+| **Global Navigation** | Consistent navigation across all screens | Responsive header, mobile menu, user profile, context awareness | `/docs/NAVIGATION_LAYOUT_PATTERNS_MOCKUP.md` |
+| **Analytics View** | Performance and usage insights | Charts, metrics, execution history, cost tracking | `/docs/ANALYTICS_DASHBOARD_MOCKUP.md` |
+| **Error Handling** | Graceful error recovery | Clear messages, recovery actions, retry mechanisms | `/docs/ERROR_HANDLING_UI_MOCKUP.md` |
+| **Billing & Usage** | Usage monitoring and billing management | Real-time usage, cost attribution, alerts | `/docs/BILLING_USAGE_COMPONENTS_MOCKUP.md` |
 
  ### 3.3 Visual Style & Assets
  - **Screenshot References**: Leverage existing UI assets in `ui-test-results/` and `screenshots/` for spacing, typography, and component placement.
