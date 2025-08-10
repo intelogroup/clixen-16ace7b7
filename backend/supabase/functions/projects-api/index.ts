@@ -1,6 +1,14 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { authenticate } from '../_shared/auth.ts';
+import { 
+  createSuccessResponse, 
+  createErrorResponse, 
+  createValidationErrorResponse,
+  createAuthErrorResponse 
+} from '../_shared/responses.ts';
+import { validate, PROJECT_VALIDATION_RULES, validateUUID } from '../_shared/validation.ts';
 
 // Types for Project API
 interface Project {
@@ -51,53 +59,7 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-// Authentication middleware
-const authenticate = async (req: Request): Promise<{ user: any; error?: string }> => {
-  const authHeader = req.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { user: null, error: 'Authentication required - Bearer token missing' };
-  }
-
-  try {
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return { user: null, error: 'Invalid authentication token' };
-    }
-
-    return { user };
-  } catch (error) {
-    return { user: null, error: 'Authentication failed' };
-  }
-};
-
-// Input validation
-const validateProjectData = (data: any): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-  
-  if (!data.name || typeof data.name !== 'string' || data.name.trim().length === 0) {
-    errors.push('Project name is required and must be a non-empty string');
-  }
-  
-  if (data.name && data.name.length > 255) {
-    errors.push('Project name must be 255 characters or less');
-  }
-  
-  if (data.description && typeof data.description !== 'string') {
-    errors.push('Project description must be a string');
-  }
-  
-  if (data.color && (typeof data.color !== 'string' || !data.color.match(/^#[0-9A-Fa-f]{6}$/))) {
-    errors.push('Project color must be a valid hex color code (e.g., #3B82F6)');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
+// Removed duplicate authentication and validation - now using shared utilities
 
 // Get all projects for a user
 const getUserProjects = async (userId: string): Promise<ProjectWithStats[]> => {
@@ -338,28 +300,17 @@ serve(async (req) => {
   console.log(`🚀 [PROJECTS-API-${requestId}] ${req.method} ${req.url}`);
 
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
     const url = new URL(req.url);
     const pathSegments = url.pathname.split('/').filter(Boolean);
     
-    // Authenticate user
+    // Authenticate user using shared utility
     const { user, error: authError } = await authenticate(req);
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: authError || 'Authentication failed',
-          timestamp: new Date().toISOString()
-        } as ApiResponse),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      return createAuthErrorResponse(authError || 'Authentication failed');
     }
 
     const userId = user.id;
@@ -382,33 +333,16 @@ serve(async (req) => {
         } else if (req.method === 'POST') {
           // POST /projects - Create new project
           const body = await req.json();
-          const validation = validateProjectData(body);
+          const validation = validate(body, PROJECT_VALIDATION_RULES);
           
           if (!validation.isValid) {
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: 'Validation failed',
-                message: validation.errors.join(', '),
-                timestamp: new Date().toISOString()
-              } as ApiResponse),
-              { 
-                status: 400, 
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              }
-            );
+            return createValidationErrorResponse('request', validation.errors.join(', '));
           }
           
-          const project = await createProject(userId, body);
-          response = {
-            success: true,
-            data: project,
-            message: 'Project created successfully',
-            timestamp: new Date().toISOString()
-          };
-          statusCode = 201;
+          const project = await createProject(userId, validation.sanitizedData);
+          return createSuccessResponse(project, 'Project created successfully', 201);
         } else {
-          throw new Error('Method not allowed');
+          return createErrorResponse('Method not allowed', 405);
         }
       } else if (pathSegments.length === 2) {
         // /projects/{id} routes
