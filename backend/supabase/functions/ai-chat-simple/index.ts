@@ -131,7 +131,7 @@ const getOpenAIApiKey = async (userId?: string): Promise<string | null> => {
   }
 };
 
-// Function to call OpenAI API
+// Function to call OpenAI API with timeout protection
 const callOpenAI = async (
   messages: ChatMessage[],
   userId?: string,
@@ -139,18 +139,39 @@ const callOpenAI = async (
   maxTokens = 1000,
   temperature = 0.7
 ): Promise<{ response: string; tokensUsed: number }> => {
+  const requestId = crypto.randomUUID().substring(0, 8);
+  console.log(`🤖 [OpenAI] [${requestId}] Starting API call:`, {
+    model,
+    maxTokens,
+    messageCount: messages.length,
+    userId: userId?.substring(0, 8) + '***'
+  });
+
   const apiKey = await getOpenAIApiKey(userId);
   
   if (!apiKey) {
+    console.log(`❌ [OpenAI] [${requestId}] No API key configured`);
     return {
       response: '⚠️ **OpenAI API Key Required**\n\nTo use the AI workflow assistant, you need to configure your OpenAI API key in your account settings.\n\n**How to get started:**\n1. Get your API key from [OpenAI](https://platform.openai.com/api-keys)\n2. Add it in your account settings\n3. Start creating amazing workflows!\n\nYour API key is stored securely and never shared.',
       tokensUsed: 0
     };
   }
 
+  console.log(`✅ [OpenAI] [${requestId}] API key configured, making request...`);
+
+  // Set up timeout protection
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.error(`⏰ [OpenAI] [${requestId}] Request timed out after 45 seconds`);
+    controller.abort();
+  }, 45000); // 45 second timeout
+
+  const startTime = Date.now();
+
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
@@ -163,19 +184,39 @@ const callOpenAI = async (
       })
     });
 
+    clearTimeout(timeoutId);
+    const duration = Date.now() - startTime;
+    console.log(`⚡ [OpenAI] [${requestId}] Request completed in ${duration}ms`);
+
     if (!response.ok) {
       const errorData = await response.text();
+      console.error(`❌ [OpenAI] [${requestId}] API error:`, { status: response.status, error: errorData });
       throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
+    console.log(`✅ [OpenAI] [${requestId}] Response received:`, {
+      tokensUsed: data.usage?.total_tokens || 0,
+      responseLength: data.choices[0]?.message?.content?.length || 0
+    });
     
     return {
       response: data.choices[0]?.message?.content || 'No response generated',
       tokensUsed: data.usage?.total_tokens || 0
     };
   } catch (error) {
-    console.error('OpenAI API call failed:', error);
+    clearTimeout(timeoutId);
+    const duration = Date.now() - startTime;
+    
+    if (error.name === 'AbortError') {
+      console.error(`⏰ [OpenAI] [${requestId}] Request aborted due to timeout after ${duration}ms`);
+      return {
+        response: '⏰ **Request Timed Out**\n\nI apologize, but the AI request took too long to process (over 45 seconds). This might be due to:\n\n- High API load\n- Complex request processing\n- Network connectivity issues\n\nPlease try again with a simpler request, or wait a moment and retry.',
+        tokensUsed: 0
+      };
+    }
+
+    console.error(`❌ [OpenAI] [${requestId}] API call failed after ${duration}ms:`, error);
     
     // User-friendly error messages
     let errorMessage = 'I encountered an error processing your request. Please try again.';
@@ -362,9 +403,20 @@ class EnhancedN8nClient {
 
   async makeRequest(endpoint: string, method = 'GET', body: any = null) {
     const url = `${this.apiUrl}${endpoint}`;
+    const requestId = crypto.randomUUID().substring(0, 8);
     
+    console.log(`🔧 [n8n] [${requestId}] ${method} ${endpoint}`);
+    
+    // Set up timeout protection for n8n API calls
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.error(`⏰ [n8n] [${requestId}] Request timed out after 30 seconds`);
+      controller.abort();
+    }, 30000); // 30 second timeout for n8n API
+
     const options: RequestInit = {
       method,
+      signal: controller.signal,
       headers: {
         'X-N8N-API-KEY': this.apiKey,
         'Content-Type': 'application/json',
@@ -375,8 +427,14 @@ class EnhancedN8nClient {
       options.body = JSON.stringify(body);
     }
 
+    const startTime = Date.now();
+
     try {
       const response = await fetch(url, options);
+      clearTimeout(timeoutId);
+      
+      const duration = Date.now() - startTime;
+      console.log(`⚡ [n8n] [${requestId}] Request completed in ${duration}ms`);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -387,6 +445,10 @@ class EnhancedN8nClient {
           parsedError = { message: errorText };
         }
         
+        console.error(`❌ [n8n] [${requestId}] API error:`, { 
+          status: response.status, 
+          error: parsedError.message || errorText 
+        });
         throw new Error(`n8n API Error ${response.status}: ${parsedError.message || errorText}`);
       }
 
@@ -397,7 +459,15 @@ class EnhancedN8nClient {
       
       return await response.text();
     } catch (error) {
-      console.error(`n8n API request failed for ${endpoint}:`, error);
+      clearTimeout(timeoutId);
+      const duration = Date.now() - startTime;
+      
+      if (error.name === 'AbortError') {
+        console.error(`⏰ [n8n] [${requestId}] Request aborted due to timeout after ${duration}ms`);
+        throw new Error('n8n API request timed out after 30 seconds');
+      }
+      
+      console.error(`❌ [n8n] [${requestId}] API request failed after ${duration}ms:`, error);
       throw error;
     }
   }

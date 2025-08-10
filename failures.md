@@ -2,6 +2,36 @@
 
 ## Major Failures Identified
 
+### 🚨 **CRITICAL: Workflow Creation Infinite Hanging** ❌ (August 10, 2025)
+**What Failed**: ai-chat-simple Edge Function requests hang indefinitely (60+ minutes) with no response
+**Root Cause**: OPENAI_API_KEY environment variable NOT configured in Supabase Edge Functions production environment
+**Impact**: 100% workflow creation failure rate - complete production outage for core feature
+**Symptoms**:
+- Frontend requests to ai-chat-simple never return
+- Edge Function returns immediate 500 error: "OpenAI API key not configured"
+- Users experience infinite loading states
+- No user-facing error messages
+
+**Investigation Findings**:
+- Function code was correct and properly structured  
+- Environment variable `OPENAI_API_KEY` missing from Supabase Edge Functions environment
+- No timeout protection on OpenAI API calls (would cause hangs if key was configured)
+- No timeout protection on n8n API calls
+- Comprehensive error logging missing
+
+**Solution Applied**:
+1. **IMMEDIATE**: Configure OPENAI_API_KEY in Supabase Edge Functions environment  
+2. **PREVENTION**: Added 45-second timeout protection to OpenAI API calls with AbortController
+3. **PREVENTION**: Added 30-second timeout protection to n8n API calls  
+4. **MONITORING**: Enhanced error logging with request IDs and duration tracking
+5. **UX**: User-friendly timeout messages instead of infinite hangs
+
+**Files Modified**: `/root/repo/backend/supabase/functions/ai-chat-simple/index.ts`
+**Lesson**: Always verify environment variable configuration in production before deployment
+**Prevention**: Implement environment variable validation checks in Edge Function startup
+
+## Major Failures Identified
+
 ### 1. **Scope Creep Violation** ❌
 **What Failed**: Team implemented complex multi-agent system (3,500+ lines) instead of simple GPT processing
 **Root Cause**: Misunderstood MVP philosophy, followed AI hype instead of user needs
