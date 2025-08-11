@@ -1256,17 +1256,41 @@ class ComprehensiveN8nPipeline {
         }
       }
       
-      // Check if we exhausted attempts
+      // Check if we exhausted attempts - Graceful failure acknowledgment
       if (!validation.valid) {
+        console.log(`⚠️ Workflow too complex - preparing graceful failure response...`)
+        
+        // Collect feedback for future improvements
+        const failureFeedback = await this.collectFailureFeedback(
+          userPrompt,
+          generatedWorkflow,
+          validation,
+          attempts
+        )
+        
+        // Store feedback for analysis
+        await this.storeFeedback(failureFeedback, userId)
+        
         return {
           success: false,
-          phase: 'exhausted-attempts',
-          reason: `Failed after ${maxAttempts} recovery attempts`,
-          lastError: validation.error,
-          finalDiagnosis: await this.errorIntelligence.diagnoseError(
-            validation.error,
-            generatedWorkflow
-          )
+          phase: 'graceful-failure',
+          userMessage: this.generateGracefulFailureMessage(failureFeedback),
+          reason: `This workflow appears to be too complex for Clixen's current capabilities`,
+          technicalDetails: {
+            attempts: maxAttempts,
+            lastError: validation.error,
+            diagnosis: await this.errorIntelligence.diagnoseError(
+              validation.error,
+              generatedWorkflow
+            )
+          },
+          feedbackId: failureFeedback.id,
+          alternativeSuggestions: this.generateAlternatives(userPrompt, feasibility),
+          nextSteps: [
+            'Try breaking down your workflow into smaller, simpler parts',
+            'Use our template library for similar workflows',
+            'Contact support with feedback ID for manual assistance'
+          ]
         }
       }
       
@@ -1347,7 +1371,518 @@ class ComprehensiveN8nPipeline {
       }
     }
   }
+  
+  // GRACEFUL FAILURE HANDLING METHODS
+  
+  private async collectFailureFeedback(
+    userPrompt: string,
+    workflow: any,
+    validation: any,
+    attempts: number
+  ): Promise<FailureFeedback> {
+    const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Analyze workflow complexity
+    const complexityAnalysis = this.analyzeComplexity(workflow)
+    
+    // Extract error patterns
+    const errorPatterns = this.extractErrorPatterns(validation)
+    
+    return {
+      id: feedbackId,
+      timestamp: new Date(),
+      userPrompt,
+      workflowStructure: {
+        nodeCount: workflow.nodes?.length || 0,
+        connectionCount: workflow.connections?.length || 0,
+        nodeTypes: [...new Set(workflow.nodes?.map(n => n.type) || [])],
+        complexity: complexityAnalysis
+      },
+      validationFailures: {
+        attempts,
+        errors: errorPatterns,
+        lastError: validation.error,
+        stage: validation.stage
+      },
+      metadata: {
+        n8nVersion: await this.getN8nVersion(),
+        apiVersion: '1.0',
+        generationModel: this.aiService.getModel()
+      }
+    }
+  }
+  
+  private async storeFeedback(feedback: FailureFeedback, userId: string): Promise<void> {
+    try {
+      // Store in database for analysis
+      await this.supabaseClient
+        .from('workflow_failure_feedback')
+        .insert({
+          feedback_id: feedback.id,
+          user_id: userId,
+          prompt: feedback.userPrompt,
+          complexity_score: feedback.workflowStructure.complexity.score,
+          error_patterns: feedback.validationFailures.errors,
+          node_count: feedback.workflowStructure.nodeCount,
+          failure_stage: feedback.validationFailures.stage,
+          created_at: feedback.timestamp,
+          metadata: feedback.metadata
+        })
+      
+      // Also store the full workflow for deep analysis
+      await this.supabaseClient
+        .from('failed_workflows')
+        .insert({
+          feedback_id: feedback.id,
+          workflow_definition: feedback,
+          created_at: feedback.timestamp
+        })
+      
+      console.log(`📝 Stored failure feedback: ${feedback.id}`)
+    } catch (error) {
+      console.error('Failed to store feedback:', error)
+      // Don't throw - we still want to return graceful response to user
+    }
+  }
+  
+  private generateGracefulFailureMessage(feedback: FailureFeedback): string {
+    const complexity = feedback.workflowStructure.complexity
+    
+    let message = `I understand you're trying to create a workflow with ${feedback.workflowStructure.nodeCount} nodes. `
+    
+    if (complexity.score > 0.8) {
+      message += `This appears to be a highly complex workflow that exceeds Clixen's current capabilities. `
+    } else if (complexity.score > 0.6) {
+      message += `This workflow has some advanced requirements that Clixen is still learning to handle. `
+    } else {
+      message += `While this workflow seems straightforward, we encountered some technical challenges. `
+    }
+    
+    message += `\n\nWe've recorded this request (ID: ${feedback.id}) and will use it to improve Clixen. `
+    message += `Our team regularly reviews these cases to expand what Clixen can do.`
+    
+    message += `\n\n**What you can do now:**`
+    message += `\n• Try simplifying your workflow by breaking it into smaller parts`
+    message += `\n• Check our template library for similar pre-built workflows`
+    message += `\n• Contact support with ID ${feedback.id} for personalized assistance`
+    
+    return message
+  }
+  
+  private generateAlternatives(userPrompt: string, feasibility: any): string[] {
+    const alternatives = []
+    
+    // Suggest simpler versions based on detected intent
+    if (userPrompt.toLowerCase().includes('email')) {
+      alternatives.push('Start with a simple "Send Email on Trigger" workflow')
+    }
+    
+    if (userPrompt.toLowerCase().includes('database') || userPrompt.toLowerCase().includes('sql')) {
+      alternatives.push('Try a basic "Database Query to Webhook" workflow first')
+    }
+    
+    if (userPrompt.toLowerCase().includes('api')) {
+      alternatives.push('Begin with a single API call workflow to test connectivity')
+    }
+    
+    // Add template suggestions based on available nodes
+    if (feasibility.availableNodes.some(n => n.type.includes('webhook'))) {
+      alternatives.push('Use our Webhook → Process → Response template')
+    }
+    
+    if (feasibility.availableNodes.some(n => n.type.includes('schedule'))) {
+      alternatives.push('Try our Scheduled Task Runner template')
+    }
+    
+    // General fallback suggestions
+    if (alternatives.length === 0) {
+      alternatives.push(
+        'Start with our Getting Started tutorial workflows',
+        'Explore our template library for similar use cases',
+        'Build the workflow step-by-step using the visual editor'
+      )
+    }
+    
+    return alternatives
+  }
+  
+  private analyzeComplexity(workflow: any): ComplexityAnalysis {
+    let score = 0
+    const factors = []
+    
+    // Node count complexity
+    const nodeCount = workflow.nodes?.length || 0
+    if (nodeCount > 20) {
+      score += 0.3
+      factors.push('high node count')
+    } else if (nodeCount > 10) {
+      score += 0.2
+      factors.push('moderate node count')
+    }
+    
+    // Connection complexity
+    const connectionCount = workflow.connections?.length || 0
+    if (connectionCount > nodeCount * 2) {
+      score += 0.2
+      factors.push('complex connections')
+    }
+    
+    // Loop detection
+    if (this.hasLoops(workflow)) {
+      score += 0.2
+      factors.push('contains loops')
+    }
+    
+    // Conditional branches
+    const conditionalNodes = workflow.nodes?.filter(n => 
+      n.type.includes('if') || n.type.includes('switch') || n.type.includes('router')
+    ).length || 0
+    if (conditionalNodes > 3) {
+      score += 0.15
+      factors.push('multiple conditional branches')
+    }
+    
+    // External services
+    const externalServices = new Set(
+      workflow.nodes?.filter(n => 
+        n.type.includes('http') || n.type.includes('api') || n.type.includes('webhook')
+      ).map(n => n.type) || []
+    ).size
+    if (externalServices > 5) {
+      score += 0.15
+      factors.push('many external services')
+    }
+    
+    return {
+      score: Math.min(score, 1),
+      factors,
+      nodeCount,
+      connectionCount,
+      recommendation: score > 0.6 ? 'simplify' : 'retry'
+    }
+  }
+  
+  private extractErrorPatterns(validation: any): ErrorPattern[] {
+    const patterns = []
+    
+    if (validation.error) {
+      patterns.push({
+        type: validation.error.type || 'UNKNOWN',
+        message: validation.error.message,
+        count: 1,
+        stage: validation.stage
+      })
+    }
+    
+    if (validation.issues) {
+      validation.issues.forEach(issue => {
+        patterns.push({
+          type: 'VALIDATION_ISSUE',
+          message: issue,
+          count: 1,
+          stage: 'validation'
+        })
+      })
+    }
+    
+    return patterns
+  }
+  
+  private hasLoops(workflow: any): boolean {
+    // Simple loop detection - check if any node connects back to an earlier node
+    const connections = workflow.connections || []
+    const nodeOrder = new Map()
+    
+    workflow.nodes?.forEach((node, index) => {
+      nodeOrder.set(node.id, index)
+    })
+    
+    return connections.some(conn => {
+      const sourceIndex = nodeOrder.get(conn.source)
+      const targetIndex = nodeOrder.get(conn.target)
+      return targetIndex <= sourceIndex
+    })
+  }
+  
+  private async getN8nVersion(): Promise<string> {
+    try {
+      const response = await fetch(`${this.n8nAPI.baseUrl}/version`)
+      const data = await response.json()
+      return data.version || 'unknown'
+    } catch {
+      return 'unknown'
+    }
+  }
 }
+```
+
+---
+
+## 🤝 Graceful Failure Handling & Feedback Collection
+
+### **Philosophy: Learn from Every Failure**
+
+When workflows fail after 3 retry attempts, Clixen acknowledges its limitations gracefully and collects detailed feedback for continuous improvement. This approach maintains user trust while building a knowledge base of edge cases.
+
+### **Failure Response Architecture**
+
+```mermaid
+graph TD
+    A[3rd Retry Failed] --> B[Complexity Analysis]
+    B --> C[Feedback Collection]
+    C --> D[Store for Analysis]
+    D --> E[Generate User Response]
+    E --> F[Provide Alternatives]
+    F --> G[User Sees Graceful Message]
+    
+    D --> H[(Feedback Database)]
+    H --> I[Weekly Analysis]
+    I --> J[Pattern Detection]
+    J --> K[System Improvements]
+```
+
+### **User Experience for Complex Workflows**
+
+Instead of generic error messages, users receive:
+
+1. **Honest Acknowledgment**
+   ```
+   "This workflow appears to be too complex for Clixen's current capabilities.
+   We've recorded this request (ID: feedback_1234) and will use it to improve."
+   ```
+
+2. **Specific Guidance**
+   - Break down into smaller workflows
+   - Use similar templates from library
+   - Contact support with feedback ID
+
+3. **Alternative Suggestions**
+   - Simpler workflow variations
+   - Step-by-step manual approach
+   - Pre-built templates for similar tasks
+
+### **Feedback Collection Schema**
+
+```typescript
+interface FailureFeedback {
+  id: string                    // Unique feedback ID for tracking
+  timestamp: Date               // When failure occurred
+  userPrompt: string           // Original user request
+  
+  workflowStructure: {
+    nodeCount: number          // Complexity indicator
+    connectionCount: number    // Connection complexity
+    nodeTypes: string[]        // What nodes were attempted
+    complexity: {
+      score: number           // 0-1 complexity score
+      factors: string[]       // Why it's complex
+      recommendation: string  // 'simplify' or 'retry'
+    }
+  }
+  
+  validationFailures: {
+    attempts: number          // How many retries
+    errors: ErrorPattern[]    // What went wrong
+    lastError: any           // Final error details
+    stage: string            // Where it failed
+  }
+  
+  metadata: {
+    n8nVersion: string       // n8n compatibility
+    apiVersion: string       // API version used
+    generationModel: string  // AI model used
+  }
+}
+```
+
+### **Database Tables for Feedback**
+
+```sql
+-- Quick lookup table for failure patterns
+CREATE TABLE workflow_failure_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  feedback_id VARCHAR(50) UNIQUE NOT NULL,
+  user_id UUID REFERENCES auth.users(id),
+  prompt TEXT NOT NULL,
+  complexity_score DECIMAL(3,2),
+  error_patterns JSONB,
+  node_count INTEGER,
+  failure_stage VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW(),
+  metadata JSONB,
+  resolved BOOLEAN DEFAULT FALSE,
+  resolution_notes TEXT
+);
+
+-- Full workflow storage for deep analysis
+CREATE TABLE failed_workflows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  feedback_id VARCHAR(50) REFERENCES workflow_failure_feedback(feedback_id),
+  workflow_definition JSONB NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  analyzed BOOLEAN DEFAULT FALSE,
+  analysis_results JSONB
+);
+
+-- Patterns learned from failures
+CREATE TABLE improvement_patterns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pattern_type VARCHAR(50),
+  description TEXT,
+  solution TEXT,
+  frequency INTEGER DEFAULT 1,
+  first_seen TIMESTAMP,
+  last_seen TIMESTAMP,
+  implemented BOOLEAN DEFAULT FALSE
+);
+```
+
+### **Complexity Scoring Algorithm**
+
+```typescript
+ComplexityFactors = {
+  nodeCount: {
+    low: 0-5 nodes (0.0),
+    medium: 6-10 nodes (0.2),
+    high: 11-20 nodes (0.3),
+    extreme: 20+ nodes (0.4)
+  },
+  connectionDensity: {
+    linear: connections ≈ nodes (0.0),
+    moderate: connections < nodes * 1.5 (0.1),
+    complex: connections > nodes * 2 (0.2)
+  },
+  controlFlow: {
+    hasLoops: +0.2,
+    conditionals > 3: +0.15,
+    parallelBranches > 2: +0.1
+  },
+  externalServices: {
+    few: 1-2 services (0.0),
+    moderate: 3-5 services (0.1),
+    many: 5+ services (0.15)
+  }
+}
+```
+
+### **Feedback Analysis Pipeline**
+
+```typescript
+class FeedbackAnalyzer {
+  async analyzeWeeklyFeedback(): Promise<AnalysisReport> {
+    // 1. Fetch unanalyzed feedback
+    const feedback = await this.fetchUnanalyzedFeedback()
+    
+    // 2. Group by error patterns
+    const patterns = this.groupByErrorPattern(feedback)
+    
+    // 3. Identify top failure causes
+    const topCauses = patterns
+      .sort((a, b) => b.frequency - a.frequency)
+      .slice(0, 10)
+    
+    // 4. Generate improvement recommendations
+    const recommendations = topCauses.map(cause => ({
+      pattern: cause.pattern,
+      frequency: cause.frequency,
+      suggestedFix: this.generateFix(cause),
+      priority: this.calculatePriority(cause),
+      estimatedEffort: this.estimateEffort(cause)
+    }))
+    
+    // 5. Update improvement patterns table
+    await this.updateImprovementPatterns(recommendations)
+    
+    return {
+      totalFailures: feedback.length,
+      topPatterns: topCauses,
+      recommendations,
+      complexityTrends: this.analyzeComplexityTrends(feedback),
+      userImpact: this.calculateUserImpact(feedback)
+    }
+  }
+}
+```
+
+### **Continuous Improvement Cycle**
+
+1. **Weekly Analysis**
+   - Review all failure feedback
+   - Identify recurring patterns
+   - Prioritize improvements
+
+2. **Pattern Detection**
+   - Common node combinations that fail
+   - Specific error messages
+   - Complexity thresholds
+
+3. **System Updates**
+   - Add new error handlers
+   - Improve prompt engineering
+   - Expand node support
+   - Update validation rules
+
+4. **User Communication**
+   - Notify users when their feedback leads to fixes
+   - Update documentation with new capabilities
+   - Release notes highlighting improvements
+
+### **Success Metrics for Feedback System**
+
+```yaml
+metrics:
+  - name: feedback_collection_rate
+    target: ">95%"  # Of failed workflows
+    current: "0%"   # Not yet implemented
+    
+  - name: pattern_detection_accuracy
+    target: ">80%"  # Correctly identify root cause
+    
+  - name: improvement_implementation_rate
+    target: "2-3 patterns/week"
+    
+  - name: user_satisfaction_with_failure_response
+    target: ">70%"  # Via follow-up survey
+    
+  - name: retry_success_after_improvements
+    target: ">50%"  # Previously failed workflows now work
+```
+
+### **Example User Interactions**
+
+**Scenario 1: Complex Multi-Service Integration**
+```
+User: "Create a workflow that monitors 10 different APIs, aggregates data, 
+       applies ML transformations, and distributes to 5 endpoints"
+
+Clixen: "I understand you're trying to create a workflow with approximately 
+        25 nodes. This appears to be a highly complex workflow that exceeds 
+        Clixen's current capabilities.
+        
+        We've recorded this request (ID: feedback_20240809_a7b3c) and will 
+        use it to improve Clixen. Our team regularly reviews these cases.
+        
+        What you can do now:
+        • Break this into 3 smaller workflows:
+          - API monitoring (5 APIs at a time)
+          - Data aggregation and transformation
+          - Distribution to endpoints
+        • Use our 'Multi-API Monitor' template as a starting point
+        • Contact support with ID feedback_20240809_a7b3c for help"
+```
+
+**Scenario 2: Unsupported Node Type**
+```
+User: "Build a workflow using the new OpenAI GPT-5 node"
+
+Clixen: "This workflow requires nodes that aren't currently available in 
+        Clixen. We're tracking this request (ID: feedback_20240809_b8c4d) 
+        to prioritize adding new integrations.
+        
+        Alternatives you can try:
+        • Use the HTTP Request node to call OpenAI's API directly
+        • Check our 'Custom AI Integration' template
+        • We support GPT-4 - would that work for your use case?"
 ```
 
 ---
