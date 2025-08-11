@@ -70,9 +70,299 @@ graph TB
 
 ---
 
-## 🔧 Core MVP Components
+## 🔧 Three-Pillar Workflow Generation Architecture
 
-### 1. **Simple Request Handler**
+### **Architecture Overview: Feasibility → Validation → Error Recovery**
+
+```mermaid
+graph TD
+    A[User Prompt] --> B[Feasibility Check]
+    B --> C{Nodes Available?}
+    C -->|No| D[Return Missing Capabilities]
+    C -->|Yes| E[AI Generation with Real Schemas]
+    E --> F[Static Validation - MCP]
+    F --> G{Valid Structure?}
+    G -->|No| H[Auto-Fix Attempt]
+    G -->|Yes| I[Dry Run Validation - n8n API]
+    I --> J{n8n Accepts?}
+    J -->|No| H
+    J -->|Yes| K[Test Execution]
+    K --> L{Execution Success?}
+    L -->|No| M[Error Intelligence Analysis]
+    L -->|Yes| N[Deploy to Production]
+    H --> O{Can Auto-Fix?}
+    O -->|Yes| F
+    O -->|No| P[Return User Actions Required]
+    M --> Q{Auto-Fix Available?}
+    Q -->|Yes| R[Apply Fix] --> F
+    Q -->|No| S[Return Diagnosis & User Actions]
+```
+
+### **Pillar A: Feasibility Check & Node Discovery** 🔍
+
+```typescript
+class FeasibilityChecker {
+  private mcpClient: MCPClient // czlonkowski/n8n-mcp
+  
+  async checkFeasibility(userPrompt: string): Promise<FeasibilityReport> {
+    // 1. Extract intended operations from prompt
+    const intentions = await this.extractIntentions(userPrompt)
+    
+    // 2. Search for matching nodes with MCP (532 nodes available)
+    const availableNodes = await this.mcpClient.call('search_nodes', {
+      query: intentions.keywords.join(' ')
+    })
+    
+    // 3. Get detailed node configurations (99% property coverage)
+    const nodeConfigs = await Promise.all(
+      availableNodes.map(node => 
+        this.mcpClient.call('get_node_documentation', {
+          nodeType: node.type
+        })
+      )
+    )
+    
+    // 4. Check AI capabilities if needed (263 AI nodes available)
+    if (intentions.requiresAI) {
+      const aiNodes = await this.mcpClient.call('list_ai_tools')
+    }
+    
+    // 5. Build comprehensive feasibility report
+    return {
+      feasible: nodeConfigs.length > 0,
+      availableNodes: nodeConfigs,
+      missingCapabilities: this.findGaps(intentions, nodeConfigs),
+      nodeSchemas: this.extractSchemas(nodeConfigs), // Real schemas prevent hallucination
+      confidenceScore: this.calculateConfidence(nodeConfigs, intentions)
+    }
+  }
+  
+  // Provide exact node schemas to AI for accurate generation
+  buildAIPrompt(feasibilityReport: FeasibilityReport): string {
+    return `Generate n8n workflow using ONLY these nodes with EXACT schemas:
+    
+    ${feasibilityReport.nodeSchemas.map(schema => `
+    Node Type: ${schema.type}
+    Display Name: ${schema.displayName}
+    Required Parameters: ${JSON.stringify(schema.required, null, 2)}
+    Optional Parameters: ${JSON.stringify(schema.optional, null, 2)}
+    Parameter Types: ${JSON.stringify(schema.types, null, 2)}
+    Connection Rules: ${schema.connectionRules}
+    Example Usage: ${schema.example}
+    `).join('\n\n')}
+    
+    CRITICAL RULES:
+    1. Use EXACT parameter names from schemas above
+    2. Include ALL required parameters
+    3. Match data types exactly (string, number, boolean, array, object)
+    4. Follow connection rules for node inputs/outputs
+    5. Generate valid node IDs and positions
+    6. Create proper connections object
+    `
+  }
+}
+```
+
+### **Pillar B: Multi-Stage Validation Pipeline** ✅
+
+```typescript
+class WorkflowValidator {
+  private mcpClient: MCPClient
+  private n8nAPI: N8nAPIClient
+  
+  async validateWorkflow(
+    generatedJSON: any,
+    testData?: any
+  ): Promise<ValidationResult> {
+    
+    // Stage 1: Static Validation (MCP) - Fast, No API Calls
+    console.log('📝 Stage 1: Static validation with MCP...')
+    const staticValidation = await this.validateStatic(generatedJSON)
+    if (!staticValidation.valid) {
+      return await this.attemptAutoFix(generatedJSON, staticValidation)
+    }
+    
+    // Stage 2: Dry Run Validation (n8n API) - Test without execution
+    console.log('🧪 Stage 2: Dry run with n8n engine...')
+    const dryRun = await this.dryRunValidation(generatedJSON)
+    if (!dryRun.valid) {
+      return await this.attemptAutoFix(generatedJSON, dryRun)
+    }
+    
+    // Stage 3: Test Execution (Real Run) - Execute with sample data
+    console.log('🚀 Stage 3: Test execution with sample data...')
+    const testRun = await this.testExecution(generatedJSON, testData)
+    if (!testRun.success) {
+      return this.analyzeExecutionFailure(testRun)
+    }
+    
+    return { valid: true, workflow: generatedJSON }
+  }
+  
+  // DETAILED DRY RUN EXPLANATION BELOW
+  private async dryRunValidation(workflow: any): Promise<ValidationResult> {
+    const testWorkflowName = `[DRY-RUN] ${workflow.name || 'Test'} ${Date.now()}`
+    let createdWorkflowId: string | null = null
+    
+    try {
+      console.log('Creating temporary workflow for dry run...')
+      
+      // Step 1: Create workflow in n8n (but don't activate it)
+      const created = await this.n8nAPI.createWorkflow({
+        ...workflow,
+        name: testWorkflowName,
+        active: false, // CRITICAL: Don't activate = no execution
+        settings: { 
+          saveManualExecutions: false, // Don't save execution history
+          callerPolicy: 'workflowsFromSameOwner' // Security setting
+        }
+      })
+      
+      createdWorkflowId = created.id
+      console.log(`✅ Dry run successful - workflow structure accepted by n8n`)
+      
+      return { 
+        valid: true, 
+        workflowId: created.id,
+        n8nValidation: 'Structure and parameters accepted'
+      }
+      
+    } catch (error) {
+      console.log(`❌ Dry run failed - n8n rejected workflow:`, error.message)
+      
+      return {
+        valid: false,
+        error: error.message,
+        details: this.parseN8nError(error),
+        stage: 'dry-run'
+      }
+    } finally {
+      // Step 2: ALWAYS clean up the test workflow
+      if (createdWorkflowId) {
+        try {
+          await this.n8nAPI.deleteWorkflow(createdWorkflowId)
+          console.log(`🗑️ Cleaned up dry run workflow: ${createdWorkflowId}`)
+        } catch (cleanupError) {
+          console.warn('Failed to clean up dry run workflow:', cleanupError.message)
+        }
+      }
+    }
+  }
+}
+```
+
+### **Pillar C: Error Intelligence & Recovery** 🔧
+
+```typescript
+class N8nErrorIntelligence {
+  private errorPatterns = new Map<RegExp, ErrorSolution>()
+  
+  constructor() {
+    this.initializeErrorPatterns()
+  }
+  
+  private initializeErrorPatterns() {
+    // Pattern library for common n8n errors
+    this.errorPatterns.set(
+      /NodeParameterValueProvider:getNodeParameter|Parameter .* is required/i,
+      {
+        type: 'MISSING_PARAMETER',
+        description: 'Required parameter missing from node',
+        solution: 'Add the missing required parameter',
+        autoFix: true,
+        handler: this.fixMissingParameter,
+        severity: 'HIGH'
+      }
+    )
+    
+    this.errorPatterns.set(
+      /Cannot read properties of undefined|Cannot access before initialization/i,
+      {
+        type: 'DATA_PATH_ERROR',
+        description: 'Invalid data reference or expression',
+        solution: 'Fix data path or add null checking',
+        autoFix: true,
+        handler: this.fixDataPath,
+        severity: 'MEDIUM'
+      }
+    )
+    
+    this.errorPatterns.set(
+      /401|Unauthorized|Invalid credentials/i,
+      {
+        type: 'AUTH_ERROR',
+        description: 'Authentication credentials invalid or missing',
+        solution: 'Verify API credentials in n8n settings',
+        autoFix: false,
+        userAction: 'Add valid credentials for this service in n8n',
+        severity: 'HIGH'
+      }
+    )
+    
+    this.errorPatterns.set(
+      /ECONNREFUSED|ETIMEDOUT|Network Error/i,
+      {
+        type: 'CONNECTION_ERROR',
+        description: 'Cannot connect to external service',
+        solution: 'Check network connectivity and service status',
+        autoFix: false,
+        userAction: 'Verify API endpoint URL and network access',
+        severity: 'HIGH'
+      }
+    )
+    
+    this.errorPatterns.set(
+      /429|Too Many Requests|Rate limit/i,
+      {
+        type: 'RATE_LIMIT',
+        description: 'API rate limit exceeded',
+        solution: 'Add delay between requests or reduce frequency',
+        autoFix: true,
+        handler: this.addRateLimitHandling,
+        severity: 'MEDIUM'
+      }
+    )
+  }
+  
+  async diagnoseError(
+    error: any,
+    workflow: any,
+    executionData?: any
+  ): Promise<ErrorDiagnosis> {
+    // Match error against known patterns
+    const pattern = this.matchErrorPattern(error)
+    
+    // Analyze context
+    const analysis = await this.analyzeErrorContext(error, workflow, executionData)
+    
+    // Get relevant documentation
+    const docs = await this.getRelevantDocumentation(error, workflow)
+    
+    return {
+      errorType: pattern?.type || 'UNKNOWN',
+      description: pattern?.description || 'Unknown error occurred',
+      severity: pattern?.severity || 'MEDIUM',
+      rootCause: analysis.rootCause,
+      failedNode: analysis.failedNode,
+      failedParameter: analysis.failedParameter,
+      
+      solutions: [
+        pattern?.solution,
+        ...analysis.suggestedFixes
+      ].filter(Boolean),
+      
+      autoFixAvailable: pattern?.autoFix || false,
+      userActions: this.buildUserActions(pattern, analysis),
+      documentation: docs,
+      
+      // Recovery suggestions ranked by success probability
+      recoverySuggestions: analysis.recoverySuggestions.sort((a, b) => b.probability - a.probability)
+    }
+  }
+}
+```
+
+### 1. **Simple Request Handler (Legacy)**
 
 ```typescript
 class MVPRequestHandler {
@@ -800,38 +1090,194 @@ When the MVP proves successful, we can gradually add:
 
 ---
 
-## 📝 Complete MVP Pipeline Flow
+## 📝 Complete Three-Pillar Pipeline Integration
 
 ```typescript
-// Simplified end-to-end flow
-async function generateWorkflow(prompt: string, userId: string) {
-  // 1. Check cache
-  const cached = await cache.get(hash(prompt))
-  if (cached) return cached
+class ComprehensiveN8nPipeline {
+  private feasibilityChecker: FeasibilityChecker
+  private validator: WorkflowValidator
+  private errorIntelligence: N8nErrorIntelligence
+  private aiService: AIService
   
-  // 2. Rate limit check
-  await rateLimiter.check(userId)
+  async generateWorkflow(userPrompt: string, userId: string): Promise<WorkflowResult> {
+    const pipelineId = `pipeline_${Date.now()}_${userId}`
+    console.log(`🚀 Starting pipeline ${pipelineId}`)
+    
+    try {
+      // PHASE 1: Feasibility & Discovery
+      console.log('🔍 Phase 1: Checking feasibility...')
+      const feasibility = await this.feasibilityChecker.checkFeasibility(userPrompt)
+      
+      if (!feasibility.feasible) {
+        return {
+          success: false,
+          phase: 'feasibility',
+          reason: 'Required nodes not available',
+          missingCapabilities: feasibility.missingCapabilities,
+          suggestions: this.buildAlternativeSuggestions(feasibility)
+        }
+      }
+      
+      console.log(`✅ Found ${feasibility.availableNodes.length} matching nodes`)
+      
+      // PHASE 2: AI Generation with Real Schemas
+      console.log('🤖 Phase 2: Generating workflow with real schemas...')
+      const aiPrompt = this.feasibilityChecker.buildAIPrompt(feasibility)
+      
+      let generatedWorkflow = await this.aiService.generate({
+        system: aiPrompt,
+        user: userPrompt,
+        temperature: 0.1, // Low temperature for precise structure
+        maxTokens: 3000
+      })
+      
+      // PHASE 3: Multi-Stage Validation with Error Recovery
+      console.log('✅ Phase 3: Multi-stage validation...')
+      let validation = await this.validator.validateWorkflow(generatedWorkflow)
+      
+      // PHASE 4: Error Recovery Loop (Max 3 attempts)
+      let attempts = 0
+      const maxAttempts = 3
+      
+      while (!validation.valid && attempts < maxAttempts) {
+        attempts++
+        console.log(`🔧 Phase 4: Attempting error recovery (${attempts}/${maxAttempts})...`)
+        
+        // Deep error diagnosis
+        const diagnosis = await this.errorIntelligence.diagnoseError(
+          validation.error,
+          generatedWorkflow,
+          validation.executionData
+        )
+        
+        console.log(`📋 Error diagnosis: ${diagnosis.errorType} - ${diagnosis.description}`)
+        
+        // Attempt automatic fix
+        if (diagnosis.autoFixAvailable) {
+          const fixResult = await this.errorIntelligence.attemptAutoFix(
+            diagnosis,
+            generatedWorkflow
+          )
+          
+          if (fixResult.fixed) {
+            console.log(`🛠️ Auto-fix successful: ${fixResult.changes.length} changes applied`)
+            generatedWorkflow = fixResult.workflow
+            validation = await this.validator.validateWorkflow(generatedWorkflow)
+          } else {
+            console.log(`❌ Auto-fix failed: ${fixResult.reason}`)
+            return {
+              success: false,
+              phase: 'error-recovery',
+              workflow: generatedWorkflow,
+              diagnosis,
+              userActionsRequired: diagnosis.userActions,
+              recoverySuggestions: diagnosis.recoverySuggestions
+            }
+          }
+        } else {
+          console.log(`⚠️ No auto-fix available for ${diagnosis.errorType}`)
+          return {
+            success: false,
+            phase: 'validation',
+            workflow: generatedWorkflow,
+            diagnosis,
+            userActionsRequired: diagnosis.userActions,
+            documentation: diagnosis.documentation
+          }
+        }
+      }
+      
+      // Check if we exhausted attempts
+      if (!validation.valid) {
+        return {
+          success: false,
+          phase: 'exhausted-attempts',
+          reason: `Failed after ${maxAttempts} recovery attempts`,
+          lastError: validation.error,
+          finalDiagnosis: await this.errorIntelligence.diagnoseError(
+            validation.error,
+            generatedWorkflow
+          )
+        }
+      }
+      
+      // PHASE 5: Final Deployment
+      console.log('🚀 Phase 5: Deploying validated workflow...')
+      const deploymentResult = await this.deployWorkflow(generatedWorkflow, userId)
+      
+      if (deploymentResult.success) {
+        console.log(`✅ Pipeline ${pipelineId} completed successfully`)
+        
+        return {
+          success: true,
+          workflow: generatedWorkflow,
+          workflowId: deploymentResult.workflowId,
+          webhookUrl: deploymentResult.webhookUrl,
+          validationReport: validation,
+          feasibilityReport: feasibility,
+          pipelineStats: {
+            totalTime: Date.now() - parseInt(pipelineId.split('_')[1]),
+            recoveryAttempts: attempts,
+            finalConfidence: feasibility.confidenceScore
+          }
+        }
+      } else {
+        return {
+          success: false,
+          phase: 'deployment',
+          workflow: generatedWorkflow,
+          deploymentError: deploymentResult.error
+        }
+      }
+      
+    } catch (pipelineError) {
+      console.error(`💥 Pipeline ${pipelineId} failed:`, pipelineError)
+      
+      return {
+        success: false,
+        phase: 'pipeline-error',
+        error: pipelineError.message,
+        stack: pipelineError.stack
+      }
+    }
+  }
   
-  // 3. Load static nodes
-  const nodes = await nodeRegistry.getNodes()
-  
-  // 4. Generate with AI (with retry)
-  const workflow = await aiService.generate(prompt, nodes)
-  
-  // 5. Basic validation
-  const validation = await validator.validate(workflow)
-  if (!validation.valid) throw new ValidationError(validation)
-  
-  // 6. Deploy to n8n
-  const deployed = await deploymentService.deploy(workflow, userId)
-  
-  // 7. Cache result
-  await cache.set(hash(prompt), deployed)
-  
-  // 8. Track metrics
-  await monitoring.track({ type: 'workflow_created', userId, success: true })
-  
-  return deployed
+  private async deployWorkflow(workflow: any, userId: string) {
+    // Add user isolation prefix
+    workflow.name = `[USR-${userId}] ${workflow.name || 'Generated Workflow'}`
+    
+    try {
+      // Deploy to n8n
+      const created = await this.n8nAPI.createWorkflow({
+        ...workflow,
+        active: true // Activate if validation passed
+      })
+      
+      // Store in Supabase with metadata
+      await this.supabaseClient
+        .from('workflows')
+        .insert({
+          user_id: userId,
+          n8n_id: created.id,
+          name: workflow.name,
+          definition: workflow,
+          status: 'active',
+          created_at: new Date()
+        })
+      
+      return {
+        success: true,
+        workflowId: created.id,
+        webhookUrl: created.webhookUrl
+      }
+      
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  }
 }
 ```
 
