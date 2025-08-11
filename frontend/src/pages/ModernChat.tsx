@@ -8,6 +8,7 @@ import {
   Timer,
   CheckSquare,
   AlertTriangle,
+  Cog,
   User,
   Bot,
   Sparkles,

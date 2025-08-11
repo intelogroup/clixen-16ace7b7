@@ -51,7 +51,7 @@ const createStubClient = () => {
     onAuthStateChange(callback: any) {
       const sub = { unsubscribe() {} };
       // Immediately emit a signed out state in preview
-      try { callback('SIGNED_OUT', null); } catch {}
+      try { callback('SIGNED_OUT', null); } catch (error) { console.error('Auth callback error:', error); }
       return { data: { subscription: sub } } as any;
     }
   } as any;

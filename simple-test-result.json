@@ -1,6 +1,0 @@
-{
-  "success": true,
-  "workflowId": "G7FpSPF2i8kB4DVz",
-  "webhookUrl": "http://18.221.12.50:5678/webhook/test-math",
-  "result": "{\"code\":404,\"message\":\"The requested webhook \\\"POST test-math\\\" is not registered.\",\"hint\":\"The workflow must be active for a production URL to run successfully. You can activate the workflow using the toggle in the top-right of the editor. Note that unlike test URL calls, production URL calls aren't shown on the canvas (only in the executions list)\"}"
-}
