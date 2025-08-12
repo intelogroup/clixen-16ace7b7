@@ -82,7 +82,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
             transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500
             ${getVariantClasses()} ${className}
           `}
-          {...props}
+          {...(props as any)}
         >
           <RotateCcw className="w-4 h-4" />
           {retryText}
@@ -110,7 +110,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
         disabled:opacity-50 disabled:cursor-not-allowed
         ${getVariantClasses()} ${className}
       `}
-      {...props}
+      {...(props as any)}
     >
       {loadingState?.isLoading || loadingState?.isRetrying ? (
         <>

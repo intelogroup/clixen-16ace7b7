@@ -42,7 +42,8 @@ export function FormField({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         disabled={disabled}
-        className={`w-full ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+        error={!!error}
+        fullWidth={true}
       />
       
       {error && (

@@ -47,23 +47,7 @@ export const ComponentSkeleton = ({ className = "" }: { className?: string }) =>
   </div>
 );
 
-// Button loading state
-export const ButtonLoading = ({ children, loading, ...props }: { 
-  children: React.ReactNode;
-  loading: boolean;
-  [key: string]: any;
-}) => (
-  <button {...props} disabled={loading || props.disabled}>
-    {loading ? (
-      <div className="flex items-center justify-center gap-2">
-        <div className="spinner-clean" />
-        <span>Loading...</span>
-      </div>
-    ) : (
-      children
-    )}
-  </button>
-);
+// Simple loading button - Use LoadingButton from ../components/LoadingButton for advanced functionality
 
 // Form field loading
 export const FieldLoading = () => (
@@ -196,7 +180,6 @@ export default {
   AppLoading,
   PageLoading,
   ComponentSkeleton,
-  ButtonLoading,
   FieldLoading,
   MessageLoading,
   CardSkeleton,

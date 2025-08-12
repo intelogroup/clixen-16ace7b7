@@ -111,7 +111,7 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || isLoading}
       whileTap={{ scale: disabled || isLoading ? 1 : 0.95 }}
       type="button"
-      {...props}
+      {...(props as any)}
     >
       {content}
     </motion.button>
