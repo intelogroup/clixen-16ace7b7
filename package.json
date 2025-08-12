@@ -48,6 +48,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@vitejs/plugin-react": "^4.7.0",
+    "axios": "^1.11.0",
     "chalk": "^5.5.0",
     "lovable-tagger": "^1.1.9",
     "vite": "^5.4.19"
