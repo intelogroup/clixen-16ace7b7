@@ -13,16 +13,30 @@
   # Secrets scanning configuration - exclude test files from scanning
   SECRETS_SCAN_OMIT_PATHS = "tests/**,test-*,**/*.test.*,**/*.spec.*,**/*.mjs,**/*.html"
 
-# Security headers - CSP handled in HTML meta tag
+# Enhanced Security Headers for Race Condition Protection
 [[headers]]
   for = "/*"
   [headers.values]
+    # Prevent clickjacking attacks
     X-Frame-Options = "DENY"
+    
+    # Enable XSS filtering
     X-XSS-Protection = "1; mode=block"
+    
+    # Prevent MIME sniffing
     X-Content-Type-Options = "nosniff"
+    
+    # Control referrer information leakage
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://zfbgdixbzezpxllkoyfc.supabase.co http://18.221.12.50:5678 https://*.netlify.app https://api.openai.com https://*.fly.dev ws: wss:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:"
+    
+    # Restrict dangerous browser permissions
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+    
+    # Force HTTPS and prevent protocol downgrade attacks
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    
+    # Enhanced Content Security Policy with stricter rules
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://zfbgdixbzezpxllkoyfc.supabase.co http://18.221.12.50:5678 https://*.netlify.app https://api.openai.com https://*.fly.dev wss://zfbgdixbzezpxllkoyfc.supabase.co; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; frame-ancestors 'none'; form-action 'self'; base-uri 'self'"
 
 # Cache static assets
 [[headers]]

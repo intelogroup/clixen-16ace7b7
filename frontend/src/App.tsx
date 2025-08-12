@@ -95,7 +95,9 @@ function AppContent() {
 
         {/* Default redirects - Handle auth state properly */}
         <Route path="/" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
-        <Route path="*" element={<Navigate to={user ? "/dashboard" : "/auth"} replace />} />
+        
+        {/* Catch-all route for undefined paths - secure fallback */}
+        <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
     </BrowserRouter>
   );

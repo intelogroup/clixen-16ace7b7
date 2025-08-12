@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,8 +11,18 @@ export default function CleanAuth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect authenticated users to their intended destination
+  useEffect(() => {
+    if (user) {
+      const redirectTo = (location.state as any)?.from || '/dashboard';
+      console.log('✅ Auth page: User already authenticated, redirecting to:', redirectTo);
+      navigate(redirectTo, { replace: true });
+    }
+  }, [user, navigate, location.state]);
 
   const form = useForm({
     email: { 
@@ -33,9 +43,14 @@ export default function CleanAuth() {
       } else {
         await signIn(values.email, values.password);
         toast.success('Welcome back!');
-        navigate('/dashboard');
+        
+        // Redirect to intended destination or default to dashboard
+        const redirectTo = (location.state as any)?.from || '/dashboard';
+        console.log('✅ Sign in successful, redirecting to:', redirectTo);
+        navigate(redirectTo, { replace: true });
       }
     } catch (error: any) {
+      console.error('🔒 Authentication error:', error);
       toast.error(error.message || 'Authentication failed');
       throw error; // Re-throw to keep form in submitting state if needed
     }
