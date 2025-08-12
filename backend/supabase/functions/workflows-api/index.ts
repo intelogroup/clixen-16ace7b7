@@ -1,6 +1,25 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, handleCors } from '../_shared/cors.ts';
+import { authenticate, verifyOwnership, logAuthEvent } from '../_shared/auth.ts';
+import { 
+  createSuccessResponse, 
+  createErrorResponse, 
+  createValidationErrorResponse,
+  createAuthErrorResponse,
+  ApiResponse
+} from '../_shared/responses.ts';
+import { validate, WORKFLOW_GENERATION_RULES, validateWorkflowJSON, validateUUID } from '../_shared/validation.ts';
+import { supabase } from '../_shared/supabase.ts';
+import { 
+  makeN8nRequest, 
+  createN8nWorkflow, 
+  setN8nWorkflowStatus, 
+  getN8nWorkflow,
+  getN8nExecutions,
+  extractWebhookUrls,
+  calculateWorkflowHealth,
+  n8nConfig 
+} from '../_shared/n8n.ts';
 
 // Types for Workflow API
 interface Workflow {
@@ -51,46 +70,9 @@ interface WorkflowStatus {
   webhook_urls?: string[];
 }
 
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-  timestamp: string;
-}
+// All shared utilities are now imported from shared modules
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const n8nApiUrl = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
-const n8nApiKey = Deno.env.get('N8N_API_KEY');
-if (!n8nApiKey) {
-  throw new Error('N8N_API_KEY environment variable is required');
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-// Authentication middleware
-const authenticate = async (req: Request): Promise<{ user: any; error?: string }> => {
-  const authHeader = req.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { user: null, error: 'Authentication required - Bearer token missing' };
-  }
-
-  try {
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error || !user) {
-      return { user: null, error: 'Invalid authentication token' };
-    }
-
-    return { user };
-  } catch (error) {
-    return { user: null, error: 'Authentication failed' };
-  }
-};
+// Authentication is now handled by shared auth utilities
 
 // Get OpenAI API key
 const getOpenAIKey = async (userId?: string): Promise<string | null> => {
@@ -128,45 +110,7 @@ const getOpenAIKey = async (userId?: string): Promise<string | null> => {
   }
 };
 
-// Make n8n API request
-const makeN8nRequest = async (
-  endpoint: string,
-  method = 'GET',
-  body?: any
-): Promise<any> => {
-  const url = `${n8nApiUrl}${endpoint}`;
-  
-  const requestOptions: RequestInit = {
-    method,
-    headers: {
-      'X-N8N-API-KEY': n8nApiKey,
-      'Content-Type': 'application/json',
-    },
-  };
-
-  if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    requestOptions.body = JSON.stringify(body);
-  }
-
-  try {
-    const response = await fetch(url, requestOptions);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`n8n API Error ${response.status}: ${errorText}`);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
-    }
-    
-    return await response.text();
-  } catch (error) {
-    console.error(`n8n API request failed for ${endpoint}:`, error);
-    throw error;
-  }
-};
+// n8n API operations now handled by shared n8n utilities
 
 // Generate workflow using OpenAI
 const generateWorkflowFromPrompt = async (
@@ -377,7 +321,7 @@ const deployWorkflow = async (
 
     try {
       // Create workflow in n8n
-      const n8nWorkflow = await makeN8nRequest('/workflows', 'POST', workflow.n8n_workflow_json);
+      const n8nWorkflow = await createN8nWorkflow(workflow.n8n_workflow_json);
       
       if (!n8nWorkflow.id) {
         throw new Error('n8n did not return workflow ID');
@@ -385,21 +329,11 @@ const deployWorkflow = async (
 
       // Activate if requested
       if (options.activate !== false) {
-        await makeN8nRequest(`/workflows/${n8nWorkflow.id}/activate`, 'POST');
+        await setN8nWorkflowStatus(n8nWorkflow.id, true);
       }
 
-      // Extract webhook URLs
-      const webhookUrls: string[] = [];
-      if (workflow.n8n_workflow_json.nodes) {
-        workflow.n8n_workflow_json.nodes.forEach((node: any) => {
-          if (node.type === 'n8n-nodes-base.webhook' && node.parameters?.path) {
-            const path = node.parameters.path.startsWith('/') 
-              ? node.parameters.path 
-              : `/${node.parameters.path}`;
-            webhookUrls.push(`${n8nApiUrl.replace('/api/v1', '')}/webhook${path}`);
-          }
-        });
-      }
+      // Extract webhook URLs using shared utility
+      const webhookUrls = extractWebhookUrls(workflow.n8n_workflow_json);
 
       // Update workflow in database
       const updateData: any = {
@@ -407,7 +341,7 @@ const deployWorkflow = async (
         deployment_status: 'deployed',
         status: 'deployed',
         last_deployed_at: new Date().toISOString(),
-        deployment_url: `${n8nApiUrl.replace('/api/v1', '')}/workflow/${n8nWorkflow.id}`,
+        deployment_url: `${n8nConfig.baseUrl}/workflow/${n8nWorkflow.id}`,
         deployment_error: null
       };
 
@@ -526,38 +460,18 @@ const getWorkflowStatus = async (userId: string, workflowId: string): Promise<Wo
     if (workflow.n8n_workflow_id && workflow.deployment_status === 'deployed') {
       try {
         // Get workflow details from n8n
-        const n8nWorkflow = await makeN8nRequest(`/workflows/${workflow.n8n_workflow_id}`);
+        const n8nWorkflow = await getN8nWorkflow(workflow.n8n_workflow_id);
         
-        // Get recent executions
-        const executions = await makeN8nRequest(`/executions?workflowId=${workflow.n8n_workflow_id}&limit=10`);
+        // Calculate workflow health using shared utility
+        const { healthScore, issues } = await calculateWorkflowHealth(workflow.n8n_workflow_id);
         
-        if (executions.data && executions.data.length > 0) {
-          const recentExecutions = executions.data;
-          const successfulExecutions = recentExecutions.filter((exec: any) => exec.status === 'success');
-          const failedExecutions = recentExecutions.filter((exec: any) => exec.status === 'error' || exec.status === 'failed');
-          
-          status.health_score = Math.round((successfulExecutions.length / recentExecutions.length) * 100);
-          
-          if (failedExecutions.length > 0) {
-            status.validation_issues = failedExecutions.map((exec: any) => 
-              `Execution failed: ${exec.error || 'Unknown error'}`
-            );
-          }
+        status.health_score = healthScore;
+        if (issues.length > 0) {
+          status.validation_issues = issues;
         }
 
-        // Extract webhook URLs
-        if (n8nWorkflow.nodes) {
-          const webhookUrls: string[] = [];
-          n8nWorkflow.nodes.forEach((node: any) => {
-            if (node.type === 'n8n-nodes-base.webhook' && node.parameters?.path) {
-              const path = node.parameters.path.startsWith('/') 
-                ? node.parameters.path 
-                : `/${node.parameters.path}`;
-              webhookUrls.push(`${n8nApiUrl.replace('/api/v1', '')}/webhook${path}`);
-            }
-          });
-          status.webhook_urls = webhookUrls;
-        }
+        // Extract webhook URLs using shared utility
+        status.webhook_urls = extractWebhookUrls(n8nWorkflow);
 
       } catch (n8nError) {
         console.warn('Could not fetch additional status from n8n:', n8nError);
@@ -594,31 +508,7 @@ const getWorkflow = async (userId: string, workflowId: string): Promise<Workflow
   }
 };
 
-// Input validation
-const validateGenerateRequest = (data: any): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-  
-  if (!data.prompt || typeof data.prompt !== 'string' || data.prompt.trim().length === 0) {
-    errors.push('Prompt is required and must be a non-empty string');
-  }
-  
-  if (data.prompt && data.prompt.length > 2000) {
-    errors.push('Prompt must be 2000 characters or less');
-  }
-  
-  if (!data.project_id || typeof data.project_id !== 'string') {
-    errors.push('Project ID is required and must be a string');
-  }
-  
-  if (data.name && (typeof data.name !== 'string' || data.name.length > 255)) {
-    errors.push('Workflow name must be a string of 255 characters or less');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
+// Input validation is now handled by shared validation utilities
 
 // Main request handler
 serve(async (req) => {
@@ -628,28 +518,17 @@ serve(async (req) => {
   console.log(`🚀 [WORKFLOWS-API-${requestId}] ${req.method} ${req.url}`);
 
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
     const url = new URL(req.url);
     const pathSegments = url.pathname.split('/').filter(Boolean);
     
-    // Authenticate user
+    // Authenticate user using shared utility
     const { user, error: authError } = await authenticate(req);
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: authError || 'Authentication failed',
-          timestamp: new Date().toISOString()
-        } as ApiResponse),
-        { 
-          status: 401, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+      return createAuthErrorResponse(authError || 'Authentication failed');
     }
 
     const userId = user.id;
@@ -661,46 +540,29 @@ serve(async (req) => {
       if (pathSegments[1] === 'generate' && req.method === 'POST') {
         // POST /workflows/generate - Generate workflow from prompt
         const body = await req.json();
-        const validation = validateGenerateRequest(body);
+        const validation = validate(body, WORKFLOW_GENERATION_RULES);
         
         if (!validation.isValid) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: 'Validation failed',
-              message: validation.errors.join(', '),
-              timestamp: new Date().toISOString()
-            } as ApiResponse),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-          );
+          return createValidationErrorResponse('request', validation.errors.join(', '));
         }
 
         // Generate workflow using AI
         const generated = await generateWorkflowFromPrompt(body.prompt, userId);
         
         // Create workflow in database
-        const workflow = await createWorkflow(userId, body.project_id, {
-          name: body.name || generated.name,
-          description: body.description || generated.description,
+        const workflow = await createWorkflow(userId, validation.sanitizedData.project_id, {
+          name: validation.sanitizedData.name || generated.name,
+          description: validation.sanitizedData.description || generated.description,
           n8n_workflow_json: generated.workflowJson,
-          original_prompt: body.prompt
+          original_prompt: validation.sanitizedData.prompt
         });
 
-        response = {
-          success: true,
-          data: {
-            workflow,
-            generated_name: generated.name,
-            generated_description: generated.description,
-            node_count: generated.workflowJson.nodes?.length || 0
-          },
-          message: 'Workflow generated successfully',
-          timestamp: new Date().toISOString()
-        };
-        statusCode = 201;
+        return createSuccessResponse({
+          workflow,
+          generated_name: generated.name,
+          generated_description: generated.description,
+          node_count: generated.workflowJson.nodes?.length || 0
+        }, 'Workflow generated successfully', 201);
 
       } else if (pathSegments.length === 3 && pathSegments[2] === 'deploy' && req.method === 'POST') {
         // POST /workflows/{id}/deploy - Deploy workflow
@@ -709,12 +571,7 @@ serve(async (req) => {
         
         const deployResult = await deployWorkflow(userId, workflowId, body);
         
-        response = {
-          success: true,
-          data: deployResult,
-          message: 'Workflow deployed successfully',
-          timestamp: new Date().toISOString()
-        };
+        return createSuccessResponse(deployResult, 'Workflow deployed successfully');
 
       } else if (pathSegments.length === 3 && pathSegments[2] === 'status' && req.method === 'GET') {
         // GET /workflows/{id}/status - Get workflow status
@@ -722,11 +579,7 @@ serve(async (req) => {
         
         const status = await getWorkflowStatus(userId, workflowId);
         
-        response = {
-          success: true,
-          data: status,
-          timestamp: new Date().toISOString()
-        };
+        return createSuccessResponse(status);
 
       } else if (pathSegments.length === 2 && req.method === 'GET') {
         // GET /workflows/{id} - Get workflow details
@@ -734,56 +587,26 @@ serve(async (req) => {
         
         const workflow = await getWorkflow(userId, workflowId);
         
-        response = {
-          success: true,
-          data: workflow,
-          timestamp: new Date().toISOString()
-        };
+        return createSuccessResponse(workflow);
 
       } else {
-        throw new Error('Endpoint not found');
+        return createErrorResponse('Endpoint not found', 404);
       }
     } else {
-      throw new Error('Endpoint not found');
+      return createErrorResponse('Endpoint not found', 404);
     }
-
-    const processingTime = Date.now() - startTime;
-    console.log(`✅ [WORKFLOWS-API-${requestId}] Completed in ${processingTime}ms`);
-
-    return new Response(
-      JSON.stringify(response),
-      { 
-        status: statusCode,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'X-Processing-Time': processingTime.toString()
-        }
-      }
-    );
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error(`❌ [WORKFLOWS-API-${requestId}] Error after ${processingTime}ms:`, error);
     
-    let statusCode = 500;
-    let errorMessage = 'Internal server error';
-    
-    if (error.message === 'Method not allowed') {
-      statusCode = 405;
-      errorMessage = error.message;
-    } else if (error.message === 'Endpoint not found') {
-      statusCode = 404;
-      errorMessage = error.message;
-    } else if (error.message.includes('not found') || error.message.includes('access denied')) {
-      statusCode = 404;
-      errorMessage = error.message;
+    // Determine appropriate error response
+    if (error.message.includes('not found') || error.message.includes('access denied')) {
+      return createErrorResponse(error.message, 404);
     } else if (error.message.includes('Validation') || error.message.includes('required')) {
-      statusCode = 400;
-      errorMessage = error.message;
+      return createErrorResponse(error.message, 400);
     } else if (error.message.includes('OpenAI') || error.message.includes('API key')) {
-      statusCode = 400;
-      errorMessage = error.message;
+      return createErrorResponse(error.message, 400);
     }
 
     // Log error telemetry
@@ -799,8 +622,7 @@ serve(async (req) => {
             event_data: {
               endpoint: 'workflows-api',
               method: req.method,
-              error: error.message,
-              status_code: statusCode
+              error: error.message
             },
             duration_ms: processingTime,
             success: false,
@@ -812,21 +634,6 @@ serve(async (req) => {
       console.warn('Failed to log error telemetry:', telemetryError);
     }
 
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-        message: statusCode >= 500 ? 'An unexpected error occurred. Please try again.' : error.message,
-        timestamp: new Date().toISOString()
-      } as ApiResponse),
-      { 
-        status: statusCode,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'X-Processing-Time': processingTime.toString()
-        }
-      }
-    );
+    return createErrorResponse('Internal server error', 500);
   }
 });

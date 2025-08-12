@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
 import { WorkflowIsolationManager } from '../_shared/workflow-isolation.ts';
+import { supabase } from '../_shared/supabase.ts';
 
 /**
  * AI Chat Simple - MVP Implementation
@@ -17,10 +17,7 @@ import { WorkflowIsolationManager } from '../_shared/workflow-isolation.ts';
  * focused on the core MVP requirements.
  */
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+// Supabase client is now imported from shared utilities
 
 // N8n API configuration
 const N8N_API_URL = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';

@@ -4,8 +4,8 @@
  */
 
 import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
+import { supabase } from '../_shared/supabase.ts';
 
 interface HealthCheckRequest {
   action: 'basic' | 'detailed' | 'dependencies' | 'performance' | 'all';
@@ -52,10 +52,7 @@ const startTime = Date.now();
 
 serve(withCors(async (req: Request) => {
   try {
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Supabase client is now imported from shared utilities
 
     const url = new URL(req.url);
     const action = url.searchParams.get('action') || 'basic';

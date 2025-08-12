@@ -1,14 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders, handleCors } from '../_shared/cors.ts';
 import { authenticate } from '../_shared/auth.ts';
 import { 
   createSuccessResponse, 
   createErrorResponse, 
   createValidationErrorResponse,
-  createAuthErrorResponse 
+  createAuthErrorResponse,
+  ApiResponse
 } from '../_shared/responses.ts';
 import { validate, PROJECT_VALIDATION_RULES, validateUUID } from '../_shared/validation.ts';
+import { supabase } from '../_shared/supabase.ts';
 
 // Types for Project API
 interface Project {
@@ -45,21 +46,9 @@ interface WorkflowSummary {
   last_deployed_at?: string;
 }
 
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-  timestamp: string;
-}
+// ApiResponse is imported from shared responses
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
-
-// Removed duplicate authentication and validation - now using shared utilities
+// Supabase client and utilities are now imported from shared modules
 
 // Get all projects for a user
 const getUserProjects = async (userId: string): Promise<ProjectWithStats[]> => {
@@ -373,7 +362,7 @@ serve(async (req) => {
         } else if (req.method === 'PUT') {
           // PUT /projects/{id} - Update project
           const body = await req.json();
-          const validation = validateProjectData({ ...body, name: body.name || 'temp' });
+          const validation = validate({ ...body, name: body.name || 'temp' }, PROJECT_VALIDATION_RULES);
           
           if (!validation.isValid) {
             const relevantErrors = validation.errors.filter(err => 
