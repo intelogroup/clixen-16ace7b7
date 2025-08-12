@@ -1,0 +1,176 @@
+{
+  "name": "[PROD] Scientific Data & Statistics",
+  "nodes": [
+    {
+      "id": "schedule3",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [250, 300],
+      "typeVersion": 1.1,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtHour": 8
+            },
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtHour": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "worldBankData",
+      "name": "World Bank Statistics",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 250],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.worldbank.org/v2/country/WLD/indicator/SP.POP.TOTL",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "date",
+              "value": "2020:2023"
+            },
+            {
+              "name": "per_page",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "covidStats",
+      "name": "COVID-19 Statistics",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 400],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://disease.sh/v3/covid-19/all",
+        "options": {}
+      }
+    },
+    {
+      "id": "earthquakeData",
+      "name": "Earthquake Data USGS",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 550],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://earthquake.usgs.gov/fdsnws/event/1/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "geojson"
+            },
+            {
+              "name": "starttime",
+              "value": "={{ $now.minus(1, 'day').toISO() }}"
+            },
+            {
+              "name": "minmagnitude",
+              "value": "4.5"
+            },
+            {
+              "name": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "climateData",
+      "name": "Climate Change Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 700],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://global-warming.org/api/temperature-api",
+        "options": {}
+      }
+    },
+    {
+      "id": "formatStatsEmail",
+      "name": "Format Statistics Email",
+      "type": "n8n-nodes-base.code",
+      "position": [650, 450],
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "python",
+        "pythonCode": "import json\nfrom datetime import datetime\nimport math\n\n# Determine greeting\ncurrent_hour = datetime.now().hour\nif current_hour < 12:\n    greeting = \"Morning\"\n    emoji = \"🌅\"\nelse:\n    greeting = \"Afternoon\"\n    emoji = \"🌆\"\n\n# Process World Bank data\nworld_stats_html = \"\"\nif items[0].json:\n    wb_data = items[0].json\n    if isinstance(wb_data, list) and len(wb_data) > 1:\n        world_stats_html = \"\"\"\n        <div style=\"padding: 20px; background: #e3f2fd; border-radius: 10px; margin-bottom: 20px;\">\n            <h2 style=\"color: #1565c0; margin: 0 0 15px 0;\">🌍 Global Population Statistics</h2>\n        \"\"\"\n        population_data = wb_data[1] if len(wb_data) > 1 else []\n        for entry in population_data[:4]:\n            if entry and 'value' in entry and entry['value']:\n                pop_billions = entry['value'] / 1_000_000_000\n                world_stats_html += f\"\"\"\n                <p style=\"color: #333; margin: 5px 0;\">\n                    <strong>{entry.get('date', 'Unknown')}:</strong> {pop_billions:.2f} billion people\n                </p>\n                \"\"\"\n        world_stats_html += \"</div>\"\n\n# Process COVID statistics\ncovid_html = \"\"\nif len(items) > 1 and items[1].json:\n    covid = items[1].json\n    covid_html = f\"\"\"\n    <div style=\"padding: 20px; background: #fce4ec; border-radius: 10px; margin-bottom: 20px;\">\n        <h2 style=\"color: #c2185b; margin: 0 0 15px 0;\">🦠 Global COVID-19 Statistics</h2>\n        <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 10px;\">\n            <div>\n                <p style=\"color: #666; margin: 5px 0;\">Total Cases: <strong>{covid.get('cases', 0):,}</strong></p>\n                <p style=\"color: #666; margin: 5px 0;\">Recovered: <strong>{covid.get('recovered', 0):,}</strong></p>\n            </div>\n            <div>\n                <p style=\"color: #666; margin: 5px 0;\">Active: <strong>{covid.get('active', 0):,}</strong></p>\n                <p style=\"color: #666; margin: 5px 0;\">Today's Cases: <strong>+{covid.get('todayCases', 0):,}</strong></p>\n            </div>\n        </div>\n        <p style=\"color: #999; font-size: 12px; margin: 10px 0 0 0;\">Last updated: {datetime.now().strftime('%B %d, %Y')}</p>\n    </div>\n    \"\"\"\n\n# Process earthquake data\nearthquake_html = \"\"\nif len(items) > 2 and items[2].json:\n    eq_data = items[2].json\n    if 'features' in eq_data:\n        earthquake_html = \"\"\"\n        <div style=\"padding: 20px; background: #fff3e0; border-radius: 10px; margin-bottom: 20px;\">\n            <h2 style=\"color: #e65100; margin: 0 0 15px 0;\">🌋 Recent Significant Earthquakes (24h)</h2>\n        \"\"\"\n        earthquakes = eq_data['features'][:5]\n        if earthquakes:\n            for eq in earthquakes:\n                props = eq.get('properties', {})\n                mag = props.get('mag', 0)\n                place = props.get('place', 'Unknown location')\n                time = datetime.fromtimestamp(props.get('time', 0)/1000).strftime('%H:%M UTC')\n                \n                # Color based on magnitude\n                if mag >= 6:\n                    color = '#d32f2f'\n                elif mag >= 5:\n                    color = '#f57c00'\n                else:\n                    color = '#fbc02d'\n                    \n                earthquake_html += f\"\"\"\n                <div style=\"margin-bottom: 10px; padding: 10px; background: white; border-left: 4px solid {color}; border-radius: 4px;\">\n                    <strong style=\"color: {color};\">M{mag}</strong> - {place}\n                    <span style=\"color: #999; font-size: 12px; margin-left: 10px;\">{time}</span>\n                </div>\n                \"\"\"\n        else:\n            earthquake_html += \"<p style='color: #666;'>No significant earthquakes in the last 24 hours</p>\"\n        earthquake_html += \"</div>\"\n\n# Process climate data\nclimate_html = \"\"\nif len(items) > 3 and items[3].json:\n    climate_data = items[3].json\n    if 'result' in climate_data:\n        recent_temps = climate_data['result'][-5:] if isinstance(climate_data['result'], list) else []\n        if recent_temps:\n            climate_html = \"\"\"\n            <div style=\"padding: 20px; background: #e8f5e9; border-radius: 10px; margin-bottom: 20px;\">\n                <h2 style=\"color: #2e7d32; margin: 0 0 15px 0;\">🌡️ Global Temperature Anomalies</h2>\n                <p style=\"color: #666; margin-bottom: 15px;\">Recent temperature deviations from 20th century average:</p>\n            \"\"\"\n            for temp in recent_temps:\n                if 'station' in temp and 'station' in temp:\n                    year_month = f\"{temp.get('time', 'Unknown')}\"\n                    anomaly = temp.get('station', 0)\n                    color = '#d32f2f' if float(anomaly) > 0 else '#1976d2'\n                    climate_html += f\"\"\"\n                    <p style=\"margin: 5px 0;\">\n                        <strong>{year_month}:</strong> \n                        <span style=\"color: {color}; font-weight: bold;\">{anomaly}°C</span>\n                    </p>\n                    \"\"\"\n            climate_html += \"</div>\"\n\n# Fun science facts\nfacts_html = \"\"\"\n<div style=\"padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; margin-bottom: 20px;\">\n    <h2 style=\"margin: 0 0 15px 0;\">💡 Scientific Facts of the Day</h2>\n    <ul style=\"margin: 0; padding-left: 20px;\">\n        <li style=\"margin-bottom: 10px;\">The human brain uses about 20% of the body's total energy despite being only 2% of body weight</li>\n        <li style=\"margin-bottom: 10px;\">There are more possible chess game variations than atoms in the observable universe</li>\n        <li style=\"margin-bottom: 10px;\">A teaspoon of neutron star material would weigh about 6 billion tons on Earth</li>\n        <li>The Great Barrier Reef is the largest living structure on Earth, visible from space</li>\n    </ul>\n</div>\n\"\"\"\n\n# Create final HTML\nhtml_content = f\"\"\"\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n    <div style=\"background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;\">\n        <h1 style=\"margin: 0; font-size: 28px;\">{emoji} Scientific Data & Statistics</h1>\n        <p style=\"margin: 10px 0 0 0; opacity: 0.9;\">{greeting} Report - {datetime.now().strftime('%A, %B %d, %Y')}</p>\n    </div>\n    \n    <div style=\"padding: 20px; background: white; border: 1px solid #e0e0e0; border-top: none;\">\n        {world_stats_html}\n        {covid_html}\n        {earthquake_html}\n        {climate_html}\n        {facts_html}\n        \n        <div style=\"margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center;\">\n            <p style=\"color: #666; margin: 0;\">📊 Data compiled from World Bank, USGS, WHO, and climate monitoring organizations</p>\n            <p style=\"color: #999; font-size: 12px; margin: 10px 0 0 0;\">Delivered daily at 8:00 AM and 3:00 PM</p>\n        </div>\n    </div>\n</body>\n</html>\n\"\"\"\n\nreturn [{\n    \"subject\": f\"{emoji} Scientific Data Report - {greeting} Edition\",\n    \"html\": html_content,\n    \"to\": \"jimkalinov@gmail.com\"\n}]"
+      }
+    },
+    {
+      "id": "sendStatsEmail",
+      "name": "Send Statistics Email",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [850, 450],
+      "typeVersion": 2.1,
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "htmlBody": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "World Bank Statistics", "type": "main", "index": 0 },
+          { "node": "COVID-19 Statistics", "type": "main", "index": 0 },
+          { "node": "Earthquake Data USGS", "type": "main", "index": 0 },
+          { "node": "Climate Change Data", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "World Bank Statistics": {
+      "main": [[{ "node": "Format Statistics Email", "type": "main", "index": 0 }]]
+    },
+    "COVID-19 Statistics": {
+      "main": [[{ "node": "Format Statistics Email", "type": "main", "index": 0 }]]
+    },
+    "Earthquake Data USGS": {
+      "main": [[{ "node": "Format Statistics Email", "type": "main", "index": 0 }]]
+    },
+    "Climate Change Data": {
+      "main": [[{ "node": "Format Statistics Email", "type": "main", "index": 0 }]]
+    },
+    "Format Statistics Email": {
+      "main": [[{ "node": "Send Statistics Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "name": "[PROD] Daily Science News Digest",
+  "nodes": [
+    {
+      "id": "schedule1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [250, 300],
+      "typeVersion": 1.1,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtHour": 9
+            },
+            {
+              "field": "hours", 
+              "hoursInterval": 1,
+              "triggerAtHour": 17,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "httpRequest1",
+      "name": "Fetch Science News",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 300],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.spaceflightnewsapi.net/v4/articles",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "5"
+            },
+            {
+              "name": "ordering",
+              "value": "-published_at"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "nasaData",
+      "name": "NASA Astronomy Picture",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 450],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.nasa.gov/planetary/apod",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "DEMO_KEY"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "arxivSearch",
+      "name": "ArXiv Latest Papers",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [450, 600],
+      "typeVersion": 4.1,
+      "parameters": {
+        "method": "GET",
+        "url": "http://export.arxiv.org/api/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search_query",
+              "value": "cat:physics.gen-ph"
+            },
+            {
+              "name": "max_results",
+              "value": "3"
+            },
+            {
+              "name": "sortBy",
+              "value": "submittedDate"
+            },
+            {
+              "name": "sortOrder",
+              "value": "descending"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "formatEmail",
+      "name": "Format Science Email",
+      "type": "n8n-nodes-base.code",
+      "position": [650, 400],
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "python",
+        "pythonCode": "import json\nfrom datetime import datetime\nimport re\n\n# Get current time for greeting\ncurrent_hour = datetime.now().hour\nif current_hour < 12:\n    greeting = \"Good Morning\"\nelif current_hour < 18:\n    greeting = \"Good Afternoon\"\nelse:\n    greeting = \"Good Evening\"\n\n# Process space news\nspace_news = items[0].json.get('results', [])\nspace_news_html = \"\"\nfor i, article in enumerate(space_news[:5], 1):\n    space_news_html += f\"\"\"\n    <div style=\"margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;\">\n        <h3 style=\"color: #2c3e50; margin: 0 0 10px 0;\">{i}. {article['title']}</h3>\n        <p style=\"color: #555; margin: 10px 0;\">{article['summary'][:200]}...</p>\n        <p style=\"color: #777; font-size: 12px;\">Source: {article.get('news_site', 'Unknown')}</p>\n        <a href=\"{article['url']}\" style=\"color: #3498db; text-decoration: none;\">Read more →</a>\n    </div>\n    \"\"\"\n\n# Process NASA APOD\nnasa_apod = items[1].json if len(items) > 1 else {}\napod_html = \"\"\nif nasa_apod:\n    apod_html = f\"\"\"\n    <div style=\"margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;\">\n        <h2 style=\"margin: 0 0 15px 0;\">🌌 NASA Astronomy Picture of the Day</h2>\n        <h3>{nasa_apod.get('title', 'Amazing Space Image')}</h3>\n        <p>{nasa_apod.get('explanation', '')[:300]}...</p>\n        <a href=\"{nasa_apod.get('url', '#')}\" style=\"color: #fff; text-decoration: underline;\">View Full Image</a>\n    </div>\n    \"\"\"\n\n# Process ArXiv papers (XML parsing)\narxiv_html = \"\"\nif len(items) > 2:\n    arxiv_data = items[2].json if hasattr(items[2], 'json') else items[2].get('data', '')\n    if isinstance(arxiv_data, str):\n        # Simple XML parsing for ArXiv\n        entries = re.findall(r'<entry>(.*?)</entry>', arxiv_data, re.DOTALL)\n        arxiv_html = \"<h2 style='color: #2c3e50; margin: 30px 0 20px 0;'>📚 Latest Physics Research Papers</h2>\"\n        for i, entry in enumerate(entries[:3], 1):\n            title_match = re.search(r'<title>(.*?)</title>', entry)\n            summary_match = re.search(r'<summary>(.*?)</summary>', entry, re.DOTALL)\n            link_match = re.search(r'<id>(.*?)</id>', entry)\n            \n            if title_match:\n                title = title_match.group(1).strip()\n                summary = summary_match.group(1).strip()[:200] if summary_match else 'No summary available'\n                link = link_match.group(1) if link_match else '#'\n                \n                arxiv_html += f\"\"\"\n                <div style=\"margin-bottom: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;\">\n                    <h4 style=\"color: #856404; margin: 0 0 10px 0;\">{i}. {title}</h4>\n                    <p style=\"color: #856404; font-size: 14px;\">{summary}...</p>\n                    <a href=\"{link}\" style=\"color: #856404; font-weight: bold;\">Read Paper →</a>\n                </div>\n                \"\"\"\n\n# Create final HTML email\nhtml_content = f\"\"\"\n<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body style=\"font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;\">\n    <div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;\">\n        <h1 style=\"margin: 0; font-size: 28px;\">🔬 Daily Science News Digest</h1>\n        <p style=\"margin: 10px 0 0 0; opacity: 0.9;\">{greeting}! Here's your science update for {datetime.now().strftime('%B %d, %Y')}</p>\n    </div>\n    \n    <div style=\"padding: 20px; background: white; border: 1px solid #e0e0e0; border-top: none;\">\n        <h2 style=\"color: #2c3e50; margin: 0 0 20px 0;\">🚀 Space & Astronomy News</h2>\n        {space_news_html}\n        \n        {apod_html}\n        \n        {arxiv_html}\n        \n        <div style=\"margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center;\">\n            <p style=\"color: #666; margin: 0;\">This digest is automatically generated and sent twice daily at 9:00 AM and 5:30 PM.</p>\n            <p style=\"color: #999; font-size: 12px; margin: 10px 0 0 0;\">Powered by NASA, ArXiv, and Space News APIs</p>\n        </div>\n    </div>\n</body>\n</html>\n\"\"\"\n\nreturn [{\n    \"subject\": f\"🔬 Science News: {greeting} Edition - {datetime.now().strftime('%b %d')}\"‚\n    \"html\": html_content,\n    \"to\": \"jimkalinov@gmail.com\"\n}]"
+      }
+    },
+    {
+      "id": "sendEmail",
+      "name": "Send Science Email",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [850, 400],
+      "typeVersion": 2.1,
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "htmlBody": "={{ $json.html }}",
+        "options": {}
+      },
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "Fetch Science News", "type": "main", "index": 0 },
+          { "node": "NASA Astronomy Picture", "type": "main", "index": 0 },
+          { "node": "ArXiv Latest Papers", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Science News": {
+      "main": [[{ "node": "Format Science Email", "type": "main", "index": 0 }]]
+    },
+    "NASA Astronomy Picture": {
+      "main": [[{ "node": "Format Science Email", "type": "main", "index": 0 }]]
+    },
+    "ArXiv Latest Papers": {
+      "main": [[{ "node": "Format Science Email", "type": "main", "index": 0 }]]
+    },
+    "Format Science Email": {
+      "main": [[{ "node": "Send Science Email", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
