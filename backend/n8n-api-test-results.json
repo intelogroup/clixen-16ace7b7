@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-08-12T19:28:30.106Z",
+  "results": {
+    "authentication": {
+      "apiKeyValid": true,
+      "requiresAuth": true
+    },
+    "workflows": {
+      "list": true,
+      "get": true,
+      "create": true,
+      "update": true,
+      "patch": false,
+      "activate": false,
+      "deactivate": true,
+      "delete": true
+    },
+    "executions": {
+      "list": true,
+      "execute": false,
+      "webhook": false
+    },
+    "credentials": {
+      "list": false,
+      "types": false,
+      "create": true,
+      "delete": true
+    },
+    "nodes": {
+      "types": false
+    },
+    "users": {
+      "me": false
+    },
+    "settings": {
+      "get": false,
+      "version": false
+    },
+    "health": {
+      "check": false,
+      "metrics": false
+    }
+  },
+  "summary": {
+    "capabilities": {
+      "✅ FULLY WORKING": [
+        "authentication.apiKeyValid",
+        "authentication.requiresAuth",
+        "workflows.list",
+        "workflows.get",
+        "workflows.create",
+        "workflows.update",
+        "workflows.deactivate",
+        "workflows.delete",
+        "executions.list",
+        "credentials.create",
+        "credentials.delete"
+      ],
+      "⚠️ PARTIAL/LIMITED": [],
+      "❌ NOT AVAILABLE": [
+        "workflows.patch",
+        "workflows.activate",
+        "executions.execute",
+        "executions.webhook",
+        "credentials.list",
+        "credentials.types",
+        "nodes.types",
+        "users.me",
+        "settings.get",
+        "settings.version",
+        "health.check",
+        "health.metrics"
+      ]
+    },
+    "successRate": 0.4782608695652174
+  }
+}
