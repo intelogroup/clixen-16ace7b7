@@ -1,0 +1,129 @@
+{
+  "name": "[USR-jimkalinov] Daily Insights & Tips",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://zenquotes.io/api/today",
+        "options": {}
+      },
+      "id": "get-quote",
+      "name": "Get Daily Quote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://uselessfacts.jsph.pl/random.json?language=en",
+        "options": {}
+      },
+      "id": "get-fact",
+      "name": "Get Fun Fact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://official-joke-api.appspot.com/random_joke",
+        "options": {}
+      },
+      "id": "get-joke",
+      "name": "Get Daily Joke",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.adviceslip.com/advice",
+        "options": {}
+      },
+      "id": "get-advice",
+      "name": "Get Life Advice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Gather all the daily content\nconst quote = items[0].json[0] || { text: 'Every day is a new opportunity.', author: 'Anonymous' };\nconst fact = items[1].json || { text: 'Did you know that bananas are berries but strawberries aren\\'t?' };\nconst joke = items[2].json || { setup: 'Why don\\'t scientists trust atoms?', punchline: 'Because they make up everything!' };\nconst advice = items[3].json?.slip || { advice: 'Take time to enjoy the simple things in life.' };\n\n// Get current date info\nconst now = new Date();\nconst dayName = now.toLocaleDateString('en-US', { weekday: 'long' });\nconst monthDay = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });\n\n// Determine greeting based on time\nconst hour = now.getHours();\nlet greeting = 'Good morning';\nif (hour >= 12 && hour < 17) greeting = 'Good afternoon';\nelse if (hour >= 17) greeting = 'Good evening';\n\n// Create beautiful HTML email\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }\n    .container { max-width: 600px; margin: 0 auto; background: white; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }\n    .content { padding: 30px; }\n    .section { margin-bottom: 30px; }\n    .section-title { font-size: 20px; font-weight: bold; color: #2d3748; margin-bottom: 15px; display: flex; align-items: center; }\n    .section-content { background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea; }\n    .quote { font-style: italic; font-size: 18px; line-height: 1.6; color: #4a5568; }\n    .author { text-align: right; margin-top: 10px; font-weight: bold; color: #667eea; }\n    .fact { color: #2d3748; font-size: 16px; line-height: 1.5; }\n    .joke { color: #2d3748; font-size: 16px; line-height: 1.5; }\n    .advice { color: #2d3748; font-size: 16px; line-height: 1.5; font-weight: 500; }\n    .footer { background: #f8f9fa; padding: 20px 30px; text-align: center; color: #718096; font-size: 14px; }\n    .emoji { font-size: 24px; margin-right: 10px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1 style=\"margin: 0; font-size: 32px;\">✨ Daily Inspiration</h1>\n      <p style=\"margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;\">${greeting}! Here's your ${dayName} dose of positivity</p>\n      <p style=\"margin: 5px 0 0 0; font-size: 14px; opacity: 0.8;\">${monthDay}</p>\n    </div>\n    \n    <div class=\"content\">\n      <div class=\"section\">\n        <div class=\"section-title\">\n          <span class=\"emoji\">💫</span>\n          Quote of the Day\n        </div>\n        <div class=\"section-content\">\n          <div class=\"quote\">\"${quote.text || quote.q}\"</div>\n          <div class=\"author\">— ${quote.author || quote.a || 'Unknown'}</div>\n        </div>\n      </div>\n      \n      <div class=\"section\">\n        <div class=\"section-title\">\n          <span class=\"emoji\">🧠</span>\n          Fascinating Fact\n        </div>\n        <div class=\"section-content\">\n          <div class=\"fact\">${fact.text}</div>\n        </div>\n      </div>\n      \n      <div class=\"section\">\n        <div class=\"section-title\">\n          <span class=\"emoji\">😄</span>\n          Smile Break\n        </div>\n        <div class=\"section-content\">\n          <div class=\"joke\">\n            <strong>Q:</strong> ${joke.setup}<br><br>\n            <strong>A:</strong> ${joke.punchline}\n          </div>\n        </div>\n      </div>\n      \n      <div class=\"section\">\n        <div class=\"section-title\">\n          <span class=\"emoji\">🎯</span>\n          Today's Wisdom\n        </div>\n        <div class=\"section-content\">\n          <div class=\"advice\">${advice.advice}</div>\n        </div>\n      </div>\n    </div>\n    \n    <div class=\"footer\">\n      <p style=\"margin: 5px 0;\"><strong>Have a wonderful ${dayName}!</strong></p>\n      <p style=\"margin: 5px 0;\">This daily dose of inspiration was curated just for you</p>\n      <p style=\"margin: 5px 0; font-size: 12px;\">Delivered with care every morning at 8:00 AM EST</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\n// Create text version\nconst textVersion = `\n✨ Daily Inspiration - ${dayName}, ${monthDay}\n\n${greeting}! Here's your daily dose of positivity:\n\n💫 QUOTE OF THE DAY\n\"${quote.text || quote.q}\"\n— ${quote.author || quote.a || 'Unknown'}\n\n🧠 FASCINATING FACT\n${fact.text}\n\n😄 SMILE BREAK\nQ: ${joke.setup}\nA: ${joke.punchline}\n\n🎯 TODAY'S WISDOM\n${advice.advice}\n\nHave a wonderful ${dayName}!\nThis daily dose of inspiration was curated just for you.\n\nDelivered with care every morning at 8:00 AM EST\n`.trim();\n\nreturn [{\n  json: {\n    to: 'jimkalinov@gmail.com',\n    subject: `✨ Your Daily Inspiration - ${dayName}, ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,\n    html: html,\n    text: textVersion,\n    from: 'onboarding@resend.dev'\n  }\n}];"
+      },
+      "id": "format-email",
+      "name": "Format Daily Email",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 350]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "={{ $json }}"
+      },
+      "id": "send-email",
+      "name": "Send Daily Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 350]
+    }
+  ],
+  "connections": {
+    "Daily 8AM Trigger": {
+      "main": [
+        [
+          {"node": "Get Daily Quote", "type": "main", "index": 0},
+          {"node": "Get Fun Fact", "type": "main", "index": 0},
+          {"node": "Get Daily Joke", "type": "main", "index": 0},
+          {"node": "Get Life Advice", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Get Daily Quote": {
+      "main": [[{"node": "Format Daily Email", "type": "main", "index": 0}]]
+    },
+    "Get Fun Fact": {
+      "main": [[{"node": "Format Daily Email", "type": "main", "index": 0}]]
+    },
+    "Get Daily Joke": {
+      "main": [[{"node": "Format Daily Email", "type": "main", "index": 0}]]
+    },
+    "Get Life Advice": {
+      "main": [[{"node": "Format Daily Email", "type": "main", "index": 0}]]
+    },
+    "Format Daily Email": {
+      "main": [[{"node": "Send Daily Email", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "timezone": "America/New_York"
+  }
+}
