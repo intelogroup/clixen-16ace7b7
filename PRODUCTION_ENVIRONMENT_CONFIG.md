@@ -60,8 +60,31 @@ supabase functions deploy --project-ref zfbgdixbzezpxllkoyfc
 
 - **Frontend**: http://18.221.12.50 (Netlify deployment)
 - **Supabase**: https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc  
-- **n8n**: http://18.221.12.50:5678
+- **n8n Automation Server**: http://18.221.12.50:5678 ✅
+- **n8n API Endpoint**: http://18.221.12.50:5678/api/v1 ✅
 - **Edge Functions**: https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/
+
+## 🤖 n8n Server Instance Details
+
+### **Server Configuration**
+- **Host**: 18.221.12.50
+- **Port**: 5678
+- **Protocol**: HTTP (internal network)
+- **Version**: n8n Community Edition (Self-hosted)
+- **Status**: ✅ Active and operational
+
+### **API Configuration**
+- **Base URL**: http://18.221.12.50:5678
+- **API Endpoint**: http://18.221.12.50:5678/api/v1
+- **Authentication**: JWT API Key (configured in environment variables)
+- **Timeout**: 30 seconds
+- **Retries**: 3 attempts
+
+### **User Isolation Implementation**
+- **Workflow Naming**: All workflows prefixed with `[USR-{userId}]`
+- **Webhook Security**: Unique URLs with user hashes
+- **Access Control**: Admin panel restricted (users access via Clixen only)
+- **Data Separation**: Workflows isolated by naming convention
 
 ## 🧪 Production Verification Tests
 

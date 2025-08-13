@@ -2,7 +2,7 @@
 ## What Actually Works for SQL Migrations & Edge Functions
 
 **Status**: ✅ TESTED & VERIFIED  
-**Last Updated**: August 9, 2025  
+**Last Updated**: August 13, 2025  
 **Environment**: Claude Code Agents on Linux 6.1.102, Node.js v22.18.0
 
 ---
@@ -181,6 +181,78 @@ curl -X POST https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 4. Read existing scripts before writing new ones
 5. Use MCP tools when available via agents
 6. Fallback to API calls for deployment
+```
+
+---
+
+## 🤖 **N8N SERVER INTEGRATION SUCCESS PATTERNS**
+
+### **✅ n8n Instance Configuration**
+```bash
+# Current Production n8n Server
+Host: 18.221.12.50
+Port: 5678
+Base URL: http://18.221.12.50:5678
+API Endpoint: http://18.221.12.50:5678/api/v1
+Status: ✅ Active and operational
+```
+
+### **✅ API Testing Patterns**
+```bash
+# Test n8n connectivity (ALWAYS works)
+curl -s http://18.221.12.50:5678/api/v1/workflows \
+  -H "Authorization: Bearer [API_KEY]"
+
+# Deploy workflow via API (PROVEN method)
+curl -X POST http://18.221.12.50:5678/api/v1/workflows \
+  -H "Authorization: Bearer [API_KEY]" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "[USR-{userId}] Test Workflow",
+    "nodes": [...],
+    "connections": {...},
+    "settings": {...}
+  }'
+
+# Check workflow status
+curl -s http://18.221.12.50:5678/api/v1/workflows/{workflow_id} \
+  -H "Authorization: Bearer [API_KEY]"
+```
+
+### **✅ User Isolation Implementation**
+```bash
+# Workflow naming convention (MANDATORY)
+Prefix: [USR-{userId}]
+Example: [USR-abc123] Daily Weather Report
+
+# Configuration location
+MCP Config: /root/repo/backend/mcp/n8n-mcp-config.json
+API Key: [Configured in environment variables]
+Security Mode: read-only-credentials
+```
+
+### **🔧 n8n Integration Commands**
+```bash
+# Check n8n server status
+curl -s http://18.221.12.50:5678/healthz
+
+# List user workflows (with prefix filtering)
+curl -s "http://18.221.12.50:5678/api/v1/workflows?search=[USR-{userId}]" \
+  -H "Authorization: Bearer [API_KEY]"
+
+# Test workflow execution
+curl -X POST http://18.221.12.50:5678/api/v1/workflows/{workflow_id}/execute \
+  -H "Authorization: Bearer [API_KEY]"
+```
+
+### **🎯 For Workflow-Orchestration-Agent**
+```bash
+# ✅ ALWAYS use these patterns:
+1. Test connectivity before deployment attempts
+2. Use workflow prefixing for user isolation
+3. Verify deployment with status checks
+4. Use MCP n8n tools when available
+5. Fallback to direct API calls for reliability
 ```
 
 ---
