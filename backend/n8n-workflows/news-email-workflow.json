@@ -1,0 +1,103 @@
+{
+  "name": "[USR-template] Daily News Email Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node-001",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/top-headlines",
+        "options": {
+          "headers": {
+            "X-API-Key": "b6b1af1b97dc4577998ef26e45cf3cc2",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "country": "us",
+            "category": "technology",
+            "pageSize": "5"
+          }
+        }
+      },
+      "id": "fetch-news-001",
+      "name": "Fetch Latest News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Transform news articles into HTML email content\nconst articles = items[0].json.articles || [];\nconst category = 'technology';\n\n// Generate HTML email content\nlet htmlContent = `\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .header { background-color: #4A90E2; color: white; padding: 20px; text-align: center; }\n    .article { border-bottom: 1px solid #eee; padding: 20px; }\n    .article-title { color: #4A90E2; font-size: 18px; font-weight: bold; margin-bottom: 10px; }\n    .article-description { margin-bottom: 10px; }\n    .article-link { color: #4A90E2; text-decoration: none; }\n    .footer { background-color: #f8f9fa; padding: 20px; text-align: center; color: #666; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>🗞️ Daily Technology News</h1>\n    <p>Your personalized news digest from Clixen</p>\n  </div>\n`;\n\n// Add articles\narticles.slice(0, 5).forEach((article, index) => {\n  htmlContent += `\n  <div class=\"article\">\n    <div class=\"article-title\">${article.title || 'No Title'}</div>\n    <div class=\"article-description\">${article.description || 'No description available.'}</div>\n    <p><strong>Source:</strong> ${article.source?.name || 'Unknown'}</p>\n    <p><a href=\"${article.url}\" class=\"article-link\" target=\"_blank\">Read Full Article →</a></p>\n  </div>\n  `;\n});\n\n// Add footer\nhtmlContent += `\n  <div class=\"footer\">\n    <p>📧 Delivered by <strong>Clixen</strong> | <a href=\"https://clixen.app\">clixen.app</a></p>\n    <p>Generated on ${new Date().toLocaleDateString()}</p>\n  </div>\n</body>\n</html>\n`;\n\n// Return formatted email data\nreturn [{\n  json: {\n    recipient_email: 'test@example.com',\n    subject: `📰 Daily Technology News - ${new Date().toLocaleDateString()}`,\n    email_content: htmlContent,\n    article_count: articles.length,\n    category: category\n  }\n}];"
+      },
+      "id": "format-email-001",
+      "name": "Format Email Content",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "{{ $json.recipient_email }}",
+            "subject": "{{ $json.subject }}",
+            "html": "{{ $json.email_content }}"
+          }
+        }
+      },
+      "id": "send-email-001",
+      "name": "Send Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest News": {
+      "main": [
+        [
+          {
+            "node": "Format Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

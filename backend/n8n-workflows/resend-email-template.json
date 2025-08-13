@@ -1,0 +1,50 @@
+{
+  "name": "Clixen Email Template with Resend API",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e4b3b0e1-9f1a-4f8b-8e9d-1c2a3b4c5d6e",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "{{ $json.recipient_email || 'test@example.com' }}",
+            "subject": "{{ $json.subject || 'Clixen Notification' }}",
+            "html": "{{ $json.email_content || '<h1>Hello from Clixen!</h1><p>This is a test email from your Clixen workflow.</p>' }}"
+          }
+        }
+      },
+      "id": "f5c4d3e2-0a1b-5c6d-9e8f-2d3e4f5a6b7c",
+      "name": "Send Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
