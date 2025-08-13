@@ -1,0 +1,457 @@
+{
+  "name": "[CLIXEN] Luxury Fallback Scraper - Ultimate Reliability",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "webhook/{{$userId}}/{{$timestamp}}/luxury-scraper",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook_trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-9d7d39e6d2db4992b7fa703fc4d69081"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "pageOptions",
+              "value": "={{ {\"waitFor\": 3000, \"onlyMainContent\": true} }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "firecrawl_primary",
+      "name": "1. Firecrawl (Primary)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check_firecrawl",
+      "name": "Firecrawl Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Playwright scraping fallback\nconst url = $input.first().json.url;\n\ntry {\n  // This would call your Playwright service\n  const response = await $http.post('http://localhost:3000/playwright/scrape', {\n    body: {\n      url: url,\n      waitTime: 3000,\n      screenshot: false\n    },\n    timeout: 30000\n  });\n  \n  return [{\n    json: {\n      success: true,\n      scraper: 'playwright',\n      data: response.data,\n      content: response.data.html,\n      markdown: response.data.markdown\n    }\n  }];\n} catch (error) {\n  return [{\n    json: {\n      success: false,\n      scraper: 'playwright',\n      error: error.message\n    }\n  }];\n}"
+      },
+      "id": "playwright_fallback",
+      "name": "2. Playwright (Fallback)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [850, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check_playwright",
+      "name": "Playwright Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://scrapeninja.p.rapidapi.com/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Key",
+              "value": "{{ $credentials.scrapeNinjaApiKey }}"
+            },
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "scrapeninja.p.rapidapi.com"
+            }
+          ]
+        },
+        "requestMethod": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.url }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "scrapeninja_fallback",
+      "name": "3. ScrapeNinja (Fallback)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success !== undefined ? $json.success : $json.status === 'ok' }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check_scrapeninja",
+      "name": "ScrapeNinja Success?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 10000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          }
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; ClixenBot/1.0)"
+            }
+          ]
+        }
+      },
+      "id": "simple_http_fallback",
+      "name": "4. Simple HTTP (Last Resort)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1650, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate and normalize results from successful scraper\nconst results = [];\n\n// Check each scraper output\nconst scrapers = [\n  { name: 'firecrawl', node: 'Firecrawl Success?' },\n  { name: 'playwright', node: 'Playwright Success?' },\n  { name: 'scrapeninja', node: 'ScrapeNinja Success?' },\n  { name: 'http', node: 'Simple HTTP (Last Resort)' }\n];\n\n// Get the first successful result\nfor (const scraper of scrapers) {\n  try {\n    const nodeOutput = $items(scraper.node);\n    if (nodeOutput && nodeOutput.length > 0 && nodeOutput[0].json.success) {\n      const result = nodeOutput[0].json;\n      \n      return [{\n        json: {\n          success: true,\n          url: $input.first().json.url,\n          scraperUsed: scraper.name,\n          content: result.content || result.data?.content || result.data?.html || result.data,\n          markdown: result.markdown || result.data?.markdown,\n          metadata: {\n            timestamp: new Date().toISOString(),\n            executionTime: Date.now() - $input.first().json.startTime,\n            fallbacksAttempted: scrapers.indexOf(scraper)\n          },\n          originalResult: result\n        }\n      }];\n    }\n  } catch (error) {\n    console.log(`Scraper ${scraper.name} failed:`, error.message);\n  }\n}\n\n// All scrapers failed\nreturn [{\n  json: {\n    success: false,\n    url: $input.first().json.url,\n    error: 'All scrapers failed',\n    metadata: {\n      timestamp: new Date().toISOString(),\n      fallbacksAttempted: scrapers.length\n    }\n  }\n}];"
+      },
+      "id": "aggregate_results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1850, 250]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "scraping_analytics",
+        "columns": "url,scraper_used,success,execution_time,content_length,timestamp",
+        "columnValues": "={{ $json.url }},={{ $json.scraperUsed }},={{ $json.success }},={{ $json.metadata.executionTime }},={{ $json.content ? $json.content.length : 0 }},={{ $json.metadata.timestamp }}"
+      },
+      "id": "log_to_database",
+      "name": "Log Analytics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2050, 250],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check_final_success",
+      "name": "Final Success Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2250, 250]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "success_response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2450, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "responseCode": 500,
+        "options": {}
+      },
+      "id": "error_response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT scraper_used, COUNT(*) as usage_count, \n       AVG(execution_time) as avg_time, \n       SUM(CASE WHEN success THEN 1 ELSE 0 END)::float / COUNT(*) as success_rate\nFROM scraping_analytics\nWHERE timestamp > NOW() - INTERVAL '24 hours'\nGROUP BY scraper_used\nORDER BY success_rate DESC, avg_time ASC",
+        "options": {}
+      },
+      "id": "get_scraper_stats",
+      "name": "Get Scraper Performance",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2050, 400],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dynamic scraper selection based on performance\nconst stats = $input.first().json;\nconst url = $items('Webhook Trigger')[0].json.url;\n\n// Analyze URL to determine best scraper\nlet recommendedScraper = 'firecrawl'; // Default\n\nif (url.includes('github.com')) {\n  recommendedScraper = 'http'; // GitHub works well with simple HTTP\n} else if (url.includes('twitter.com') || url.includes('instagram.com')) {\n  recommendedScraper = 'playwright'; // JS-heavy sites need browser\n} else if (stats && stats.length > 0) {\n  // Use best performing scraper from recent stats\n  recommendedScraper = stats[0].scraper_used;\n}\n\nreturn [{\n  json: {\n    recommendedScraper,\n    performanceStats: stats,\n    url: url\n  }\n}];"
+      },
+      "id": "smart_selection",
+      "name": "Smart Scraper Selection",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [2250, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "1. Firecrawl (Primary)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Scraper Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Firecrawl (Primary)": {
+      "main": [
+        [
+          {
+            "node": "Firecrawl Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firecrawl Success?": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "2. Playwright (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Playwright (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "Playwright Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Playwright Success?": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "3. ScrapeNinja (Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. ScrapeNinja (Fallback)": {
+      "main": [
+        [
+          {
+            "node": "ScrapeNinja Success?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ScrapeNinja Success?": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "4. Simple HTTP (Last Resort)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Simple HTTP (Last Resort)": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Log Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Analytics": {
+      "main": [
+        [
+          {
+            "node": "Final Success Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Success Check": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Scraper Performance": {
+      "main": [
+        [
+          {
+            "node": "Smart Scraper Selection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "description": "Ultimate reliability scraping workflow with luxury fallbacks. Never fails to deliver data using Firecrawl, Playwright, ScrapeNinja, and HTTP as cascading fallbacks."
+  },
+  "tags": [
+    "scraping",
+    "fallback",
+    "reliability",
+    "firecrawl",
+    "playwright",
+    "clixen"
+  ]
+}
