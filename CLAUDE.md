@@ -46,8 +46,67 @@ curl -s https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 - `docker` deployment - Not accessible
 - Package installations - Not persistent
 
+### **🔧 N8N WORKFLOW CREATION - PROVEN PATTERNS**
+```bash
+# ALWAYS check existing workflow templates first
+ls -la backend/n8n-workflows/
+# Use existing patterns from working workflows
+
+# Template structure (MANDATORY):
+{
+  "name": "[USR-{userId}] Workflow Name",
+  "nodes": [...],
+  "connections": {...},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+
+# REMOVE read-only properties before deployment:
+# - Remove "active", "id", "versionId", "tags", "description" 
+# - Keep only: name, nodes, connections, settings
+```
+
+### **📧 EMAIL INTEGRATION - WORKING APPROACH**
+```bash
+# ✅ USE RESEND API (NOT SMTP)
+# Hardcode credentials in workflow JSON as requested
+{
+  "url": "https://api.resend.com/emails",
+  "options": {
+    "headers": {
+      "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+    },
+    "body": {
+      "from": "onboarding@resend.dev",
+      "to": "recipient@example.com",
+      "subject": "Subject",
+      "html": "HTML content"
+    }
+  }
+}
+
+# ❌ NEVER USE SMTP nodes - use HTTP Request with Resend API
+# ❌ NEVER try to setup email credentials - use hardcoded approach
+```
+
+### **🔑 API CREDENTIALS - TESTED METHODS**
+```bash
+# ✅ NewsAPI Integration
+# Use HTTP Header Auth credential in n8n: "Clixen-NewsAPI"
+# API Key: b6b1af1b97dc4577998ef26e45cf3cc2
+# Header: X-API-Key with User-Agent: "Clixen/1.0 (https://clixen.app)"
+
+# ✅ HTTP Request Node Configuration
+# Always use typeVersion: 3 (not 4.1) for compatibility
+# Use "options.headers" and "options.qs" structure
+# Test API endpoints before workflow deployment
+```
+
 ### **📚 SUCCESS REFERENCE**
 See `/root/repo/AGENTS_DEPLOYMENT_SUCCESS_GUIDE.md` for complete details and working examples from verified successful implementations.
+
+**🎯 CRITICAL**: Always check `/root/repo/backend/n8n-workflows/` for existing templates before creating new workflow JSON files.
 
 ---
 
@@ -481,6 +540,86 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 4. **MVP Success Metrics**: Focus on the 4 core metrics defined in spec
 5. **User Journey First**: Prioritize complete user flow over advanced features
 6. **Read and proceed according rules.md** this set of rules are not restricting you but guide you to act safely.
+
+## 🤖 **Clixen Agent System Prompt Updates**
+
+**MANDATORY for AI Workflow Generation Agents:**
+
+### **🔧 Workflow Creation Protocol**
+```typescript
+// ALWAYS follow this sequence when generating n8n workflows:
+
+1. CHECK_EXISTING_TEMPLATES: 
+   - Read /root/repo/backend/n8n-workflows/ directory
+   - Use existing patterns and structures
+   - Copy working node configurations
+
+2. EMAIL_INTEGRATION_STANDARD:
+   - ALWAYS use Resend API via HTTP Request node
+   - NEVER use SMTP or Email nodes  
+   - Hardcode credentials: "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+   - Use sender: "onboarding@resend.dev"
+
+3. HTTP_NODE_CONFIGURATION:
+   - typeVersion: 3 (not 4.1)
+   - Use "options.headers" structure
+   - Use "options.qs" for query parameters
+   - Include User-Agent for external APIs
+
+4. WORKFLOW_STRUCTURE:
+   - Name: "[USR-{userId}] Descriptive Name"
+   - Include: name, nodes, connections, settings
+   - Exclude: active, id, versionId, tags, description
+   - Settings: { "executionOrder": "v1" }
+
+5. API_CREDENTIALS:
+   - NewsAPI: Use "Clixen-NewsAPI" credential (b6b1af1b97dc4577998ef26e45cf3cc2)
+   - OpenWeatherMap: Available in credentials
+   - Firecrawl: Available in credentials
+   - Other APIs: Check existing credential templates first
+```
+
+### **📧 Email Node Generation Rules**
+```json
+// MANDATORY email node structure:
+{
+  "parameters": {
+    "url": "https://api.resend.com/emails",
+    "options": {
+      "headers": {
+        "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+      },
+      "body": {
+        "from": "onboarding@resend.dev",
+        "to": "{{ $json.recipient_email }}",
+        "subject": "{{ $json.subject }}",
+        "html": "{{ $json.email_content }}"
+      }
+    }
+  },
+  "type": "n8n-nodes-base.httpRequest",
+  "typeVersion": 3
+}
+```
+
+### **🔍 Template Discovery Process**
+```bash
+# Before creating ANY workflow JSON:
+1. ls -la backend/n8n-workflows/
+2. Read 2-3 existing workflow files
+3. Copy node structure and patterns
+4. Adapt for new use case
+5. Test JSON structure compatibility
+```
+
+### **⚠️ Common Pitfalls to Avoid**
+- ❌ Using SMTP nodes for email
+- ❌ Creating credentials when hardcoded approach works
+- ❌ Using typeVersion 4.1 for HTTP nodes  
+- ❌ Including read-only properties in workflow JSON
+- ❌ Not checking existing templates first
+- ❌ Missing User-Agent headers for external APIs
+- ❌ Forgetting user isolation naming: "[USR-{userId}]"
 
 ## 📚 **Documentation Discipline**
 

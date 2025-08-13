@@ -1,5 +1,69 @@
 # Development Successes & Replication Guide
 
+## 🔑 **API CREDENTIAL SETUP: NewsAPI & Resend Integration Success (August 13, 2025)**
+
+### **Achievement**: Complete API Integration with n8n Workflow Deployment ✅
+
+**Session Duration**: Single session  
+**APIs Integrated**: NewsAPI + Resend API  
+**Workflows Deployed**: 2 production-ready workflows  
+**Success Rate**: 100% deployment success ✅
+
+#### **Success Highlights**:
+- **NewsAPI Credential**: Created `Clixen-NewsAPI` credential in n8n (ID: y6DD4c4WSQ1BPP7E) ✅
+- **Resend Integration**: Hardcoded API approach working perfectly ✅
+- **Workflow Deployment**: Both email template and news digest workflows live ✅
+- **Production URLs**: 
+  - Email Template: https://n8nio-n8n-7xzf6n.sliplane.app/workflow/crzQP3QyU36vQuCg
+  - News Digest: https://n8nio-n8n-7xzf6n.sliplane.app/workflow/wxqBxUVtM8D6DVnH
+
+### **Key Success Patterns - n8n Workflow Deployment**:
+1. **Template First Approach**: Always check existing workflows before creating new ones ✅
+2. **HTTP over SMTP**: Use HTTP Request nodes with Resend API instead of SMTP nodes ✅
+3. **Hardcoded Credentials**: Direct API key inclusion in workflow JSON (as requested) ✅
+4. **JSON Structure**: Remove read-only properties (active, id, versionId, tags) ✅
+5. **Node Configuration**: Use typeVersion: 3, "options.headers" structure ✅
+
+### **Reusable Solutions - API Integration Stack**:
+```javascript
+// NewsAPI Integration Pattern
+{
+  "url": "https://newsapi.org/v2/top-headlines",
+  "options": {
+    "headers": {
+      "X-API-Key": "b6b1af1b97dc4577998ef26e45cf3cc2",
+      "User-Agent": "Clixen/1.0 (https://clixen.app)"
+    },
+    "qs": { "country": "us", "category": "technology", "pageSize": "5" }
+  }
+}
+
+// Resend Email Pattern
+{
+  "url": "https://api.resend.com/emails",
+  "options": {
+    "headers": {
+      "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+    },
+    "body": {
+      "from": "onboarding@resend.dev",
+      "to": "{{ $json.recipient_email }}",
+      "subject": "{{ $json.subject }}",
+      "html": "{{ $json.email_content }}"
+    }
+  }
+}
+```
+
+### **Critical Learning - Workflow JSON Requirements**:
+- **Mandatory Properties**: name, nodes, connections, settings
+- **Remove Before Deploy**: active, id, versionId, tags, description
+- **Settings Structure**: `{ "executionOrder": "v1" }`
+- **User Isolation**: Prefix workflow names with `[USR-{userId}]`
+- **Node TypeVersion**: Use 3 for HTTP Request nodes (not 4.1)
+
+---
+
 ## 🚀 **DEPLOYMENT SUCCESS: Production-Ready MVP Build & Deploy (August 9, 2025)**
 
 ### **Achievement**: Complete Frontend Build, Deployment, and Testing ✅
