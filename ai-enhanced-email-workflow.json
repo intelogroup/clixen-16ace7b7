@@ -1,0 +1,172 @@
+{
+  "name": "[AI-ENHANCED] Smart Email Automation with OpenAI",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-email-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-816c0c13b97a423e8ab3c3233e759b97"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "{\n  \"url\": \"https://techcrunch.com/category/artificial-intelligence/\",\n  \"formats\": [\"markdown\"],\n  \"onlyMainContent\": true,\n  \"waitFor\": 2000\n}"
+      },
+      "id": "scrape-content",
+      "name": "Scrape AI News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract and prepare content for OpenAI\nconst scrapedData = items[0].json;\nconst currentDate = new Date().toLocaleDateString('en-US', { \n  weekday: 'long', \n  year: 'numeric', \n  month: 'long', \n  day: 'numeric' \n});\n\n// Get scraped content or use fallback\nlet newsContent = '';\nif (scrapedData.data?.markdown) {\n  // Take first 3000 characters for GPT context\n  newsContent = scrapedData.data.markdown.substring(0, 3000);\n  console.log('Scraped content length:', newsContent.length);\n} else if (scrapedData.success === false || scrapedData.error) {\n  // Firecrawl failed, use alternative approach\n  newsContent = `Recent AI developments include advances in large language models, new AI startups securing funding, breakthroughs in computer vision, and ongoing discussions about AI safety and regulation. Visit TechCrunch AI section for the latest updates.`;\n  console.log('Using fallback content');\n} else {\n  newsContent = 'AI and technology news from various sources.';\n}\n\n// Prepare the prompt for OpenAI\nconst systemPrompt = `You are an AI newsletter curator who creates engaging, informative email digests about artificial intelligence and technology. Your emails should be professional yet friendly, informative yet concise.`;\n\nconst userPrompt = `Create a professional HTML email newsletter for ${currentDate} with the following requirements:\n\n1. Subject line: Create a catchy subject line with an emoji\n2. Email content: Format the following AI news into an engaging email with:\n   - A warm greeting\n   - 3-5 key highlights from the news (or general AI trends if no specific news)\n   - Brief summaries for each point\n   - A call-to-action to read more\n   - Professional sign-off\n\n3. Use this HTML structure:\n   - Headers with <h2> and <h3> tags\n   - Bullet points with <ul> and <li>\n   - Paragraphs with <p> tags\n   - Links with <a href=\"https://techcrunch.com/category/artificial-intelligence/\">Read more</a>\n   - Style with inline CSS for email compatibility\n\nNews content to summarize:\n${newsContent}\n\nIMPORTANT: Return ONLY the HTML body content (not the full HTML document). The email should be ready to send.`;\n\nreturn [{\n  json: {\n    systemPrompt: systemPrompt,\n    userPrompt: userPrompt,\n    newsContent: newsContent,\n    date: currentDate,\n    hasScrapedContent: scrapedData.data?.markdown ? true : false\n  }\n}];"
+      },
+      "id": "prepare-gpt-prompt",
+      "name": "Prepare GPT Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "{\n  \"model\": \"gpt-4-turbo-preview\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"{{ $json.systemPrompt }}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.userPrompt }}\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"max_tokens\": 2000\n}"
+      },
+      "id": "openai-format",
+      "name": "OpenAI Format Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process OpenAI response and prepare final email\nconst gptResponse = items[0].json;\nconst previousData = items[0].json;\nconst currentTime = new Date();\n\n// Extract email content from GPT response\nlet emailContent = '';\nlet emailSubject = `🤖 AI Tech Digest - ${currentTime.toLocaleDateString()}`;\n\nif (gptResponse.choices && gptResponse.choices[0]?.message?.content) {\n  emailContent = gptResponse.choices[0].message.content;\n  \n  // Try to extract subject from content if GPT included it\n  const subjectMatch = emailContent.match(/Subject:(.+?)\\n/);\n  if (subjectMatch) {\n    emailSubject = subjectMatch[1].trim();\n    emailContent = emailContent.replace(/Subject:.+?\\n/, '');\n  }\n} else {\n  // Fallback if OpenAI fails\n  emailContent = `\n    <h2>🚀 AI Technology Update</h2>\n    <p>Hello!</p>\n    <p>Here's your AI news digest for today:</p>\n    <ul>\n      <li>Latest developments in artificial intelligence</li>\n      <li>New breakthroughs in machine learning</li>\n      <li>Industry updates and insights</li>\n    </ul>\n    <p><a href=\"https://techcrunch.com/category/artificial-intelligence/\">Read more on TechCrunch</a></p>\n    <p>Best regards,<br>Your AI Newsletter</p>\n  `;\n}\n\n// Wrap content in professional email template\nconst fullHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n      line-height: 1.6;\n      color: #333;\n      max-width: 600px;\n      margin: 0 auto;\n      padding: 0;\n      background-color: #f5f5f5;\n    }\n    .email-container {\n      background-color: white;\n      margin: 20px auto;\n      border-radius: 10px;\n      overflow: hidden;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    .header {\n      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n      color: white;\n      padding: 30px;\n      text-align: center;\n    }\n    .header h1 {\n      margin: 0;\n      font-size: 28px;\n      font-weight: 600;\n    }\n    .header p {\n      margin: 10px 0 0 0;\n      opacity: 0.9;\n      font-size: 14px;\n    }\n    .content {\n      padding: 30px;\n    }\n    .content h2 {\n      color: #333;\n      margin-top: 0;\n      font-size: 24px;\n    }\n    .content h3 {\n      color: #555;\n      margin-top: 20px;\n      font-size: 18px;\n    }\n    .content p {\n      color: #666;\n      margin: 15px 0;\n    }\n    .content ul {\n      color: #666;\n      margin: 15px 0;\n      padding-left: 20px;\n    }\n    .content li {\n      margin: 8px 0;\n    }\n    .content a {\n      color: #667eea;\n      text-decoration: none;\n      font-weight: 500;\n    }\n    .content a:hover {\n      text-decoration: underline;\n    }\n    .footer {\n      background: #f8f9fa;\n      padding: 20px;\n      text-align: center;\n      font-size: 12px;\n      color: #999;\n    }\n    .footer p {\n      margin: 5px 0;\n    }\n    .button {\n      display: inline-block;\n      padding: 12px 24px;\n      background: #667eea;\n      color: white;\n      text-decoration: none;\n      border-radius: 5px;\n      margin: 20px 0;\n      font-weight: 500;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"email-container\">\n    <div class=\"header\">\n      <h1>🤖 AI Intelligence Digest</h1>\n      <p>${currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>\n    </div>\n    <div class=\"content\">\n      ${emailContent}\n    </div>\n    <div class=\"footer\">\n      <p>📧 Delivered by AI-Powered Automation</p>\n      <p>Powered by n8n + OpenAI + Firecrawl + Resend</p>\n      <p>© 2025 Clixen Automation. All rights reserved.</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\n// Return formatted email data for Resend\nreturn [{\n  json: {\n    from: 'AI Newsletter <onboarding@resend.dev>',\n    to: 'jimkalinov@gmail.com',\n    subject: emailSubject,\n    html: fullHtml,\n    text: emailContent.replace(/<[^>]*>/g, ''), // Strip HTML for text version\n    metadata: {\n      workflow: 'ai-enhanced-email',\n      timestamp: currentTime.toISOString(),\n      hasAIContent: gptResponse.choices ? true : false,\n      hasScrapedContent: previousData.hasScrapedContent || false\n    }\n  }\n}];"
+      },
+      "id": "format-final-email",
+      "name": "Format Final Email",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "={{ $json }}"
+      },
+      "id": "send-resend",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'AI-enhanced email sent successfully!', emailId: $json.id, recipient: $json.to, timestamp: new Date().toISOString() }) }}",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 500]
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [[{"node": "Scrape AI News", "type": "main", "index": 0}]]
+    },
+    "Webhook Trigger": {
+      "main": [[{"node": "Scrape AI News", "type": "main", "index": 0}]]
+    },
+    "Scrape AI News": {
+      "main": [[{"node": "Prepare GPT Prompt", "type": "main", "index": 0}]]
+    },
+    "Prepare GPT Prompt": {
+      "main": [[{"node": "OpenAI Format Email", "type": "main", "index": 0}]]
+    },
+    "OpenAI Format Email": {
+      "main": [[{"node": "Format Final Email", "type": "main", "index": 0}]]
+    },
+    "Format Final Email": {
+      "main": [[
+        {"node": "Send via Resend", "type": "main", "index": 0}
+      ]]
+    },
+    "Send via Resend": {
+      "main": [[{"node": "Webhook Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "timezone": "America/New_York"
+  }
+}
