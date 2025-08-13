@@ -1,0 +1,214 @@
+{
+  "name": "[USR-test] Simple Weather Info Test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "path": "test-webhook-simple",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-test-trigger-001", 
+      "name": "Webhook Test Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://wttr.in/Boston",
+        "options": {
+          "headers": {
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "format": "j1"
+          }
+        }
+      },
+      "id": "fetch-weather-001",
+      "name": "Fetch Weather Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Transform weather data into readable format\nconst weatherData = items[0].json;\nconst currentCondition = weatherData.current_condition?.[0] || {};\nconst location = weatherData.nearest_area?.[0] || {};\n\n// Extract key weather information\nconst weather = {\n  location: `${location.areaName?.[0]?.value || 'Unknown'}, ${location.country?.[0]?.value || 'Unknown'}`,\n  temperature: `${currentCondition.temp_F || 'N/A'}°F (${currentCondition.temp_C || 'N/A'}°C)`,\n  condition: currentCondition.weatherDesc?.[0]?.value || 'Unknown',\n  humidity: `${currentCondition.humidity || 'N/A'}%`,\n  windSpeed: `${currentCondition.windspeedMiles || 'N/A'} mph`,\n  visibility: `${currentCondition.visibility || 'N/A'} miles`,\n  timestamp: new Date().toISOString()\n};\n\n// Generate simple report\nconst report = `🌤️ Weather Report for ${weather.location}\n\n🌡️ Temperature: ${weather.temperature}\n☁️ Condition: ${weather.condition}\n💧 Humidity: ${weather.humidity}\n💨 Wind Speed: ${weather.windSpeed}\n👁️ Visibility: ${weather.visibility}\n\n📅 Generated: ${new Date().toLocaleString()}\n🔗 Powered by Clixen`;\n\nreturn [{\n  json: {\n    weather_report: report,\n    structured_data: weather,\n    test_status: 'success',\n    workflow_name: 'Simple Weather Test'\n  }\n}];"
+      },
+      "id": "format-weather-001",
+      "name": "Format Weather Report",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "{{ $json.test_status }}",
+              "operation": "equal",
+              "value2": "success"
+            }
+          ]
+        }
+      },
+      "id": "check-success-001",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log successful test execution\nconst report = items[0].json.weather_report;\nconst timestamp = new Date().toISOString();\n\nconsole.log('✅ Weather Test Workflow Executed Successfully');\nconsole.log('📊 Report Generated:', report);\nconsole.log('⏰ Execution Time:', timestamp);\n\nreturn [{\n  json: {\n    execution_status: 'completed',\n    test_result: 'PASS',\n    report: report,\n    timestamp: timestamp,\n    message: 'Weather test workflow executed successfully - template discovery system working!'\n  }\n}];"
+      },
+      "id": "log-success-001",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log failed test execution\nconst timestamp = new Date().toISOString();\n\nconsole.log('❌ Weather Test Workflow Failed');\nconsole.log('⏰ Failure Time:', timestamp);\n\nreturn [{\n  json: {\n    execution_status: 'failed',\n    test_result: 'FAIL',\n    timestamp: timestamp,\n    message: 'Weather test workflow failed - investigate template discovery system'\n  }\n}];"
+      },
+      "id": "log-failure-001",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "path": "test-weather-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{{ $json }}"
+      },
+      "id": "webhook-response-001",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather Data": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weather Report": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Failure": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
