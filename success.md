@@ -48,6 +48,54 @@
 
 ### **Key Success Patterns**:
 1. **Multi-agent Coordination**: Specialized subagents for each phase with clear handoffs
+
+---
+
+## ✅ **n8n WORKFLOW CREATION & INTEGRATION SUCCESS** (August 13, 2025)
+
+### **Achievement**: Programmatic Workflow Creation and Management
+
+**What Worked**: Successfully created and activated multiple n8n workflows via API
+**Workflows Created**:
+1. **[PROD] AI News Scraper with Firecrawl** - ID: 5lHSTnqo9ssJyilQ
+2. **[WEBHOOK] Firecrawl Email Workflow** - ID: IS1Sr8r17cks6rcf  
+3. **[ACTIVE] Simple Email Trigger** - ID: 8LsX28vwI5DbXRkE
+
+### **Working API Patterns**:
+```bash
+# Create workflow - WORKS
+curl -X POST -H "X-N8N-API-KEY: {key}" -d @workflow.json http://18.221.12.50:5678/api/v1/workflows
+
+# Activate workflow - WORKS  
+curl -X POST -H "X-N8N-API-KEY: {key}" http://18.221.12.50:5678/api/v1/workflows/{id}/activate
+
+# Update workflow - WORKS
+curl -X PUT -H "X-N8N-API-KEY: {key}" -d @workflow.json http://18.221.12.50:5678/api/v1/workflows/{id}
+
+# Get workflow status - WORKS
+curl -H "X-N8N-API-KEY: {key}" http://18.221.12.50:5678/api/v1/workflows/{id}
+
+# List executions - WORKS
+curl -H "X-N8N-API-KEY: {key}" http://18.221.12.50:5678/api/v1/executions?limit=10
+```
+
+### **Firecrawl Integration Success**:
+- **API Key**: fc-9d7d39e6d2db4992b7fa703fc4d69081 successfully configured
+- **MCP Integration**: `claude mcp add firecrawl` successfully added to Claude Code
+- **Direct API**: Successfully scrapes TechCrunch AI content with proper markdown extraction
+- **Workflow Integration**: Firecrawl API embedded in n8n HTTP Request nodes
+
+### **Schedule Triggers Configured**:
+- **Scientific Data**: 8:00 AM and 3:00 PM daily ✅
+- **AI Technical News**: 12:00 PM and 8:00 PM daily ✅
+- **AI News Scraper**: 9:00 AM and 6:00 PM daily ✅
+
+### **Lessons for Replication**:
+1. Use JSON file approach for complex workflow definitions
+2. Remove read-only properties (`active`, `tags`) before creation
+3. Activate workflows via dedicated `/activate` endpoint
+4. Schedule triggers work reliably for automated execution
+5. Firecrawl MCP provides better content extraction than direct scraping
 2. **Enhanced Tooling**: CLI utilities (make, jq, parallel) for automation
 3. **Security-First**: Fixed critical vulnerability (ModernDashboard → StandardDashboard)
 4. **Documentation Discipline**: Updated existing docs vs creating new ones

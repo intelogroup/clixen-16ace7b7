@@ -399,3 +399,37 @@ try {
 - **Environment**: ❌ Missing API keys blocking core functionality
 
 **Recommendation**: Fix critical issues (est. 2 hours), then system is production-ready for 50-user MVP.
+
+---
+
+## 🔍 **n8n WEBHOOK EXECUTION FAILURES** (August 13, 2025)
+
+### **10. n8n API Execution Endpoints Not Available** ❌
+**What Failed**: Direct workflow execution via n8n REST API endpoints  
+**Error Pattern**: All execution endpoints return 404 "not found"
+**Attempted Endpoints**:
+- `/api/v1/workflows/{id}/execute` - 404
+- `/api/v1/workflows/{id}/trigger` - 404  
+- `/api/v1/workflows/{id}/run` - 404
+**Root Cause**: n8n API doesn't expose direct execution endpoints for security
+**Lesson**: Webhooks are the only programmatic trigger method for n8n workflows
+
+### **11. Webhook Registration Issues** ❌
+**What Failed**: Created webhook workflows don't register their webhook URLs
+**Error Pattern**: "The requested webhook is not registered" despite workflow being active
+**Technical Details**:
+- Workflow active status: true
+- Webhook path configured: "firecrawl-email-trigger", "email-trigger-2025"
+- Production URL attempts: All return 404
+- Test URL attempts: Require manual UI interaction
+**Root Cause**: n8n webhook registration requires specific workflow activation sequence
+**Solution Required**: Use existing registered webhooks or manual test mode
+
+### **12. Firecrawl MCP Integration Success** ✅
+**What Succeeded**: Firecrawl MCP successfully scrapes content via Claude Code
+**Working Configuration**:
+```bash
+claude mcp add firecrawl -e FIRECRAWL_API_KEY=fc-9d7d39e6d2db4992b7fa703fc4d69081 -- npx -y firecrawl-mcp
+```
+**Evidence**: Successfully scraped TechCrunch AI articles with proper headlines extraction
+**Lesson**: MCP integrations work better than direct API calls for content scraping

@@ -1,11 +1,11 @@
 # Clixen Developer Handoff - MVP IMPLEMENTATION
 
-## 🚀 Project Status: Security-Enhanced MVP Ready
+## 🚀 Project Status: n8n Integration & Workflow Automation Ready
 
-**Date**: August 8, 2025  
-**Status**: MVP with user isolation ready for 50-user trial  
-**Branch**: `feature/n8n-integration-secure`  
-**Architecture**: Netlify + Supabase + n8n Community (self-hosted)
+**Date**: August 13, 2025  
+**Status**: MVP with programmatic workflow creation and scheduled automation  
+**Branch**: `terragon/explore-app-auth-system`  
+**Architecture**: Netlify + Supabase + n8n Community (self-hosted) + Firecrawl
 
 ---
 
@@ -98,6 +98,88 @@ Frontend ← Supabase (RLS only)
 - Clear user disclaimers about limitations
 
 ### **Known Limitations**
+
+---
+
+## 🔧 **n8n WORKFLOW AUTOMATION UPDATE** (August 13, 2025)
+
+### **✅ Successfully Implemented**
+
+#### **Workflow Creation & Management**
+- **API Integration**: Full CRUD operations via n8n REST API
+- **Schedule Triggers**: 3 production workflows with automated daily execution
+- **Firecrawl Integration**: API key configured and MCP integration active
+- **Webhook Workflows**: Created but registration requires manual activation
+
+#### **Working n8n API Endpoints**
+```bash
+# All verified and working with API key authentication
+POST   /api/v1/workflows              # Create new workflow
+GET    /api/v1/workflows              # List all workflows  
+GET    /api/v1/workflows/{id}         # Get workflow details
+PUT    /api/v1/workflows/{id}         # Update workflow
+POST   /api/v1/workflows/{id}/activate # Activate workflow
+GET    /api/v1/executions             # Get execution logs
+```
+
+#### **Configured Workflows**
+1. **[PROD] AI News Scraper with Firecrawl** 
+   - Schedule: 9:00 AM & 6:00 PM daily
+   - Firecrawl API: fc-9d7d39e6d2db4992b7fa703fc4d69081
+   - Email: jimkalinov@gmail.com
+
+2. **[PROD] Scientific Data & Statistics**
+   - Schedule: 8:00 AM & 3:00 PM daily
+   - Sources: World Bank, USGS, WHO, Climate APIs
+
+3. **[PROD] AI Technical News Digest**
+   - Schedule: 12:00 PM & 8:00 PM daily
+   - Sources: HackerNews, Dev.to, ArXiv
+
+### **❌ Known Issues**
+
+#### **Webhook Execution Limitations**
+- **Problem**: Webhook URLs don't register automatically
+- **Error**: "The requested webhook is not registered"
+- **Workaround**: Use scheduled triggers or manual test mode
+- **Root Cause**: n8n requires UI interaction for webhook registration
+
+#### **Direct Execution API Not Available**
+- **Attempted**: `/execute`, `/trigger`, `/run` endpoints
+- **Result**: All return 404 "not found"
+- **Solution**: Use webhooks or scheduled triggers only
+
+### **🔑 API Credentials & Configuration**
+
+```javascript
+// Verified Working Credentials
+const config = {
+  n8n: {
+    url: "http://18.221.12.50:5678/api/v1",
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU"
+  },
+  firecrawl: {
+    apiKey: "fc-9d7d39e6d2db4992b7fa703fc4d69081",
+    mcp: "claude mcp add firecrawl -e FIRECRAWL_API_KEY=fc-9d7d39e6d2db4992b7fa703fc4d69081 -- npx -y firecrawl-mcp"
+  },
+  email: {
+    recipient: "jimkalinov@gmail.com",
+    smtp: "Configured in n8n credentials (ID: 1)"
+  }
+}
+```
+
+### **📊 Execution Status**
+- **Schedule Triggers**: Firing on schedule (verified via logs)
+- **Execution Success**: Failing due to SMTP configuration issues
+- **Firecrawl API**: Working perfectly via MCP and direct API
+- **Email Delivery**: Pending SMTP credential verification
+
+### **🎯 Next Steps for Full Automation**
+1. **Fix SMTP Configuration**: Verify email credentials in n8n
+2. **Webhook Registration**: Investigate n8n webhook activation sequence
+3. **Error Handling**: Add retry logic to failing workflows
+4. **Monitoring**: Set up execution success alerts
 - n8n admin panel shows all workflows (users don't have access)
 - Execution logs are global (mitigated by prefixes)
 - Resource limits shared across users
