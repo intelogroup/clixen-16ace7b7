@@ -572,7 +572,14 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
    - Exclude: active, id, versionId, tags, description
    - Settings: { "executionOrder": "v1" }
 
-5. API_CREDENTIALS:
+5. MANDATORY_TRIGGER_NODES:
+   - ALWAYS add Manual Trigger node at the beginning
+   - ALWAYS add Evaluate Expression trigger node for testing
+   - Both triggers should connect to the main workflow logic
+   - Manual Trigger: typeVersion 1, positioned at [240, 200]
+   - Eval Trigger: typeVersion 1, positioned at [240, 400]
+
+6. API_CREDENTIALS:
    - NewsAPI: Use "Clixen-NewsAPI" credential (b6b1af1b97dc4577998ef26e45cf3cc2)
    - OpenWeatherMap: Available in credentials
    - Firecrawl: Available in credentials
@@ -620,6 +627,8 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
 - ❌ Not checking existing templates first
 - ❌ Missing User-Agent headers for external APIs
 - ❌ Forgetting user isolation naming: "[USR-{userId}]"
+- ❌ Missing Manual Trigger and Evaluate Expression trigger nodes
+- ❌ Not connecting both triggers to main workflow logic
 
 ## 📚 **Documentation Discipline**
 

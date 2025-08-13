@@ -1,0 +1,191 @@
+{
+  "name": "[USR-jimkalinov] Boston News Daily Brief",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "expression": "true"
+      },
+      "id": "eval-trigger",
+      "name": "Evaluate Expression",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "options": {
+          "headers": {
+            "X-API-Key": "b6b1af1b97dc4577998ef26e45cf3cc2",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "q": "Boston",
+            "language": "en",
+            "sortBy": "publishedAt",
+            "pageSize": "5",
+            "from": "{{ new Date(Date.now() - 24*60*60*1000).toISOString().split('T')[0] }}"
+          }
+        }
+      },
+      "id": "get-boston-news",
+      "name": "Get Boston News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process Boston news articles for OpenAI formatting\nconst newsData = items[0].json;\n\n// Extract top 5 news articles\nconst articles = newsData.articles ? newsData.articles.slice(0, 5).map(article => ({\n  title: article.title,\n  description: article.description,\n  source: article.source.name,\n  url: article.url,\n  publishedAt: new Date(article.publishedAt).toLocaleDateString('en-US', {\n    weekday: 'short',\n    month: 'short', \n    day: 'numeric'\n  })\n})) : [];\n\n// Create prompt for OpenAI\nconst prompt = `Create a minimalist, short news brief email for jimkalinov@gmail.com with the following Boston news:\n\nBOSTON NEWS (Latest 5 articles from last 24 hours):\n${articles.map((article, i) => `${i+1}. ${article.title}\\n   Source: ${article.source} | Published: ${article.publishedAt}\\n   ${article.description}\\n   URL: ${article.url}\\n`).join('\\n')}\n\nRequirements:\n- Keep it short and minimalist\n- Use clean, modern HTML with simple styling\n- Professional but friendly tone for daily news consumption\n- Include news emoji (📰) and brief intro\n- Summarize each article in 1-2 sentences\n- Make headlines clickable links\n- Clean typography with good spacing\n- Subject line: \"📰 Boston News Brief - [Today's Date]\"\n- Return ONLY the HTML email content, no other text`;\n\nreturn [{\n  json: {\n    newsData: articles,\n    articleCount: articles.length,\n    openaiPrompt: prompt,\n    recipient: 'jimkalinov@gmail.com'\n  }\n}];"
+      },
+      "id": "process-news",
+      "name": "Process News Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer YOUR_OPENAI_API_KEY_HERE",
+            "Content-Type": "application/json",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "body": {
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an expert email designer who creates minimalist, clean, and professional news brief emails. Focus on clarity, readability, and visual appeal with modern typography."
+              },
+              {
+                "role": "user", 
+                "content": "{{ $json.openaiPrompt }}"
+              }
+            ],
+            "max_tokens": 2000,
+            "temperature": 0.3
+          }
+        }
+      },
+      "id": "openai-format",
+      "name": "OpenAI Format Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract formatted email from OpenAI response\nconst openaiResponse = items[0].json;\nconst emailContent = openaiResponse.choices[0].message.content;\n\n// Generate subject line with today's date\nconst today = new Date().toLocaleDateString('en-US', { \n  weekday: 'short', \n  month: 'short', \n  day: 'numeric' \n});\n\nreturn [{\n  json: {\n    recipient_email: 'jimkalinov@gmail.com',\n    subject: `📰 Boston News Brief - ${today}`,\n    email_content: emailContent,\n    from: 'onboarding@resend.dev'\n  }\n}];"
+      },
+      "id": "format-final-email",
+      "name": "Format Final Email",
+      "type": "n8n-nodes-base.function", 
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "{{ $json.recipient_email }}",
+            "subject": "{{ $json.subject }}",
+            "html": "{{ $json.email_content }}"
+          }
+        }
+      },
+      "id": "send-email",
+      "name": "Send Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1240, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Boston News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Expression": {
+      "main": [
+        [
+          {
+            "node": "Get Boston News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Boston News": {
+      "main": [
+        [
+          {
+            "node": "Process News Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process News Data": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Format Email": {
+      "main": [
+        [
+          {
+            "node": "Format Final Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Final Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
