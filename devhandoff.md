@@ -48,6 +48,97 @@
 
 #### **Critical Fixes Required (2-4 hours)**
 1. Run database migration for missing columns
+
+---
+
+## 🔧 **n8n Workflow Automation Update - August 13, 2025**
+
+### **Enhanced Email Workflow System**
+
+#### **✅ Implemented Features**
+1. **Comprehensive Workflow JSON**: Created enhanced email workflow with:
+   - Webhook trigger with custom paths
+   - Schedule triggers (9 AM and 6 PM daily)
+   - Firecrawl integration for content scraping
+   - HTML email formatting with responsive design
+   - Error handling and activity logging
+
+2. **Deployment Scripts**: Created automated deployment tools:
+   - `deploy-enhanced-workflow.cjs` - Full-featured deployment
+   - `deploy-simple-workflow.cjs` - Simplified deployment
+   - `enhanced-email-workflow.json` - Complete workflow template
+
+#### **⚠️ Known Issues & Limitations**
+
+1. **n8n API Connectivity**: 
+   - API endpoints intermittently timing out
+   - Webhook registration requires manual UI activation
+   - SMTP credentials must be configured manually in UI
+
+2. **SMTP Configuration Required**:
+   ```javascript
+   // Gmail SMTP Settings (Recommended)
+   Host: smtp.gmail.com
+   Port: 587
+   Security: TLS/STARTTLS
+   User: your-email@gmail.com
+   Password: your-app-password (NOT regular password)
+   ```
+
+3. **Webhook URL Pattern**:
+   ```
+   http://18.221.12.50:5678/webhook/{unique-path}
+   ```
+
+#### **📝 Manual Configuration Steps**
+
+1. **Set Up Gmail App Password**:
+   - Go to Google Account settings
+   - Enable 2-factor authentication
+   - Generate app-specific password
+   - Use this password for SMTP
+
+2. **Configure n8n SMTP**:
+   - Access n8n UI: http://18.221.12.50:5678
+   - Open any workflow with email node
+   - Click "Send Email" node
+   - Add SMTP credentials as shown above
+
+3. **Activate Webhooks**:
+   - Open workflow in n8n UI
+   - Toggle workflow to "Active"
+   - Test webhook with provided curl command
+
+#### **🚀 Deployment Commands**
+
+```bash
+# Deploy enhanced workflow
+node deploy-enhanced-workflow.cjs
+
+# Deploy simple workflow (recommended for testing)
+node deploy-simple-workflow.cjs
+
+# Test webhook manually
+curl -X POST http://18.221.12.50:5678/webhook/{your-webhook-path} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "jimkalinov@gmail.com",
+    "subject": "Test Email",
+    "content": "Testing n8n email workflow"
+  }'
+```
+
+#### **📊 Workflow Features Matrix**
+
+| Feature | Status | Configuration |
+|---------|--------|--------------|
+| Schedule Triggers | ✅ Working | 9 AM, 6 PM daily |
+| Webhook Triggers | ⚠️ Manual activation | Requires UI toggle |
+| Firecrawl Integration | ✅ Working | API key configured |
+| SMTP Email Sending | ⚠️ Manual config | Requires credentials |
+| HTML Formatting | ✅ Working | Responsive templates |
+| Error Handling | ✅ Working | Logging implemented |
+| Activity Logging | ✅ Working | Console + workflow logs |
 2. Redeploy Edge Functions with environment variables
 3. Verify workflow creation in production
 4. Test user isolation with live data

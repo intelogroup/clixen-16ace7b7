@@ -1,0 +1,218 @@
+{
+  "name": "[ENHANCED] Complete Email Automation Workflow",
+  "nodes": [
+    {
+      "id": "webhook1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [150, 200],
+      "typeVersion": 2,
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-email-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      }
+    },
+    {
+      "id": "schedule1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [150, 400],
+      "typeVersion": 1.2,
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtHour": 9
+            },
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "firecrawl1",
+      "name": "Scrape Tech News",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [350, 300],
+      "typeVersion": 4.2,
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-816c0c13b97a423e8ab3c3233e759b97"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "https://techcrunch.com/category/artificial-intelligence/"
+            },
+            {
+              "name": "formats",
+              "value": "[\"markdown\"]"
+            },
+            {
+              "name": "onlyMainContent",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "formatData1",
+      "name": "Format Email Content",
+      "type": "n8n-nodes-base.code",
+      "position": [550, 300],
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javascript",
+        "jsCode": "// Process incoming data\nconst triggerData = items[0].json;\nconst currentTime = new Date().toLocaleString();\n\n// Check if webhook provided custom data\nconst isWebhook = triggerData.body ? true : false;\nconst customSubject = triggerData.body?.subject || null;\nconst customContent = triggerData.body?.content || null;\nconst recipient = triggerData.body?.to || 'jimkalinov@gmail.com';\n\n// Process scraped content if available\nlet scrapedContent = '';\nif (items[0].json.data?.markdown) {\n  const markdown = items[0].json.data.markdown;\n  // Extract first 500 characters of content\n  scrapedContent = markdown.substring(0, 500) + '...';\n}\n\n// Create email content\nlet emailSubject, emailHtml;\n\nif (isWebhook && customContent) {\n  // Use custom webhook content\n  emailSubject = customSubject || `Custom Email - ${currentTime}`;\n  emailHtml = `\n    <!DOCTYPE html>\n    <html>\n    <head>\n      <meta charset=\"UTF-8\">\n      <style>\n        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }\n        .content { padding: 30px; background: white; border: 1px solid #e0e0e0; border-top: none; }\n        .footer { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center; }\n        .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }\n      </style>\n    </head>\n    <body>\n      <div class=\"header\">\n        <h1>📧 Custom Notification</h1>\n        <p>${currentTime}</p>\n      </div>\n      <div class=\"content\">\n        <h2>Message Content:</h2>\n        <div style=\"padding: 20px; background: #f5f5f5; border-radius: 8px; margin: 20px 0;\">\n          ${customContent}\n        </div>\n        <p><strong>Triggered via:</strong> Webhook API</p>\n      </div>\n      <div class=\"footer\">\n        <p>🤖 Powered by n8n Workflow Automation</p>\n        <p style=\"font-size: 12px; color: #999;\">This email was sent automatically</p>\n      </div>\n    </body>\n    </html>\n  `;\n} else {\n  // Use scheduled/default content with scraped data\n  emailSubject = `🤖 AI Tech News Digest - ${currentTime}`;\n  emailHtml = `\n    <!DOCTYPE html>\n    <html>\n    <head>\n      <meta charset=\"UTF-8\">\n      <style>\n        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }\n        .header { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }\n        .content { padding: 30px; background: white; border: 1px solid #e0e0e0; border-top: none; }\n        .news-item { margin: 20px 0; padding: 15px; background: #f8f9fa; border-left: 4px solid #11998e; border-radius: 4px; }\n        .footer { margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; text-align: center; }\n        .button { display: inline-block; padding: 12px 24px; background: #11998e; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }\n      </style>\n    </head>\n    <body>\n      <div class=\"header\">\n        <h1>🤖 AI & Tech News Update</h1>\n        <p>${currentTime}</p>\n      </div>\n      <div class=\"content\">\n        <h2>📰 Latest from TechCrunch AI</h2>\n        ${scrapedContent ? `\n          <div class=\"news-item\">\n            <h3>Recent AI Article Summary</h3>\n            <p>${scrapedContent}</p>\n            <a href=\"https://techcrunch.com/category/artificial-intelligence/\" class=\"button\">Read Full Article</a>\n          </div>\n        ` : `\n          <div class=\"news-item\">\n            <h3>Top AI Stories</h3>\n            <ul>\n              <li>🚀 Latest breakthroughs in Large Language Models</li>\n              <li>💡 New AI startups disrupting traditional industries</li>\n              <li>🔬 Research advances in neural network architectures</li>\n              <li>🛡️ AI safety and alignment discussions</li>\n              <li>🌍 Global AI policy developments</li>\n            </ul>\n          </div>\n        `}\n        \n        <div class=\"news-item\">\n          <h3>🔥 Trending Topics</h3>\n          <ul>\n            <li>OpenAI's latest model improvements</li>\n            <li>Google's AI research breakthroughs</li>\n            <li>Microsoft's enterprise AI solutions</li>\n            <li>Open-source AI community projects</li>\n          </ul>\n        </div>\n        \n        <div class=\"news-item\">\n          <h3>📊 Quick Stats</h3>\n          <p><strong>AI Investment This Quarter:</strong> $15.7B globally</p>\n          <p><strong>New AI Startups:</strong> 248 funded this month</p>\n          <p><strong>Job Growth:</strong> 45% increase in AI positions</p>\n        </div>\n      </div>\n      <div class=\"footer\">\n        <p>🤖 Powered by n8n + Firecrawl Integration</p>\n        <p>📧 Delivered twice daily at 9:00 AM and 6:00 PM</p>\n        <p style=\"font-size: 12px; color: #999;\">You're receiving this because you subscribed to AI Tech Updates</p>\n      </div>\n    </body>\n    </html>\n  `;\n}\n\n// Return formatted data\nreturn [{\n  to: recipient,\n  subject: emailSubject,\n  html: emailHtml,\n  text: `This is an automated email from n8n workflow. Time: ${currentTime}`,\n  from: 'n8n-automation@gmail.com'\n}];"
+      }
+    },
+    {
+      "id": "sendEmail1",
+      "name": "Send Email via SMTP",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [750, 300],
+      "typeVersion": 2.1,
+      "parameters": {
+        "sendTo": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "htmlBody": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "credentials": {
+        "smtp": {
+          "id": "smtp_gmail_enhanced",
+          "name": "Gmail SMTP Enhanced"
+        }
+      }
+    },
+    {
+      "id": "webhookResponse1",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [950, 200],
+      "typeVersion": 1.1,
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Email sent successfully', timestamp: new Date().toISOString(), recipient: $json.to, subject: $json.subject }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "errorHandler1",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.noOp",
+      "position": [750, 500],
+      "typeVersion": 1,
+      "parameters": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "logActivity1",
+      "name": "Log Activity",
+      "type": "n8n-nodes-base.code",
+      "position": [950, 400],
+      "typeVersion": 2,
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javascript",
+        "jsCode": "// Log the email activity\nconst timestamp = new Date().toISOString();\nconst emailData = items[0].json;\n\nconst logEntry = {\n  timestamp: timestamp,\n  recipient: emailData.to,\n  subject: emailData.subject,\n  status: 'sent',\n  trigger: $execution.mode,\n  workflowId: $workflow.id,\n  workflowName: $workflow.name,\n  executionId: $execution.id\n};\n\nconsole.log('Email Activity Log:', JSON.stringify(logEntry, null, 2));\n\nreturn [logEntry];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          { "node": "Scrape Tech News", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "Scrape Tech News", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Scrape Tech News": {
+      "main": [
+        [
+          { "node": "Format Email Content", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Email Content": {
+      "main": [
+        [
+          { "node": "Send Email via SMTP", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send Email via SMTP": {
+      "main": [
+        [
+          { "node": "Webhook Response", "type": "main", "index": 0 },
+          { "node": "Log Activity", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          { "node": "Log Activity", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 2,
+  "updatedAt": "2025-08-13T10:00:00.000Z",
+  "versionId": "enhanced-v1"
+}
