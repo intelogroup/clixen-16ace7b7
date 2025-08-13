@@ -1,0 +1,206 @@
+{
+  "name": "[USR-jimkalinov] Dorchester Weather & Boston News Daily Brief",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "options": {
+          "headers": {
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "q": "Dorchester,MA,US",
+            "appid": "bd5e378503939ddaee76f12ad7a97608",
+            "units": "imperial"
+          }
+        }
+      },
+      "id": "get-weather",
+      "name": "Get Dorchester Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "options": {
+          "headers": {
+            "X-API-Key": "b6b1af1b97dc4577998ef26e45cf3cc2",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "q": "Boston",
+            "language": "en",
+            "sortBy": "publishedAt",
+            "pageSize": "3",
+            "from": "{{ new Date(Date.now() - 24*60*60*1000).toISOString().split('T')[0] }}"
+          }
+        }
+      },
+      "id": "get-news",
+      "name": "Get Boston News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Combine weather and news data for OpenAI processing\nconst weatherData = $input.first().json;\nconst newsData = $input.last().json;\n\n// Extract weather information\nconst weather = {\n  location: `${weatherData.name}, ${weatherData.sys.country}`,\n  temperature: Math.round(weatherData.main.temp),\n  feelsLike: Math.round(weatherData.main.feels_like),\n  description: weatherData.weather[0].description,\n  humidity: weatherData.main.humidity,\n  windSpeed: Math.round(weatherData.wind.speed),\n  sunrise: new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),\n  sunset: new Date(weatherData.sys.sunset * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })\n};\n\n// Extract top 3 news articles\nconst articles = newsData.articles ? newsData.articles.slice(0, 3).map(article => ({\n  title: article.title,\n  description: article.description,\n  source: article.source.name,\n  url: article.url,\n  publishedAt: new Date(article.publishedAt).toLocaleDateString()\n})) : [];\n\n// Create prompt for OpenAI\nconst prompt = `Create a minimalist, short daily brief email for jimkalinov@gmail.com with the following information:\n\nWEATHER (Dorchester, MA):\n- Temperature: ${weather.temperature}°F (feels like ${weather.feelsLike}°F)\n- Conditions: ${weather.description}\n- Humidity: ${weather.humidity}%\n- Wind: ${weather.windSpeed} mph\n- Sunrise: ${weather.sunrise}, Sunset: ${weather.sunset}\n\nBOSTON NEWS (Latest 3 articles):\n${articles.map((article, i) => `${i+1}. ${article.title} (${article.source}) - ${article.description}`).join('\\n')}\n\nRequirements:\n- Keep it short and minimalist\n- Use clean, modern HTML with simple styling\n- Include weather emoji and brief advice\n- Summarize news in 1-2 sentences each\n- Professional but friendly tone\n- Subject line: \"🌤️ Dorchester Weather & Boston News - [Today's Date]\"\n- Return ONLY the HTML email content, no other text`;\n\nreturn [{\n  json: {\n    weatherData: weather,\n    newsData: articles,\n    openaiPrompt: prompt,\n    recipient: 'jimkalinov@gmail.com'\n  }\n}];"
+      },
+      "id": "combine-data",
+      "name": "Combine Weather & News Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer YOUR_OPENAI_API_KEY_HERE",
+            "Content-Type": "application/json",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "body": {
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an expert email designer who creates minimalist, clean, and professional daily brief emails. Focus on clarity, brevity, and visual appeal."
+              },
+              {
+                "role": "user",
+                "content": "{{ $json.openaiPrompt }}"
+              }
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.7
+          }
+        }
+      },
+      "id": "openai-format",
+      "name": "OpenAI Format Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Extract formatted email from OpenAI response\nconst openaiResponse = items[0].json;\nconst emailContent = openaiResponse.choices[0].message.content;\n\n// Generate subject line\nconst today = new Date().toLocaleDateString('en-US', { \n  weekday: 'short', \n  month: 'short', \n  day: 'numeric' \n});\n\nreturn [{\n  json: {\n    recipient_email: 'jimkalinov@gmail.com',\n    subject: `🌤️ Dorchester Weather & Boston News - ${today}`,\n    email_content: emailContent,\n    from: 'onboarding@resend.dev'\n  }\n}];"
+      },
+      "id": "format-email",
+      "name": "Format Final Email",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "{{ $json.recipient_email }}",
+            "subject": "{{ $json.subject }}",
+            "html": "{{ $json.email_content }}"
+          }
+        }
+      },
+      "id": "send-email",
+      "name": "Send Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1240, 300]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Get Dorchester Weather",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Boston News", 
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Dorchester Weather": {
+      "main": [
+        [
+          {
+            "node": "Combine Weather & News Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Boston News": {
+      "main": [
+        [
+          {
+            "node": "Combine Weather & News Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Weather & News Data": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Format Email": {
+      "main": [
+        [
+          {
+            "node": "Format Final Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Final Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
