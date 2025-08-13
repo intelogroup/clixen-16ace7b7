@@ -1,0 +1,305 @@
+{
+  "name": "[USR-jimkalinov] Hacker News Daily Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "path": "hn-digest-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Firecrawl credentials with a simple request first\nconst testUrl = 'https://example.com';\n\nreturn [{\n  json: {\n    test_url: testUrl,\n    timestamp: new Date().toISOString(),\n    purpose: 'credential_testing',\n    next_step: 'firecrawl_test'\n  }\n}];"
+      },
+      "id": "credential-test-prep",
+      "name": "Prepare Credential Test",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.test_url }}\",\n  \"formats\": [\"markdown\"],\n  \"onlyMainContent\": true\n}",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer fc-c94c53f6acb944ceb39068e2bf6bb8a1",
+            "Content-Type": "application/json",
+            "User-Agent": "Clixen/1.0 (Credential Test)"
+          }
+        }
+      },
+      "id": "test-firecrawl-api",
+      "name": "Test Firecrawl API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate Firecrawl API response and proceed if successful\nconst response = $input.first().json;\n\nif (response.success && response.data && response.data.markdown) {\n  console.log('✅ Firecrawl API Test: SUCCESS');\n  console.log('Response contains valid markdown data');\n  \n  return [{\n    json: {\n      credential_test: 'PASSED',\n      firecrawl_working: true,\n      target_url: 'https://news.ycombinator.com',\n      scrape_purpose: 'hacker_news_digest',\n      timestamp: new Date().toISOString()\n    }\n  }];\n} else {\n  console.log('❌ Firecrawl API Test: FAILED');\n  console.log('Response:', response);\n  \n  return [{\n    json: {\n      credential_test: 'FAILED',\n      firecrawl_working: false,\n      error: 'Firecrawl API credentials invalid or service unavailable',\n      fallback_content: 'Technical news digest temporarily unavailable',\n      timestamp: new Date().toISOString()\n    }\n  }];\n}"
+      },
+      "id": "validate-credentials",
+      "name": "Validate Firecrawl Credentials",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "credential-check",
+              "leftValue": "={{ $json.credential_test }}",
+              "rightValue": "PASSED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-credentials-if",
+      "name": "Check Credentials Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.target_url }}\",\n  \"formats\": [\"markdown\"],\n  \"onlyMainContent\": true,\n  \"maxAge\": 3600000\n}",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer fc-c94c53f6acb944ceb39068e2bf6bb8a1",
+            "Content-Type": "application/json",\n            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          }
+        }
+      },
+      "id": "scrape-hacker-news",
+      "name": "Scrape Hacker News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Hacker News data and create email content\ntry {\n  const scraped = $input.first().json;\n  const markdown = scraped.data?.markdown || scraped.markdown || 'No content available';\n  \n  // Extract top stories from the markdown\n  const lines = markdown.split('\\n');\n  const stories = [];\n  \n  // Parse the table format to extract stories\n  let currentStory = null;\n  \n  for (const line of lines) {\n    // Look for story titles (lines with links)\n    if (line.includes('](') && !line.includes('comments') && !line.includes('Hacker News')) {\n      // Extract title and URL\n      const match = line.match(/\\[([^\\]]+)\\]\\(([^)]+)\\)/);\n      if (match && !match[1].includes('points by') && !match[1].includes('comments')) {\n        currentStory = {\n          title: match[1].trim(),\n          url: match[2],\n          points: null,\n          comments: null,\n          time: null\n        };\n      }\n    } else if (line.includes('points by') && currentStory) {\n      // Extract points and comments\n      const pointsMatch = line.match(/(\\d+) points/);\n      const commentsMatch = line.match(/(\\d+) comments/);\n      const timeMatch = line.match(/(\\d+) (hour|minute)s? ago/);\n      \n      if (pointsMatch) currentStory.points = pointsMatch[1];\n      if (commentsMatch) currentStory.comments = commentsMatch[1];\n      if (timeMatch) currentStory.time = `${timeMatch[1]} ${timeMatch[2]}(s) ago`;\n      \n      stories.push(currentStory);\n      currentStory = null;\n    }\n  }\n  \n  // Take top 10 stories\n  const topStories = stories.slice(0, 10);\n  \n  // Create HTML email content\n  const htmlContent = `\n    <!DOCTYPE html>\n    <html>\n    <head>\n      <meta charset=\"utf-8\">\n      <title>Hacker News Daily Digest</title>\n      <style>\n        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 700px; margin: 0 auto; background: #f6f6ef; }\n        .container { background: white; margin: 20px auto; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }\n        .header { background: #ff6600; color: white; padding: 30px; text-align: center; }\n        .header h1 { margin: 0; font-size: 2.2em; font-weight: 300; }\n        .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 1.1em; }\n        .content { padding: 30px; }\n        .story { border-left: 4px solid #ff6600; padding: 20px; margin: 20px 0; background: #fafafa; border-radius: 0 8px 8px 0; }\n        .story-title { font-size: 1.3em; font-weight: 600; margin-bottom: 10px; }\n        .story-title a { color: #333; text-decoration: none; }\n        .story-title a:hover { color: #ff6600; }\n        .story-meta { color: #666; font-size: 0.9em; margin-top: 10px; }\n        .story-meta span { margin-right: 15px; }\n        .points { color: #ff6600; font-weight: 600; }\n        .footer { background: #f0f0f0; padding: 20px; text-align: center; color: #666; font-size: 0.9em; }\n        .footer a { color: #ff6600; text-decoration: none; }\n        @media (max-width: 600px) {\n          .container { margin: 10px; }\n          .header, .content { padding: 20px; }\n          .story { padding: 15px; }\n        }\n      </style>\n    </head>\n    <body>\n      <div class=\"container\">\n        <div class=\"header\">\n          <h1>🔥 Hacker News Digest</h1>\n          <p>Top stories from the front page • ${new Date().toLocaleDateString('en-US', {\n            weekday: 'long',\n            year: 'numeric',\n            month: 'long',\n            day: 'numeric'\n          })}</p>\n        </div>\n        \n        <div class=\"content\">\n          ${topStories.map((story, index) => `\n            <div class=\"story\">\n              <div class=\"story-title\">\n                <a href=\"${story.url}\" target=\"_blank\">\n                  ${index + 1}. ${story.title}\n                </a>\n              </div>\n              <div class=\"story-meta\">\n                ${story.points ? `<span class=\"points\">${story.points} points</span>` : ''}\n                ${story.comments ? `<span>${story.comments} comments</span>` : ''}\n                ${story.time ? `<span>${story.time}</span>` : ''}\n              </div>\n            </div>\n          `).join('')}\n        </div>\n        \n        <div class=\"footer\">\n          <p>📧 Delivered by <strong>Clixen Workflow Automation</strong> | Powered by <a href=\"https://news.ycombinator.com\" target=\"_blank\">Hacker News</a></p>\n          <p>Web scraping by <a href=\"https://firecrawl.dev\" target=\"_blank\">Firecrawl</a> | Generated at ${new Date().toLocaleString()}</p>\n        </div>\n      </div>\n    </body>\n    </html>\n  `;\n  \n  return [{\n    json: {\n      recipient_email: \"jimkalinov@gmail.com\",\n      subject: `🔥 Hacker News Digest - ${topStories.length} Top Stories - ${new Date().toLocaleDateString()}`,\n      email_content: htmlContent,\n      story_count: topStories.length,\n      stories_preview: topStories.slice(0, 3).map(s => s.title).join(', '),\n      success: true,\n      scrape_source: 'hacker_news',\n      timestamp: new Date().toISOString()\n    }\n  }];\n  \n} catch (error) {\n  console.log('❌ Error processing Hacker News data:', error.message);\n  \n  // Fallback email content\n  const fallbackContent = `\n    <!DOCTYPE html>\n    <html>\n    <head>\n      <meta charset=\"utf-8\">\n      <title>Tech News Digest - Service Notice</title>\n      <style>\n        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }\n        .header { background: #ff6b6b; color: white; padding: 20px; text-align: center; }\n        .content { padding: 20px; background: #f9f9f9; }\n        .notice { background: white; border-radius: 8px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n      </style>\n    </head>\n    <body>\n      <div class=\"header\">\n        <h1>⚠️ Tech News Digest Notice</h1>\n      </div>\n      <div class=\"content\">\n        <div class=\"notice\">\n          <h2>Content Processing Temporarily Unavailable</h2>\n          <p>We're currently experiencing issues processing the latest tech news content.</p>\n          <p>Your regular digest will resume with the next scheduled delivery.</p>\n          <p><strong>Technical Details:</strong> ${error.message}</p>\n        </div>\n      </div>\n      <div style=\"text-align: center; padding: 20px; color: #666; font-size: 0.9em;\">\n        <p>Powered by <strong>Clixen Workflow Automation</strong></p>\n      </div>\n    </body>\n    </html>\n  `;\n  \n  return [{\n    json: {\n      recipient_email: \"jimkalinov@gmail.com\",\n      subject: \"⚠️ Tech News Digest - Processing Issue\",\n      email_content: fallbackContent,\n      story_count: 0,\n      success: false,\n      error: error.message,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}"
+      },
+      "id": "process-news-content",
+      "name": "Process News Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create fallback content when credentials fail\nconst fallbackContent = `\n  <!DOCTYPE html>\n  <html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Tech News Digest - Service Unavailable</title>\n    <style>\n      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }\n      .header { background: #ff6b6b; color: white; padding: 20px; text-align: center; }\n      .content { padding: 20px; background: #f9f9f9; }\n      .notice { background: white; border-radius: 8px; padding: 20px; margin: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n    </style>\n  </head>\n  <body>\n    <div class=\"header\">\n      <h1>🔧 Service Maintenance Notice</h1>\n    </div>\n    <div class=\"content\">\n      <div class=\"notice\">\n        <h2>Tech News Digest Temporarily Unavailable</h2>\n        <p>Our news scraping service is currently undergoing maintenance.</p>\n        <p>We're working to restore the service as quickly as possible.</p>\n        <p>Your regular tech news digest will resume shortly.</p>\n      </div>\n    </div>\n    <div style=\"text-align: center; padding: 20px; color: #666; font-size: 0.9em;\">\n      <p>Powered by <strong>Clixen Workflow Automation</strong></p>\n      <p>Questions? Contact us at <a href=\"mailto:support@clixen.app\">support@clixen.app</a></p>\n    </div>\n  </body>\n  </html>\n`;\n\nreturn [{\n  json: {\n    recipient_email: \"jimkalinov@gmail.com\",\n    subject: \"🔧 Tech News Digest - Service Maintenance\",\n    email_content: fallbackContent,\n    story_count: 0,\n    success: false,\n    reason: 'credential_failure',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "fallback-content",
+      "name": "Create Fallback Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,\n      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"onboarding@resend.dev\",\n  \"to\": [\"{{ $json.recipient_email }}\"],\n  \"subject\": \"{{ $json.subject }}\",\n  \"html\": \"{{ $json.email_content }}\"\n}",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2",
+            "Content-Type": "application/json"
+          }
+        }
+      },
+      "id": "send-digest-email",
+      "name": "Send Digest Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log the email delivery results\nconst emailResponse = $input.first().json;\nconst contentData = $('Process News Content').first()?.json || $('Create Fallback Content').first()?.json;\n\nconsole.log('=== HACKER NEWS DIGEST DELIVERY REPORT ===');\nconsole.log('Timestamp:', new Date().toISOString());\nconsole.log('Recipient:', contentData.recipient_email);\nconsole.log('Subject:', contentData.subject);\nconsole.log('Story Count:', contentData.story_count);\nconsole.log('Content Success:', contentData.success);\nconsole.log('Email Response:', emailResponse);\n\nif (emailResponse.id) {\n  console.log('✅ DIGEST EMAIL SENT SUCCESSFULLY');\n  console.log('Email ID:', emailResponse.id);\n} else {\n  console.log('❌ EMAIL SENDING FAILED');\n  console.log('Error:', emailResponse);\n}\n\nreturn [{\n  json: {\n    delivery_status: emailResponse.id ? 'sent' : 'failed',\n    email_id: emailResponse.id || null,\n    recipient: contentData.recipient_email,\n    subject: contentData.subject,\n    story_count: contentData.story_count,\n    content_success: contentData.success,\n    stories_preview: contentData.stories_preview || 'N/A',\n    timestamp: new Date().toISOString(),\n    workflow_type: 'hacker_news_digest',\n    full_response: emailResponse\n  }\n}];"
+      },
+      "id": "log-digest-delivery",
+      "name": "Log Digest Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2220, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Credential Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Credential Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Credential Test": {
+      "main": [
+        [
+          {
+            "node": "Test Firecrawl API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Firecrawl API": {
+      "main": [
+        [
+          {
+            "node": "Validate Firecrawl Credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Firecrawl Credentials": {
+      "main": [
+        [
+          {
+            "node": "Check Credentials Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Credentials Success": {
+      "main": [
+        [
+          {
+            "node": "Scrape Hacker News",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Fallback Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Hacker News": {
+      "main": [
+        [
+          {
+            "node": "Process News Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process News Content": {
+      "main": [
+        [
+          {
+            "node": "Send Digest Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Fallback Content": {
+      "main": [
+        [
+          {
+            "node": "Send Digest Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Digest Email": {
+      "main": [
+        [
+          {
+            "node": "Log Digest Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Digest Delivery": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

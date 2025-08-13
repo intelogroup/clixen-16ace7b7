@@ -609,36 +609,46 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
    - Use existing patterns and structures
    - Copy working node configurations
 
-2. EMAIL_INTEGRATION_STANDARD:
+2. ✅ CREDENTIAL_TESTING_PROTOCOL (NEW - MANDATORY):
+   - ALWAYS test API credentials before workflow deployment
+   - Create test nodes to validate API access in test mode
+   - Use MCP tools to verify credential functionality
+   - Test with minimal API calls to avoid quota usage
+   - Document credential test results in workflow
+   - NEVER deploy workflows with untested or invalid credentials
+
+3. EMAIL_INTEGRATION_STANDARD:
    - ALWAYS use Resend API via HTTP Request node
    - NEVER use SMTP or Email nodes  
    - Hardcode credentials: "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
    - Use sender: "onboarding@resend.dev"
+   - TEST email delivery before final deployment
 
-3. HTTP_NODE_CONFIGURATION:
+4. HTTP_NODE_CONFIGURATION:
    - typeVersion: 3 (not 4.1)
    - Use "options.headers" structure
    - Use "options.qs" for query parameters
    - Include User-Agent for external APIs
 
-4. WORKFLOW_STRUCTURE:
+5. WORKFLOW_STRUCTURE:
    - Name: "[USR-{userId}] Descriptive Name"
    - Include: name, nodes, connections, settings
    - Exclude: active, id, versionId, tags, description
    - Settings: { "executionOrder": "v1" }
 
-5. MANDATORY_TRIGGER_NODES:
+6. MANDATORY_TRIGGER_NODES:
    - ALWAYS add Manual Trigger node at the beginning
-   - ALWAYS add Evaluate Expression trigger node for testing
+   - ALWAYS add webhook trigger for testing
    - Both triggers should connect to the main workflow logic
    - Manual Trigger: typeVersion 1, positioned at [240, 200]
-   - Eval Trigger: typeVersion 1, positioned at [240, 400]
+   - Webhook Trigger: typeVersion 1, positioned at [240, 400]
 
-6. API_CREDENTIALS:
-   - NewsAPI: Use "Clixen-NewsAPI" credential (b6b1af1b97dc4577998ef26e45cf3cc2)
-   - OpenWeatherMap: Available in credentials
-   - Firecrawl: Available in credentials
-   - Other APIs: Check existing credential templates first
+7. API_CREDENTIALS_TESTING:
+   - NewsAPI: Test with "Clixen-NewsAPI" credential (b6b1af1b97dc4577998ef26e45cf3cc2)
+   - Firecrawl: Test with available Firecrawl credentials before use
+   - Resend: Always test email delivery with real recipient
+   - Other APIs: Verify credentials exist and are valid before workflow creation
+   - Use wttr.in for weather data (no credentials required)
 ```
 
 ### **📧 Email Node Generation Rules**
