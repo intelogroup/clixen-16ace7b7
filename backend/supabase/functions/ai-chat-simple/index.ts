@@ -4,6 +4,7 @@ import { WorkflowIsolationManager } from '../_shared/workflow-isolation.ts';
 import { supabase } from '../_shared/supabase.ts';
 import { smartWorkflowGenerator, UserContext } from '../_shared/smart-workflow-generator.ts';
 import { errorFeedbackLoop, DeploymentError } from '../_shared/error-feedback-loop.ts';
+import { N8nMCPClient } from '../_shared/n8n-mcp-client.ts';
 
 /**
  * AI Chat Simple - MVP Implementation
@@ -393,160 +394,6 @@ ${jsonString}`;
   };
 };
 
-// Enhanced N8n API Client with MCP Integration
-class EnhancedN8nClient {
-  constructor() {
-    this.apiUrl = N8N_API_URL;
-    this.apiKey = N8N_API_KEY;
-  }
-
-  async makeRequest(endpoint: string, method = 'GET', body: any = null) {
-    const url = `${this.apiUrl}${endpoint}`;
-    const requestId = crypto.randomUUID().substring(0, 8);
-    
-    console.log(`🔧 [n8n] [${requestId}] ${method} ${endpoint}`);
-    
-    // Set up timeout protection for n8n API calls
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.error(`⏰ [n8n] [${requestId}] Request timed out after 30 seconds`);
-      controller.abort();
-    }, 30000); // 30 second timeout for n8n API
-
-    const options: RequestInit = {
-      method,
-      signal: controller.signal,
-      headers: {
-        'X-N8N-API-KEY': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-      options.body = JSON.stringify(body);
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const response = await fetch(url, options);
-      clearTimeout(timeoutId);
-      
-      const duration = Date.now() - startTime;
-      console.log(`⚡ [n8n] [${requestId}] Request completed in ${duration}ms`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        let parsedError;
-        try {
-          parsedError = JSON.parse(errorText);
-        } catch {
-          parsedError = { message: errorText };
-        }
-        
-        console.error(`❌ [n8n] [${requestId}] API error:`, { 
-          status: response.status, 
-          error: parsedError.message || errorText 
-        });
-        throw new Error(`n8n API Error ${response.status}: ${parsedError.message || errorText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      }
-      
-      return await response.text();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      const duration = Date.now() - startTime;
-      
-      if (error.name === 'AbortError') {
-        console.error(`⏰ [n8n] [${requestId}] Request aborted due to timeout after ${duration}ms`);
-        throw new Error('n8n API request timed out after 30 seconds');
-      }
-      
-      console.error(`❌ [n8n] [${requestId}] API request failed after ${duration}ms:`, error);
-      throw error;
-    }
-  }
-
-  async deployWorkflow(workflow: any, userIntent?: string, maxRetries: number = 2): Promise<{ success: boolean; workflowId?: string; error?: string; webhookUrl?: string }> {
-    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
-      try {
-        console.log(`🚀 Deploying workflow to n8n (attempt ${attempt})...`);
-        
-        // Deploy to n8n
-        const deployment = await this.makeRequest('/workflows', 'POST', workflow);
-        console.log(`✅ Workflow deployed! ID: ${deployment.id}`);
-        
-        // Activate workflow
-        await this.makeRequest(`/workflows/${deployment.id}/activate`, 'POST');
-        console.log('✅ Workflow activated');
-        
-        // Find webhook path for URL generation
-        const webhookNode = workflow.nodes?.find((node: any) => 
-          node.type === 'n8n-nodes-base.webhook'
-        );
-        
-        let webhookUrl = null;
-        if (webhookNode?.parameters?.path) {
-          webhookUrl = `http://18.221.12.50:5678/webhook/${webhookNode.parameters.path}`;
-        }
-        
-        return {
-          success: true,
-          workflowId: deployment.id,
-          webhookUrl
-        };
-      } catch (error) {
-        console.error(`❌ Workflow deployment failed (attempt ${attempt}):`, error.message);
-        
-        // If this is not the last attempt, try to auto-fix
-        if (attempt <= maxRetries) {
-          console.log(`🔧 Attempting auto-fix for deployment error...`);
-          
-          const deploymentError: DeploymentError = {
-            error: error.message,
-            httpStatus: error.status,
-            timestamp: new Date(),
-            userIntent,
-            workflowJson: workflow
-          };
-          
-          // Use error feedback loop to fix the workflow
-          const fixResult = await errorFeedbackLoop.processDeploymentError(
-            deploymentError,
-            workflow,
-            userIntent
-          );
-          
-          if (fixResult.success && fixResult.fixedWorkflow) {
-            console.log(`✅ Auto-fix successful: ${fixResult.appliedFixes.join(', ')}`);
-            workflow = fixResult.fixedWorkflow; // Use fixed workflow for next attempt
-            continue; // Retry with fixed workflow
-          } else {
-            console.log(`❌ Auto-fix failed: ${fixResult.remainingErrors.join(', ')}`);
-          }
-        }
-        
-        // If we've exhausted retries or auto-fix failed, return error
-        if (attempt === maxRetries + 1) {
-          return {
-            success: false,
-            error: error.message
-          };
-        }
-      }
-    }
-    
-    // This should never be reached, but just in case
-    return {
-      success: false,
-      error: 'Deployment failed after all retry attempts'
-    };
-  }
-}
 
 // Function to generate n8n workflow using smart generator (99% reliability)
 const generateN8nWorkflow = async (spec: WorkflowSpec, userId?: string, conversationHistory?: ChatMessage[]): Promise<any> => {
@@ -985,10 +832,10 @@ serve(async (req) => {
           workflowData = await generateN8nWorkflow(spec, user_id, conversationHistory);
           console.log('✅ Workflow JSON generated and validated with smart generator');
           
-          // Deploy to n8n with error feedback loop
-          const n8nClient = new EnhancedN8nClient();
+          // Deploy to n8n with enhanced MCP client
+          const n8nClient = new N8nMCPClient(true); // Enable MCP
           const userIntent = conversationHistory.map(m => m.content).join(' ');
-          const deployment = await n8nClient.deployWorkflow(workflowData, userIntent);
+          const deployment = await n8nClient.deployWorkflow(workflowData, userIntent, 2, user_id);
           
           if (deployment.success) {
             workflowGenerated = true;
