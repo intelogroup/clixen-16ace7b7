@@ -7,7 +7,7 @@
 - **Alternative URL**: http://18.221.12.50 ✅ (Direct server access)
 - **Authentication**: Working with real credentials ✅
 - **Supabase Backend**: https://zfbgdixbzezpxllkoyfc.supabase.co ✅
-- **n8n Interface**: http://18.221.12.50:5678 ✅
+- **n8n Interface**: https://n8nio-n8n-7xzf6n.sliplane.app/ ✅
 
 **Last Updated**: August 13, 2025 | **Status**: Production Ready MVP | **Architecture**: Netlify Static + Supabase + n8n Community
 
@@ -232,8 +232,8 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzA0NjM5NywiZXhwIjoyMDY4NjIyMzk3fQ.wLXwQbAiONyVVBeF0MOo6HIl2pHa7-o_pMi1HMGWsig
 
 # n8n Configuration  
-VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1
-VITE_N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU
+VITE_N8N_API_URL=https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+VITE_N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiN2ZmZWU5My04YTBlLTQwYTItYmMyYi0xOGE1NDliODAwZDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1MTAzNzc1fQ.mXnHtIvlmj-93EjwXZqBwzmUx9uUIddS4fO3TGMRCZ0
 
 # OpenAI Configuration (for Edge Functions)
 OPENAI_API_KEY=your-openai-key-here

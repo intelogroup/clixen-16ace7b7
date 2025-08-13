@@ -10,8 +10,8 @@
 # Frontend Environment Variables (VITE_ prefix for client-side)
 VITE_SUPABASE_URL=https://zfbgdixbzezpxllkoyfc.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmYmdkaXhiemV6cHhsbGtveWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwNDYzOTcsImV4cCI6MjA2ODYyMjM5N30.RIDf8tMNfcrVJsA_AhobZBU_H4gUHp6imiIFmzOFapw
-VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1
-VITE_N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU
+VITE_N8N_API_URL=https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+VITE_N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiN2ZmZWU5My04YTBlLTQwYTItYmMyYi0xOGE1NDliODAwZDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1MTAzNzc1fQ.mXnHtIvlmj-93EjwXZqBwzmUx9uUIddS4fO3TGMRCZ0
 ```
 
 ### Step 2: Supabase Edge Functions Environment Variables  
@@ -19,8 +19,8 @@ VITE_N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYT
 
 **Required Variables**:
 ```bash
-N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjODIxMTllNy1lYThlLTQyYzItYjgyNS1hY2ViNTk4OWQ2N2IiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU0MjYzMTM4fQ.VIvNOzeo2FtKUAgdVLcV9Xrg9XLC-xl11kp6yb_FraU
-N8N_API_URL=http://18.221.12.50:5678/api/v1
+N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiN2ZmZWU5My04YTBlLTQwYTItYmMyYi0xOGE1NDliODAwZDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1MTAzNzc1fQ.mXnHtIvlmj-93EjwXZqBwzmUx9uUIddS4fO3TGMRCZ0
+N8N_API_URL=https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
 OPENAI_API_KEY=[PRODUCTION_KEY_REQUIRED]
 ```
 
@@ -60,23 +60,23 @@ supabase functions deploy --project-ref zfbgdixbzezpxllkoyfc
 
 - **Frontend**: http://18.221.12.50 (Netlify deployment)
 - **Supabase**: https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc  
-- **n8n Automation Server**: http://18.221.12.50:5678 ✅
-- **n8n API Endpoint**: http://18.221.12.50:5678/api/v1 ✅
+- **n8n Automation Server**: https://n8nio-n8n-7xzf6n.sliplane.app/ ✅
+- **n8n API Endpoint**: https://n8nio-n8n-7xzf6n.sliplane.app/api/v1 ✅
 - **Edge Functions**: https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/
 
 ## 🤖 n8n Server Instance Details
 
 ### **Server Configuration**
-- **Host**: 18.221.12.50
-- **Port**: 5678
-- **Protocol**: HTTP (internal network)
-- **Version**: n8n Community Edition (Self-hosted)
+- **Host**: n8nio-n8n-7xzf6n.sliplane.app
+- **Protocol**: HTTPS (Sliplane managed)
+- **Version**: n8n Community Edition (Sliplane hosted)
 - **Status**: ✅ Active and operational
 
 ### **API Configuration**
-- **Base URL**: http://18.221.12.50:5678
-- **API Endpoint**: http://18.221.12.50:5678/api/v1
+- **Base URL**: https://n8nio-n8n-7xzf6n.sliplane.app
+- **API Endpoint**: https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
 - **Authentication**: JWT API Key (configured in environment variables)
+- **New API Key**: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiN2ZmZWU5My04YTBlLTQwYTItYmMyYi0xOGE1NDliODAwZDYiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU1MTAzNzc1fQ.mXnHtIvlmj-93EjwXZqBwzmUx9uUIddS4fO3TGMRCZ0
 - **Timeout**: 30 seconds
 - **Retries**: 3 attempts
 

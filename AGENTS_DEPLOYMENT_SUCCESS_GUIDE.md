@@ -189,23 +189,25 @@ curl -X POST https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 
 ### **✅ n8n Instance Configuration**
 ```bash
-# Current Production n8n Server
-Host: 18.221.12.50
-Port: 5678
-Base URL: http://18.221.12.50:5678
-API Endpoint: http://18.221.12.50:5678/api/v1
-Status: ✅ Active and operational
+# Current Production n8n Server (Updated)
+Host: n8nio-n8n-7xzf6n.sliplane.app
+Protocol: HTTPS (Sliplane managed)
+Base URL: https://n8nio-n8n-7xzf6n.sliplane.app/
+API Endpoint: https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+Status: ✅ Active and operational (Sliplane hosted)
 ```
 
 ### **✅ API Testing Patterns**
 ```bash
-# Test n8n connectivity (ALWAYS works)
-curl -s http://18.221.12.50:5678/api/v1/workflows \
-  -H "Authorization: Bearer [API_KEY]"
+# Test n8n connectivity (ALWAYS works) - UPDATED
+curl -s https://n8nio-n8n-7xzf6n.sliplane.app/api/v1/workflows \
+  -H "X-N8N-API-KEY: [NEW_API_KEY]"
 
-# Deploy workflow via API (PROVEN method)
-curl -X POST http://18.221.12.50:5678/api/v1/workflows \
-  -H "Authorization: Bearer [API_KEY]" \
+# Note: Sliplane n8n uses X-N8N-API-KEY header format (not Authorization Bearer)
+
+# Deploy workflow via API (PROVEN method) - UPDATED
+curl -X POST https://n8nio-n8n-7xzf6n.sliplane.app/api/v1/workflows \
+  -H "X-N8N-API-KEY: [NEW_API_KEY]" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "[USR-{userId}] Test Workflow",
@@ -214,9 +216,9 @@ curl -X POST http://18.221.12.50:5678/api/v1/workflows \
     "settings": {...}
   }'
 
-# Check workflow status
-curl -s http://18.221.12.50:5678/api/v1/workflows/{workflow_id} \
-  -H "Authorization: Bearer [API_KEY]"
+# Check workflow status - UPDATED
+curl -s https://n8nio-n8n-7xzf6n.sliplane.app/api/v1/workflows/{workflow_id} \
+  -H "X-N8N-API-KEY: [NEW_API_KEY]"
 ```
 
 ### **✅ User Isolation Implementation**
@@ -233,16 +235,16 @@ Security Mode: read-only-credentials
 
 ### **🔧 n8n Integration Commands**
 ```bash
-# Check n8n server status
-curl -s http://18.221.12.50:5678/healthz
+# Check n8n server status - UPDATED
+curl -s https://n8nio-n8n-7xzf6n.sliplane.app/healthz
 
-# List user workflows (with prefix filtering)
-curl -s "http://18.221.12.50:5678/api/v1/workflows?search=[USR-{userId}]" \
-  -H "Authorization: Bearer [API_KEY]"
+# List user workflows (with prefix filtering) - UPDATED
+curl -s "https://n8nio-n8n-7xzf6n.sliplane.app/api/v1/workflows?search=[USR-{userId}]" \
+  -H "X-N8N-API-KEY: [NEW_API_KEY]"
 
-# Test workflow execution
-curl -X POST http://18.221.12.50:5678/api/v1/workflows/{workflow_id}/execute \
-  -H "Authorization: Bearer [API_KEY]"
+# Test workflow execution - UPDATED
+curl -X POST https://n8nio-n8n-7xzf6n.sliplane.app/api/v1/workflows/{workflow_id}/execute \
+  -H "X-N8N-API-KEY: [NEW_API_KEY]"
 ```
 
 ### **🎯 For Workflow-Orchestration-Agent**

@@ -13,7 +13,7 @@ Clixen is a **natural-language workflow creator** that transforms user prompts i
 
 ### **Backend Services**
 - **Supabase Backend**: https://zfbgdixbzezpxllkoyfc.supabase.co ✅
-- **n8n Automation Server**: http://18.221.12.50:5678 ✅
+- **n8n Automation Server**: https://n8nio-n8n-7xzf6n.sliplane.app/ ✅
 - **Authentication**: Working with real credentials ✅
 
 ### **Test Credentials** (50-User Beta)
@@ -26,8 +26,8 @@ Clixen is a **natural-language workflow creator** that transforms user prompts i
 ### **Tech Stack**
 - **Frontend**: React 18 + Vite 5 + TypeScript + Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Auth + Edge Functions)
-- **Workflow Engine**: n8n Community Edition (Self-hosted)
-- **Deployment**: Netlify Static + Supabase + AWS EC2
+- **Workflow Engine**: n8n Community Edition (Sliplane hosted)
+- **Deployment**: Netlify Static + Supabase + Sliplane
 
 ### **Core Components**
 ```
@@ -55,9 +55,9 @@ npm run build
 ### **2. n8n Server Configuration**
 ```bash
 # n8n Instance Details
-Server: http://18.221.12.50:5678
-API Endpoint: http://18.221.12.50:5678/api/v1
-API Key: [Configured in environment variables]
+Server: https://n8nio-n8n-7xzf6n.sliplane.app/
+API Endpoint: https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+API Key: [New Sliplane API Key - Configured in environment variables]
 
 # User Isolation Pattern
 Workflow Naming: [USR-{userId}] {workflowName}
@@ -69,12 +69,12 @@ Webhook URLs: /webhook/{userHash}/{timestamp}/{random}
 # Frontend (.env)
 VITE_SUPABASE_URL=https://zfbgdixbzezpxllkoyfc.supabase.co
 VITE_SUPABASE_ANON_KEY=[anon-key]
-VITE_N8N_API_URL=http://18.221.12.50:5678/api/v1
-VITE_N8N_API_KEY=[api-key]
+VITE_N8N_API_URL=https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+VITE_N8N_API_KEY=[new-sliplane-api-key]
 
 # Edge Functions
-N8N_API_URL=http://18.221.12.50:5678/api/v1
-N8N_API_KEY=[api-key]
+N8N_API_URL=https://n8nio-n8n-7xzf6n.sliplane.app/api/v1
+N8N_API_KEY=[new-sliplane-api-key]
 OPENAI_API_KEY=[openai-key]
 ```
 
@@ -214,13 +214,13 @@ npm run test:e2e                        # End-to-end tests
 
 ### **API Documentation**
 - **Supabase**: https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
-- **n8n API**: http://18.221.12.50:5678/api/v1 (Internal)
+- **n8n API**: https://n8nio-n8n-7xzf6n.sliplane.app/api/v1 (Sliplane hosted)
 - **Edge Functions**: https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/
 
 ## 🆘 Support & Troubleshooting
 
 ### **Common Issues**
-1. **n8n Connection Errors**: Check server status at http://18.221.12.50:5678
+1. **n8n Connection Errors**: Check server status at https://n8nio-n8n-7xzf6n.sliplane.app/
 2. **Authentication Issues**: Verify Supabase configuration
 3. **Deployment Failures**: Check Netlify build logs
 4. **Workflow Errors**: Check Edge Function logs in Supabase
