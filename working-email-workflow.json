@@ -1,0 +1,131 @@
+{
+  "name": "[SUCCESS] Email Automation - Resend API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-automation",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-816c0c13b97a423e8ab3c3233e759b97"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "{\n  \"url\": \"https://techcrunch.com/category/artificial-intelligence/\",\n  \"formats\": [\"markdown\"],\n  \"onlyMainContent\": true\n}"
+      },
+      "id": "scrape-content",
+      "name": "Scrape AI News",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Get input data\nconst triggerData = items[0].json;\nconst isWebhook = triggerData.headers ? true : false;\nconst currentTime = new Date();\nconst timeString = currentTime.toLocaleString('en-US', { \n  weekday: 'long', \n  year: 'numeric', \n  month: 'long', \n  day: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit'\n});\n\n// Process scraped content\nlet newsContent = '';\nif (triggerData.data?.markdown) {\n  const markdown = triggerData.data.markdown;\n  // Extract first 300 characters as preview\n  newsContent = markdown.substring(0, 300) + '...';\n} else {\n  // Default content if no scraping data\n  newsContent = 'Latest AI developments and tech innovations from around the world.';\n}\n\n// Get custom data from webhook if provided\nconst customTo = triggerData.body?.to || triggerData.to || 'jimkalinov@gmail.com';\nconst customSubject = triggerData.body?.subject || triggerData.subject;\nconst customContent = triggerData.body?.content || triggerData.content;\n\n// Determine email content based on trigger type\nlet emailSubject, emailContent;\n\nif (isWebhook && customContent) {\n  // Custom webhook content\n  emailSubject = customSubject || `📧 Custom Notification - ${currentTime.toLocaleDateString()}`;\n  emailContent = customContent;\n} else {\n  // Default AI news content\n  emailSubject = `🤖 AI Tech News Digest - ${currentTime.toLocaleDateString()}`;\n  emailContent = `\n    <h2>🚀 Latest AI & Tech News</h2>\n    <div style=\"background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;\">\n      <h3>📰 TechCrunch AI Summary</h3>\n      <p>${newsContent}</p>\n      <a href=\"https://techcrunch.com/category/artificial-intelligence/\" style=\"color: #007cba; text-decoration: none;\">Read Full Articles →</a>\n    </div>\n    \n    <div style=\"background: #e8f4fd; padding: 15px; border-left: 4px solid #007cba; margin: 20px 0;\">\n      <h4>🔥 Today's AI Highlights:</h4>\n      <ul>\n        <li>Large Language Model advancements</li>\n        <li>AI startup funding and acquisitions</li>\n        <li>Machine learning research breakthroughs</li>\n        <li>AI policy and regulatory updates</li>\n      </ul>\n    </div>\n  `;\n}\n\n// Create HTML email\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body { \n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; \n      line-height: 1.6; \n      color: #333; \n      margin: 0; \n      padding: 0;\n    }\n    .container { max-width: 600px; margin: 0 auto; }\n    .header { \n      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); \n      color: white; \n      padding: 30px; \n      text-align: center;\n    }\n    .content { \n      background: white; \n      padding: 30px; \n      border: 1px solid #e0e0e0;\n    }\n    .footer { \n      background: #f8f9fa; \n      padding: 20px; \n      text-align: center; \n      color: #666;\n      font-size: 14px;\n    }\n    h1 { margin: 0; font-size: 28px; }\n    h2 { color: #333; margin-top: 0; }\n    a { color: #007cba; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🚀 Automated Notification</h1>\n      <p style=\"margin: 10px 0 0 0; opacity: 0.9;\">${timeString}</p>\n    </div>\n    \n    <div class=\"content\">\n      ${emailContent}\n      \n      <div style=\"margin-top: 30px; padding: 15px; background: #f0f8ff; border-radius: 8px;\">\n        <p style=\"margin: 0; color: #555;\">📊 <strong>Execution Details:</strong></p>\n        <p style=\"margin: 5px 0 0 0; color: #777; font-size: 14px;\">Triggered via ${isWebhook ? 'Webhook API' : 'Schedule'} • ${timeString}</p>\n      </div>\n    </div>\n    \n    <div class=\"footer\">\n      <p style=\"margin: 0;\">🤖 Powered by n8n + Resend + Firecrawl</p>\n      <p style=\"margin: 5px 0 0 0; font-size: 12px;\">This email was sent automatically</p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\n// Return email data for Resend API\nreturn [{\n  json: {\n    from: 'Clixen AI <onboarding@resend.dev>',\n    to: customTo,\n    subject: emailSubject,\n    html: html,\n    text: `Automated notification sent at ${timeString}\\n\\nContent: ${emailContent.replace(/<[^>]*>/g, '')}\\n\\nPowered by n8n workflow automation`\n  }\n}];"
+      },
+      "id": "format-email",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "bodyParametersJson": "={{ $json }}"
+      },
+      "id": "send-email",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Email sent successfully!', timestamp: new Date().toISOString(), recipient: $json.to, subject: $json.subject }) }}",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Scrape AI News", "type": "main", "index": 0}]]
+    },
+    "Daily Schedule": {
+      "main": [[{"node": "Scrape AI News", "type": "main", "index": 0}]]
+    },
+    "Scrape AI News": {
+      "main": [[{"node": "Format Email", "type": "main", "index": 0}]]
+    },
+    "Format Email": {
+      "main": [[{"node": "Send via Resend", "type": "main", "index": 0}]]
+    },
+    "Send via Resend": {
+      "main": [[{"node": "Webhook Response", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "timezone": "America/New_York"
+  }
+}
