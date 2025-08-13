@@ -1,0 +1,124 @@
+{
+  "name": "Clixen Test Workflow - User Demo",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b8c0d2e1-7f3a-4b5c-9d8e-1f2a3b4c5d6e",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "Hello from Clixen! This workflow was created via natural language processing."
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "user_id",
+              "value": "clixen-demo-user"
+            },
+            {
+              "name": "project",
+              "value": "Clixen Beta Testing"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-5e6f-7g8h-9i0j-k1l2m3n4o5p6",
+      "name": "Set Demo Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.user_id }}",
+              "operation": "contains",
+              "value2": "demo"
+            }
+          ]
+        }
+      },
+      "id": "c7d8e9f0-1a2b-3c4d-5e6f-7g8h9i0j1k2l",
+      "name": "Check Demo User",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "success"
+            },
+            {
+              "name": "workflow_type",
+              "value": "clixen-generated"
+            },
+            {
+              "name": "organization",
+              "value": "folder-based"
+            }
+          ]
+        }
+      },
+      "id": "e9f0a1b2-3c4d-5e6f-7g8h-9i0j1k2l3m4n",
+      "name": "Success Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [900, 200]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Set Demo Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Demo Data": {
+      "main": [
+        [
+          {
+            "node": "Check Demo User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Demo User": {
+      "main": [
+        [
+          {
+            "node": "Success Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

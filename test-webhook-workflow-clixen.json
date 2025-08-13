@@ -1,0 +1,90 @@
+{
+  "name": "Clixen Webhook Test - User Demo",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clixen-test",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger-1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300],
+      "webhookId": "clixen-demo-webhook"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "Hello from Clixen! Webhook triggered successfully."
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "user_id",
+              "value": "={{ $json.user_id || 'anonymous' }}"
+            },
+            {
+              "name": "project",
+              "value": "={{ $json.project || 'default' }}"
+            },
+            {
+              "name": "workflow_type",
+              "value": "clixen-webhook-generated"
+            }
+          ]
+        }
+      },
+      "id": "process-data-1",
+      "name": "Process Request Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"success\", \"message\": \"Clixen workflow executed via webhook\", \"data\": $json, \"execution_time\": new Date().toISOString() } }}"
+      },
+      "id": "webhook-response-1",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Process Request Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Request Data": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}
