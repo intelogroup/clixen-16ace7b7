@@ -1,0 +1,246 @@
+{
+  "metadata": {
+    "name": "Shopify New Order to Google Sheets",
+    "slug": "shopify-new-order-to-sheets",
+    "category": "e-commerce",
+    "tags": ["shopify", "google-sheets", "orders", "tracking"],
+    "persona": "alex",
+    "use_case": "Automatically log every new Shopify order to a Google Sheets spreadsheet for easy tracking and analysis",
+    "complexity": "simple",
+    "example_prompt": "When I get a new order in Shopify, add it to my Orders spreadsheet"
+  },
+  "technical": {
+    "trigger_app": "shopify",
+    "trigger_type": "new_order",
+    "action_apps": ["google_sheets"],
+    "requirements": [
+      "Shopify store with API access",
+      "Google Sheets with write permissions",
+      "Configured Shopify webhook"
+    ],
+    "limitations": [
+      "Maximum 10,000 rows per sheet",
+      "Rate limited to 100 requests per minute"
+    ]
+  },
+  "placeholders": [
+    {
+      "key": "{{SHOPIFY_STORE_URL}}",
+      "type": "string",
+      "required": true,
+      "description": "Your Shopify store URL",
+      "validation_regex": "^https://[a-z0-9-]+\\.myshopify\\.com$",
+      "ai_hint": "Extract store name from user context",
+      "user_prompt": "What is your Shopify store URL?"
+    },
+    {
+      "key": "{{GOOGLE_SHEET_ID}}",
+      "type": "string",
+      "required": true,
+      "description": "Google Sheet ID to store orders",
+      "ai_hint": "Extract sheet name or ask user",
+      "user_prompt": "Which Google Sheet should store the orders?"
+    },
+    {
+      "key": "{{SHEET_NAME}}",
+      "type": "string",
+      "required": false,
+      "default_value": "Orders",
+      "description": "Name of the sheet tab",
+      "ai_hint": "Default to 'Orders' unless specified"
+    },
+    {
+      "key": "{{FILTER_AMOUNT}}",
+      "type": "number",
+      "required": false,
+      "default_value": 0,
+      "description": "Minimum order amount to track",
+      "ai_hint": "Extract if user mentions minimum amount"
+    }
+  ],
+  "n8n_workflow": {
+    "name": "[USR-{{USER_ID}}] Shopify Orders to Sheets",
+    "nodes": [
+      {
+        "parameters": {},
+        "id": "webhook-trigger",
+        "name": "Shopify Order Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "webhookId": "{{WEBHOOK_ID}}"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "number": [
+              {
+                "value1": "={{$json[\"total_price\"]}}",
+                "operation": "largerEqual",
+                "value2": "{{FILTER_AMOUNT}}"
+              }
+            ]
+          }
+        },
+        "id": "filter-node",
+        "name": "Filter Orders",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [450, 300]
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "sheetId": "{{GOOGLE_SHEET_ID}}",
+          "range": "{{SHEET_NAME}}!A:H",
+          "options": {
+            "valueInputMode": "USER_ENTERED"
+          }
+        },
+        "id": "sheets-node",
+        "name": "Add to Google Sheets",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 2,
+        "position": [650, 300],
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "{{GOOGLE_SHEETS_CREDENTIAL_ID}}",
+            "name": "Google Sheets account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "values": {
+            "string": [
+              {
+                "name": "order_id",
+                "value": "={{$json[\"id\"]}}"
+              },
+              {
+                "name": "order_number",
+                "value": "={{$json[\"order_number\"]}}"
+              },
+              {
+                "name": "customer_email",
+                "value": "={{$json[\"email\"]}}"
+              },
+              {
+                "name": "total_price",
+                "value": "={{$json[\"total_price\"]}}"
+              },
+              {
+                "name": "currency",
+                "value": "={{$json[\"currency\"]}}"
+              },
+              {
+                "name": "order_date",
+                "value": "={{$json[\"created_at\"]}}"
+              },
+              {
+                "name": "items_count",
+                "value": "={{$json[\"line_items\"].length}}"
+              },
+              {
+                "name": "status",
+                "value": "={{$json[\"financial_status\"]}}"
+              }
+            ]
+          }
+        },
+        "id": "format-data",
+        "name": "Format Order Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 1,
+        "position": [550, 300]
+      }
+    ],
+    "connections": {
+      "Shopify Order Webhook": {
+        "main": [
+          [
+            {
+              "node": "Filter Orders",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter Orders": {
+        "main": [
+          [
+            {
+              "node": "Format Order Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format Order Data": {
+        "main": [
+          [
+            {
+              "node": "Add to Google Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    }
+  },
+  "test_data": {
+    "sample_order": {
+      "id": 5678901234,
+      "order_number": 1001,
+      "email": "customer@example.com",
+      "total_price": "125.00",
+      "currency": "USD",
+      "created_at": "2024-01-13T10:00:00Z",
+      "financial_status": "paid",
+      "line_items": [
+        {
+          "title": "Product 1",
+          "quantity": 2,
+          "price": "50.00"
+        },
+        {
+          "title": "Product 2",
+          "quantity": 1,
+          "price": "25.00"
+        }
+      ]
+    }
+  },
+  "validation_rules": [
+    {
+      "field": "GOOGLE_SHEET_ID",
+      "rule": "must_exist",
+      "error_message": "Google Sheet must exist and be accessible"
+    },
+    {
+      "field": "FILTER_AMOUNT",
+      "rule": "non_negative",
+      "error_message": "Filter amount must be 0 or greater"
+    }
+  ],
+  "success_metrics": [
+    {
+      "metric": "webhook_received",
+      "expected": true
+    },
+    {
+      "metric": "data_formatted",
+      "expected": true
+    },
+    {
+      "metric": "sheet_updated",
+      "expected": true
+    }
+  ]
+}
