@@ -1,0 +1,101 @@
+{
+  "name": "[USR-jimkalinov] Boston Weather Email",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://wttr.in/Boston?format=j1",
+        "options": {}
+      },
+      "id": "weather-fetch-1",
+      "name": "Get Boston Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const weatherData = $input.all()[0].json;\nconst currentWeather = weatherData.current_condition[0];\nconst todayWeather = weatherData.weather[0];\nconst currentTime = new Date();\nconst formattedDate = currentTime.toLocaleDateString('en-US', {\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\nconst formattedTime = currentTime.toLocaleTimeString('en-US', {\n  hour: '2-digit',\n  minute: '2-digit',\n  timeZoneName: 'short'\n});\n\nconst temperature = `${currentWeather.temp_F}°F (${currentWeather.temp_C}°C)`;\nconst condition = currentWeather.weatherDesc[0].value;\nconst humidity = `${currentWeather.humidity}%`;\nconst windSpeed = `${currentWeather.windspeedMiles} mph`;\nconst windDir = currentWeather.winddir16Point;\nconst feelsLike = `${currentWeather.FeelsLikeF}°F`;\nconst uvIndex = currentWeather.uvIndex;\nconst visibility = `${currentWeather.visibility} miles`;\nconst pressure = `${currentWeather.pressure} mb`;\n\nconst maxTemp = `${todayWeather.maxtempF}°F`;\nconst minTemp = `${todayWeather.mintempF}°F`;\nconst sunrise = todayWeather.astronomy[0].sunrise;\nconst sunset = todayWeather.astronomy[0].sunset;\n\nconst emailSubject = `🌤️ Boston Weather Update - ${formattedDate}`;\n\nconst emailHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <style>\n    body {\n      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;\n      line-height: 1.6;\n      color: #333;\n      max-width: 600px;\n      margin: 0 auto;\n      padding: 0;\n      background-color: #f0f8ff;\n    }\n    .email-container {\n      background-color: white;\n      margin: 20px auto;\n      border-radius: 12px;\n      overflow: hidden;\n      box-shadow: 0 4px 6px rgba(0,0,0,0.1);\n    }\n    .header {\n      background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);\n      color: white;\n      padding: 30px;\n      text-align: center;\n    }\n    .header h1 {\n      margin: 0;\n      font-size: 28px;\n      font-weight: 600;\n    }\n    .content {\n      padding: 30px;\n    }\n    .current-weather {\n      text-align: center;\n      background: linear-gradient(135deg, #f8fbff 0%, #e3f2fd 100%);\n      padding: 30px;\n      border-radius: 10px;\n      margin: 20px 0;\n      border: 2px solid #bbdefb;\n    }\n    .temperature {\n      font-size: 48px;\n      font-weight: bold;\n      color: #0984e3;\n      margin: 10px 0;\n    }\n    .condition {\n      font-size: 20px;\n      color: #666;\n      margin: 10px 0;\n      text-transform: capitalize;\n    }\n    .weather-grid {\n      display: grid;\n      grid-template-columns: 1fr 1fr;\n      gap: 15px;\n      margin: 25px 0;\n    }\n    .weather-item {\n      background: #f8fbff;\n      padding: 15px;\n      border-radius: 8px;\n      text-align: center;\n      border: 1px solid #e3f2fd;\n    }\n    .weather-label {\n      font-size: 12px;\n      color: #666;\n      text-transform: uppercase;\n      margin-bottom: 8px;\n      font-weight: 600;\n    }\n    .weather-value {\n      font-size: 16px;\n      font-weight: bold;\n      color: #333;\n    }\n    .footer {\n      background: #f8fbff;\n      padding: 20px;\n      text-align: center;\n      font-size: 12px;\n      color: #666;\n    }\n  </style>\n</head>\n<body>\n  <div class=\"email-container\">\n    <div class=\"header\">\n      <h1>🌤️ Boston Weather</h1>\n      <p>${formattedDate}</p>\n      <p>${formattedTime}</p>\n    </div>\n    <div class=\"content\">\n      <div class=\"current-weather\">\n        <div class=\"temperature\">${temperature}</div>\n        <div class=\"condition\">${condition}</div>\n        <p style=\"margin: 10px 0 0 0; color: #666; font-size: 14px;\">Feels like ${feelsLike}</p>\n      </div>\n      \n      <div class=\"weather-grid\">\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">🌡️ High/Low</div>\n          <div class=\"weather-value\">${maxTemp} / ${minTemp}</div>\n        </div>\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">💧 Humidity</div>\n          <div class=\"weather-value\">${humidity}</div>\n        </div>\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">💨 Wind</div>\n          <div class=\"weather-value\">${windSpeed} ${windDir}</div>\n        </div>\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">👁️ Visibility</div>\n          <div class=\"weather-value\">${visibility}</div>\n        </div>\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">🔽 Pressure</div>\n          <div class=\"weather-value\">${pressure}</div>\n        </div>\n        <div class=\"weather-item\">\n          <div class=\"weather-label\">☀️ UV Index</div>\n          <div class=\"weather-value\">${uvIndex}</div>\n        </div>\n      </div>\n      \n      <div style=\"background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 20px 0;\">\n        <p style=\"margin: 0; color: #856404;\"><strong>🌅 Sunrise:</strong> ${sunrise} | <strong>🌅 Sunset:</strong> ${sunset}</p>\n      </div>\n      \n      <p style=\"text-align: center; color: #666; margin: 20px 0;\">\n        Have a wonderful day in Boston! 🏙️\n      </p>\n    </div>\n    <div class=\"footer\">\n      <p><strong>📧 Automated Weather Report</strong></p>\n      <p>Powered by wttr.in + n8n + Resend</p>\n      <p style=\"margin-top: 10px; font-size: 11px; color: #999;\">\n        Generated on ${formattedDate} at ${formattedTime}\n      </p>\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nconst emailText = `\nBoston Weather Report\n${formattedDate} ${formattedTime}\n\nCurrent Conditions:\nTemperature: ${temperature} (Feels like ${feelsLike})\nCondition: ${condition}\n\nToday's Forecast:\nHigh: ${maxTemp} | Low: ${minTemp}\nHumidity: ${humidity}\nWind: ${windSpeed} ${windDir}\nVisibility: ${visibility}\nPressure: ${pressure}\nUV Index: ${uvIndex}\n\nSun Times:\nSunrise: ${sunrise}\nSunset: ${sunset}\n\nHave a wonderful day in Boston!\n\nPowered by wttr.in + n8n automation\nGenerated on ${formattedDate} at ${formattedTime}\n`;\n\nreturn [{\n  json: {\n    subject: emailSubject,\n    html: emailHtml,\n    text: emailText,\n    from: 'Weather Bot <onboarding@resend.dev>',\n    to: 'jimkalinov@gmail.com',\n    metadata: {\n      location: 'Boston',\n      temperature: temperature,\n      condition: condition,\n      timestamp: currentTime.toISOString()\n    }\n  }\n}];"
+      },
+      "id": "format-email-1",
+      "name": "Format Weather Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"from\": $json.from,\n  \"to\": $json.to,\n  \"subject\": $json.subject,\n  \"html\": $json.html,\n  \"text\": $json.text\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "id": "send-email-1",
+      "name": "Send Weather Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "t4fN3khNkgNO8SpH"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Boston Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Boston Weather": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weather Email": {
+      "main": [
+        [
+          {
+            "node": "Send Weather Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1"
+}
