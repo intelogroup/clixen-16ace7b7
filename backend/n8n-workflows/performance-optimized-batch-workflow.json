@@ -1,0 +1,193 @@
+{
+  "name": "[USR-template] Performance Optimized Batch Processing",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate large dataset for demonstration\n// In production, this would be fetched from an API or database\nconst totalRecords = 1000; // Simulate large dataset\nconst records = [];\n\nfor (let i = 1; i <= totalRecords; i++) {\n  records.push({\n    id: i,\n    name: `Record ${i}`,\n    email: `user${i}@example.com`,\n    status: i % 3 === 0 ? 'active' : 'inactive',\n    score: Math.floor(Math.random() * 100),\n    timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString()\n  });\n}\n\n// Add metadata for tracking\nreturn [{\n  json: {\n    totalRecords: totalRecords,\n    batchSize: 50, // Process 50 records at a time\n    records: records,\n    startTime: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-data-001",
+      "name": "Prepare Large Dataset",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "split-batches-001",
+      "name": "Split Into Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Memory-efficient processing\n// Process only current batch to avoid memory overflow\nconst batchData = $input.first().json;\nconst currentBatch = $node['Split Into Batches'].context.currentRunIndex || 0;\nconst records = batchData.records || [];\n\n// Efficient data transformation\nconst processedRecords = [];\nconst batchStartTime = Date.now();\n\n// Process records in current batch only\nfor (const record of records) {\n  // Simulate complex processing\n  const processed = {\n    id: record.id,\n    name: record.name.toUpperCase(),\n    email: record.email.toLowerCase(),\n    status: record.status,\n    score: record.score,\n    category: record.score >= 70 ? 'high' : record.score >= 40 ? 'medium' : 'low',\n    processed: true,\n    batchNumber: currentBatch + 1\n  };\n  \n  // Filter data early to reduce memory usage\n  if (processed.status === 'active') {\n    processedRecords.push(processed);\n  }\n}\n\nconst batchProcessTime = Date.now() - batchStartTime;\n\n// Return only necessary data\nreturn [{\n  json: {\n    batchNumber: currentBatch + 1,\n    recordsProcessed: records.length,\n    activeRecords: processedRecords.length,\n    processingTime: `${batchProcessTime}ms`,\n    data: processedRecords // Only active records\n  }\n}];"
+      },
+      "id": "process-batch-001",
+      "name": "Process Batch (Memory Efficient)",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Aggregate batch results without storing all data\nconst currentBatch = $input.first().json;\n\n// Initialize or get aggregation context\nif (!$node['Aggregate Results'].context) {\n  $node['Aggregate Results'].context = {\n    totalProcessed: 0,\n    totalActive: 0,\n    batches: [],\n    startTime: Date.now()\n  };\n}\n\nconst context = $node['Aggregate Results'].context;\n\n// Update aggregation (store only summary, not full data)\ncontext.totalProcessed += currentBatch.recordsProcessed;\ncontext.totalActive += currentBatch.activeRecords;\ncontext.batches.push({\n  batchNumber: currentBatch.batchNumber,\n  processed: currentBatch.recordsProcessed,\n  active: currentBatch.activeRecords,\n  time: currentBatch.processingTime\n});\n\n// Don't store the actual records to save memory\n// Only pass summary forward\nreturn [{\n  json: {\n    currentBatch: currentBatch.batchNumber,\n    totalProcessedSoFar: context.totalProcessed,\n    totalActiveSoFar: context.totalActive,\n    averagePerBatch: Math.round(context.totalActive / context.batches.length)\n  }\n}];"
+      },
+      "id": "aggregate-results-001",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "value": 100,
+        "unit": "ms"
+      },
+      "id": "throttle-001",
+      "name": "Throttle (Rate Limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if we should continue processing\n// This implements a circuit breaker pattern\n\nconst context = $node['Aggregate Results'].context || {};\nconst MAX_ERRORS = 3;\nconst MAX_PROCESSING_TIME = 60000; // 1 minute\n\n// Initialize error tracking\nif (!context.errors) {\n  context.errors = 0;\n}\n\n// Check for error conditions\nconst currentTime = Date.now();\nconst processingTime = currentTime - (context.startTime || currentTime);\n\nif (context.errors >= MAX_ERRORS) {\n  throw new Error(`Circuit breaker triggered: Too many errors (${context.errors})`);\n}\n\nif (processingTime > MAX_PROCESSING_TIME) {\n  throw new Error(`Circuit breaker triggered: Processing time exceeded (${processingTime}ms)`);\n}\n\n// Check memory usage (simplified)\nconst memoryUsage = process.memoryUsage();\nconst heapUsedMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);\n\nif (heapUsedMB > 500) { // 500MB threshold\n  console.warn(`High memory usage detected: ${heapUsedMB}MB`);\n  // Could trigger garbage collection or pause processing\n}\n\nreturn [{\n  json: {\n    status: 'healthy',\n    processingTime: `${processingTime}ms`,\n    memoryUsage: `${heapUsedMB}MB`,\n    errors: context.errors\n  }\n}];"
+      },
+      "id": "circuit-breaker-001",
+      "name": "Circuit Breaker Check",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Final summary after all batches\nconst context = $node['Aggregate Results'].context || {};\nconst endTime = Date.now();\nconst totalTime = endTime - (context.startTime || endTime);\n\n// Calculate statistics\nconst stats = {\n  summary: {\n    totalRecords: context.totalProcessed || 0,\n    activeRecords: context.totalActive || 0,\n    inactiveRecords: (context.totalProcessed || 0) - (context.totalActive || 0),\n    totalBatches: context.batches ? context.batches.length : 0,\n    processingTime: `${totalTime}ms`,\n    averageTimePerBatch: context.batches ? \n      `${Math.round(totalTime / context.batches.length)}ms` : '0ms',\n    recordsPerSecond: totalTime > 0 ? \n      Math.round((context.totalProcessed || 0) / (totalTime / 1000)) : 0\n  },\n  performance: {\n    memoryEfficient: true,\n    batchProcessing: true,\n    throttled: true,\n    circuitBreakerEnabled: true\n  },\n  timestamp: new Date().toISOString()\n};\n\n// Clean up context to free memory\ndelete $node['Aggregate Results'].context;\n\nconsole.log('Processing complete:', JSON.stringify(stats, null, 2));\n\nreturn [{ json: stats }];"
+      },
+      "id": "final-summary-001",
+      "name": "Final Summary",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Stream data to external storage (e.g., S3, database)\n// This demonstrates how to handle results without keeping everything in memory\n\nconst batchData = $input.first().json;\n\n// In production, this would stream to:\n// - S3 using multipart upload\n// - Database using bulk insert\n// - Message queue for further processing\n// - CSV file using streams\n\n// Simulate streaming to storage\nconst streamResult = {\n  status: 'streamed',\n  destination: 'external_storage',\n  batchNumber: batchData.currentBatch,\n  recordCount: batchData.totalActiveSoFar,\n  timestamp: new Date().toISOString(),\n  // Don't include actual data in response to save memory\n  metadata: {\n    format: 'json',\n    compressed: true,\n    encryption: 'AES-256'\n  }\n};\n\n// Log streaming action\nconsole.log(`Streamed batch ${batchData.currentBatch} to storage`);\n\nreturn [{ json: streamResult }];"
+      },
+      "id": "stream-to-storage-001",
+      "name": "Stream to Storage",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 450]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Large Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Large Dataset": {
+      "main": [
+        [
+          {
+            "node": "Split Into Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Batches": {
+      "main": [
+        [
+          {
+            "node": "Process Batch (Memory Efficient)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Batch (Memory Efficient)": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Stream to Storage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Throttle (Rate Limit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Throttle (Rate Limit)": {
+      "main": [
+        [
+          {
+            "node": "Circuit Breaker Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Circuit Breaker Check": {
+      "main": [
+        [
+          {
+            "node": "Split Into Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  }
+}

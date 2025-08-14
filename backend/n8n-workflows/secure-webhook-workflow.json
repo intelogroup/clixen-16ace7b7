@@ -1,0 +1,172 @@
+{
+  "name": "[USR-template] Secure Webhook with HMAC Validation",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "webhook/secure/{{$randomString}}/{{$timestamp}}",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "secure-webhook-001",
+      "name": "Secure Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// HMAC Signature Validation\nconst crypto = require('crypto');\n\n// Secret key (should be stored securely in credentials)\nconst SECRET_KEY = 'your-webhook-secret-key-here';\n\n// Get the raw body and signature from headers\nconst rawBody = $input.first().json.body;\nconst receivedSignature = $input.first().json.headers['x-webhook-signature'];\nconst timestamp = $input.first().json.headers['x-webhook-timestamp'];\n\n// Validate timestamp (prevent replay attacks)\nconst currentTime = Math.floor(Date.now() / 1000);\nconst requestTime = parseInt(timestamp);\n\nif (Math.abs(currentTime - requestTime) > 300) { // 5 minute window\n  throw new Error('Request timestamp is too old or invalid');\n}\n\n// Calculate expected signature\nconst payload = `${timestamp}.${rawBody}`;\nconst expectedSignature = crypto\n  .createHmac('sha256', SECRET_KEY)\n  .update(payload)\n  .digest('hex');\n\n// Compare signatures\nif (receivedSignature !== expectedSignature) {\n  throw new Error('Invalid webhook signature');\n}\n\n// Parse and validate IP (optional IP whitelisting)\nconst clientIP = $input.first().json.headers['x-forwarded-for'] || \n                 $input.first().json.headers['x-real-ip'];\n\nconst allowedIPs = [\n  '192.168.1.0/24',  // Example: internal network\n  '10.0.0.0/8',      // Example: private network\n  // Add your allowed IPs here\n];\n\n// IP validation logic (simplified for example)\n// In production, use proper IP range checking libraries\n\n// If all validations pass, parse the body\nlet parsedData;\ntry {\n  parsedData = JSON.parse(rawBody);\n} catch (error) {\n  throw new Error('Invalid JSON in request body');\n}\n\n// Sanitize input data\nconst sanitizedData = {\n  action: parsedData.action ? String(parsedData.action).substring(0, 100) : '',\n  data: parsedData.data || {},\n  timestamp: new Date().toISOString(),\n  clientIP: clientIP,\n  verified: true\n};\n\nreturn [{\n  json: sanitizedData\n}];"
+      },
+      "id": "validate-security-001",
+      "name": "Validate Security",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 300],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "functionCode": "// Input validation and sanitization\nconst data = $input.first().json;\n\n// Define validation rules\nconst validationRules = {\n  action: {\n    required: true,\n    type: 'string',\n    maxLength: 100,\n    pattern: /^[a-zA-Z0-9_-]+$/\n  },\n  data: {\n    required: false,\n    type: 'object'\n  }\n};\n\n// Validate required fields\nfor (const [field, rules] of Object.entries(validationRules)) {\n  const value = data[field];\n  \n  if (rules.required && !value) {\n    throw new Error(`Missing required field: ${field}`);\n  }\n  \n  if (value && rules.type && typeof value !== rules.type) {\n    throw new Error(`Invalid type for field ${field}: expected ${rules.type}`);\n  }\n  \n  if (value && rules.maxLength && value.length > rules.maxLength) {\n    throw new Error(`Field ${field} exceeds maximum length of ${rules.maxLength}`);\n  }\n  \n  if (value && rules.pattern && !rules.pattern.test(value)) {\n    throw new Error(`Field ${field} contains invalid characters`);\n  }\n}\n\n// Sanitize data object (prevent injection attacks)\nif (data.data && typeof data.data === 'object') {\n  const sanitizedDataObj = {};\n  \n  for (const [key, value] of Object.entries(data.data)) {\n    // Sanitize keys\n    const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '');\n    \n    // Sanitize values (example: escape HTML)\n    let sanitizedValue = value;\n    if (typeof value === 'string') {\n      sanitizedValue = value\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#x27;')\n        .replace(/\\//g, '&#x2F;');\n    }\n    \n    sanitizedDataObj[sanitizedKey] = sanitizedValue;\n  }\n  \n  data.data = sanitizedDataObj;\n}\n\nreturn [{ json: data }];"
+      },
+      "id": "sanitize-input-001",
+      "name": "Sanitize Input",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Rate limiting implementation\nconst clientIP = $input.first().json.clientIP;\nconst action = $input.first().json.action;\nconst currentTime = Date.now();\n\n// In production, this would be stored in a database or Redis\n// For demo purposes, using in-memory storage\nglobal.rateLimitStore = global.rateLimitStore || {};\n\n// Define rate limits per action\nconst rateLimits = {\n  'default': { requests: 100, window: 60000 }, // 100 requests per minute\n  'create': { requests: 10, window: 60000 },   // 10 creates per minute\n  'delete': { requests: 5, window: 60000 },    // 5 deletes per minute\n  'update': { requests: 20, window: 60000 }    // 20 updates per minute\n};\n\nconst limit = rateLimits[action] || rateLimits['default'];\nconst key = `${clientIP}:${action}`;\n\n// Initialize or get existing rate limit data\nif (!global.rateLimitStore[key]) {\n  global.rateLimitStore[key] = {\n    requests: [],\n    windowStart: currentTime\n  };\n}\n\nconst store = global.rateLimitStore[key];\n\n// Clean old requests outside the window\nstore.requests = store.requests.filter(\n  timestamp => currentTime - timestamp < limit.window\n);\n\n// Check if limit exceeded\nif (store.requests.length >= limit.requests) {\n  const resetTime = store.requests[0] + limit.window;\n  const waitTime = Math.ceil((resetTime - currentTime) / 1000);\n  \n  throw new Error(\n    `Rate limit exceeded. Try again in ${waitTime} seconds. ` +\n    `Limit: ${limit.requests} requests per ${limit.window/1000} seconds`\n  );\n}\n\n// Add current request\nstore.requests.push(currentTime);\n\n// Add rate limit headers to response\nconst remaining = limit.requests - store.requests.length;\nconst resetTime = store.requests[0] + limit.window;\n\nreturn [{\n  json: {\n    ...($input.first().json),\n    rateLimit: {\n      limit: limit.requests,\n      remaining: remaining,\n      reset: new Date(resetTime).toISOString()\n    }\n  }\n}];"
+      },
+      "id": "rate-limiter-001",
+      "name": "Rate Limiter",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process the validated and secured request\nconst data = $input.first().json;\nconst action = data.action;\n\n// Route to appropriate processing based on action\nlet result = {};\n\nswitch(action) {\n  case 'create':\n    result = {\n      status: 'created',\n      id: Math.random().toString(36).substring(7),\n      data: data.data,\n      timestamp: new Date().toISOString()\n    };\n    break;\n    \n  case 'update':\n    result = {\n      status: 'updated',\n      data: data.data,\n      timestamp: new Date().toISOString()\n    };\n    break;\n    \n  case 'delete':\n    result = {\n      status: 'deleted',\n      timestamp: new Date().toISOString()\n    };\n    break;\n    \n  default:\n    result = {\n      status: 'processed',\n      action: action,\n      data: data.data,\n      timestamp: new Date().toISOString()\n    };\n}\n\n// Add security metadata\nresult.security = {\n  verified: true,\n  clientIP: data.clientIP,\n  rateLimit: data.rateLimit\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "process-request-001",
+      "name": "Process Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Audit logging for security events\nconst result = $input.first().json;\nconst auditLog = {\n  timestamp: new Date().toISOString(),\n  event: 'webhook_processed',\n  action: result.action || 'unknown',\n  status: result.status,\n  clientIP: result.security?.clientIP || 'unknown',\n  verified: result.security?.verified || false,\n  rateLimit: result.security?.rateLimit || {},\n  workflowId: $workflow.id,\n  workflowName: $workflow.name,\n  executionId: $execution.id\n};\n\n// In production, send to logging service (e.g., Datadog, CloudWatch)\nconsole.log('AUDIT:', JSON.stringify(auditLog));\n\n// Return both result and audit log\nreturn [{\n  json: {\n    result: result,\n    audit: auditLog\n  }\n}];"
+      },
+      "id": "audit-log-001",
+      "name": "Audit Log",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Security alert for failed validations\nconst error = $input.first().json.error;\nconst headers = $input.first().json.headers || {};\n\nconst alert = {\n  timestamp: new Date().toISOString(),\n  severity: 'HIGH',\n  type: 'security_validation_failed',\n  error: error.message || 'Unknown security error',\n  clientIP: headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown',\n  userAgent: headers['user-agent'] || 'unknown',\n  workflowId: $workflow.id,\n  workflowName: $workflow.name\n};\n\n// In production, send security alert\n// Example: Send to security monitoring service\nconsole.error('SECURITY ALERT:', JSON.stringify(alert));\n\n// Optionally send notification\nreturn [{\n  json: {\n    alert: alert,\n    action: 'security_alert_triggered'\n  }\n}];"
+      },
+      "id": "security-alert-001",
+      "name": "Security Alert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 500],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Secure Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Security",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Security": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Security Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Input": {
+      "main": [
+        [
+          {
+            "node": "Rate Limiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Security Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limiter": {
+      "main": [
+        [
+          {
+            "node": "Process Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Security Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Request": {
+      "main": [
+        [
+          {
+            "node": "Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 60,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  }
+}

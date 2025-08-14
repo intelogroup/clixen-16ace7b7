@@ -1,0 +1,180 @@
+{
+  "name": "[USR-template] AI-Powered Data Processor with Dynamic Credentials",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "path": "webhook/{{$randomString}}/{{$timestamp}}",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger-001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Dynamic credential selection based on environment\n// This demonstrates n8n's expression capabilities\n\nconst inputData = $input.first().json;\nconst environment = inputData.environment || 'production';\nconst apiEndpoint = inputData.apiEndpoint || 'https://api.openai.com/v1';\n\n// Map environments to different credential configurations\nconst credentialMap = {\n  'development': {\n    apiKey: 'dev-api-key-placeholder',\n    model: 'gpt-3.5-turbo',\n    temperature: 0.7,\n    maxTokens: 500\n  },\n  'staging': {\n    apiKey: 'staging-api-key-placeholder',\n    model: 'gpt-3.5-turbo',\n    temperature: 0.5,\n    maxTokens: 1000\n  },\n  'production': {\n    apiKey: 'prod-api-key-placeholder',\n    model: 'gpt-4',\n    temperature: 0.3,\n    maxTokens: 2000\n  }\n};\n\nconst config = credentialMap[environment] || credentialMap['production'];\n\n// Use n8n expressions to access workflow metadata\nconst workflowId = $workflow.id;\nconst workflowName = $workflow.name;\nconst executionId = $execution.id;\nconst currentTime = new Date().toISOString();\n\nreturn [{\n  json: {\n    ...inputData,\n    config: config,\n    metadata: {\n      workflowId: workflowId,\n      workflowName: workflowName,\n      executionId: executionId,\n      timestamp: currentTime,\n      environment: environment\n    }\n  }\n}];"
+      },
+      "id": "prepare-credentials-001",
+      "name": "Prepare Dynamic Credentials",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Advanced data validation using n8n expressions\n// Demonstrates complex expression usage\n\nconst data = $input.first().json;\nconst errors = [];\n\n// Use JMESPath-style queries\nconst requiredFields = ['prompt', 'data'];\n\nfor (const field of requiredFields) {\n  if (!data[field]) {\n    errors.push(`Missing required field: ${field}`);\n  }\n}\n\n// Validate data array using expressions\nif (data.data && Array.isArray(data.data)) {\n  // Check if we have valid data items\n  const invalidItems = data.data.filter(item => {\n    return !item.id || !item.content;\n  });\n  \n  if (invalidItems.length > 0) {\n    errors.push(`Found ${invalidItems.length} invalid data items`);\n  }\n  \n  // Limit data size for API calls\n  if (data.data.length > 100) {\n    data.data = data.data.slice(0, 100);\n    data.truncated = true;\n  }\n}\n\nif (errors.length > 0) {\n  throw new Error(`Validation failed: ${errors.join(', ')}`);\n}\n\n// Transform data using expressions\nconst transformedData = {\n  prompt: data.prompt,\n  items: data.data?.map(item => ({\n    id: item.id,\n    content: item.content,\n    // Use expression to calculate hash\n    hash: Buffer.from(item.content).toString('base64').substring(0, 8),\n    processedAt: new Date().toISOString()\n  })) || [],\n  config: data.config\n};\n\nreturn [{ json: transformedData }];"
+      },
+      "id": "validate-transform-001",
+      "name": "Validate and Transform Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "headers": {
+            "Authorization": "=Bearer {{$node['Prepare Dynamic Credentials'].json.config.apiKey}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "={{$node['Prepare Dynamic Credentials'].json.config.model}}",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are a helpful assistant that processes and analyzes data."
+              },
+              {
+                "role": "user",
+                "content": "={{$json.prompt}}\\n\\nData to process:\\n{{JSON.stringify($json.items)}}"
+              }
+            ],
+            "temperature": "={{$node['Prepare Dynamic Credentials'].json.config.temperature}}",
+            "max_tokens": "={{$node['Prepare Dynamic Credentials'].json.config.maxTokens}}"
+          },
+          "retry": {
+            "enabled": true,
+            "maxAttempts": 3,
+            "waitBetween": 2000
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "openai-request-001",
+      "name": "OpenAI API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process AI response with error handling\nconst response = $input.first().json;\nconst metadata = $node['Prepare Dynamic Credentials'].json.metadata;\n\nif (response.error) {\n  // Handle API errors gracefully\n  return [{\n    json: {\n      status: 'error',\n      error: response.error,\n      fallback: 'AI processing failed, using fallback response',\n      metadata: metadata\n    }\n  }];\n}\n\n// Extract AI response\nconst aiResponse = response.choices?.[0]?.message?.content || 'No response generated';\n\n// Calculate token usage if available\nconst usage = response.usage || {};\nconst totalTokens = usage.total_tokens || 0;\nconst estimatedCost = totalTokens * 0.00002; // Rough estimate\n\n// Use Luxon for date formatting\nconst processedTime = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss');\n\nreturn [{\n  json: {\n    status: 'success',\n    response: aiResponse,\n    usage: {\n      promptTokens: usage.prompt_tokens || 0,\n      completionTokens: usage.completion_tokens || 0,\n      totalTokens: totalTokens,\n      estimatedCost: `$${estimatedCost.toFixed(4)}`\n    },\n    metadata: {\n      ...metadata,\n      processedAt: processedTime,\n      model: response.model || 'unknown'\n    }\n  }\n}];"
+      },
+      "id": "process-response-001",
+      "name": "Process AI Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Store results using dynamic expressions\n// This would typically save to a database or send notifications\n\nconst result = $input.first().json;\n\n// Use expressions to build dynamic output\nconst output = {\n  workflowExecution: {\n    id: $execution.id,\n    mode: $execution.mode,\n    workflowId: $workflow.id,\n    workflowName: $workflow.name\n  },\n  result: result,\n  // Use expression to reference data from earlier nodes\n  originalRequest: {\n    environment: $node['Prepare Dynamic Credentials'].json.metadata.environment,\n    timestamp: $node['Prepare Dynamic Credentials'].json.metadata.timestamp\n  },\n  // Calculate execution time\n  executionTime: (() => {\n    const start = new Date($node['Prepare Dynamic Credentials'].json.metadata.timestamp);\n    const end = new Date();\n    return `${(end - start) / 1000} seconds`;\n  })()\n};\n\n// In production, this would save to database or send notifications\nconsole.log('Workflow completed:', JSON.stringify(output, null, 2));\n\nreturn [{ json: output }];"
+      },
+      "id": "store-results-001",
+      "name": "Store Results",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1240, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dynamic Credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Dynamic Credentials",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Dynamic Credentials": {
+      "main": [
+        [
+          {
+            "node": "Validate and Transform Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and Transform Data": {
+      "main": [
+        [
+          {
+            "node": "OpenAI API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI API Call": {
+      "main": [
+        [
+          {
+            "node": "Process AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process AI Response": {
+      "main": [
+        [
+          {
+            "node": "Store Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 120,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  }
+}

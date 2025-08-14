@@ -1228,3 +1228,203 @@ The Error Diagnostics Agent automatically activates when these keywords are dete
 > "Every error tells a story. Every failure teaches a lesson. My job is not to fix the code, but to understand why it failed, document the wisdom, and help prevent it from happening again."
 
 This agent embodies the experience of a senior developer who has seen every type of failure and knows that understanding the 'why' is more valuable than quick fixes.
+
+---
+
+## 🧠 **Critical n8n Knowledge for Clixen Workflow Generation (August 14, 2025)**
+
+### **1. Credential Management Patterns** 🔐
+
+#### **OAuth2 Implementation Challenges**:
+- **Known Issue**: n8n Community Edition has inconsistent OAuth2 token refresh
+- **Workaround**: Use API Key authentication where possible
+- **Pattern**: Store credentials as environment variables, reference via expressions
+
+#### **Dynamic Credential Selection**:
+```json
+{
+  "Authorization": "=Bearer {{$node['CredentialSelector'].json.config.apiKey}}"
+}
+```
+
+#### **Best Practices for Clixen**:
+1. **Prefer API Keys**: More reliable than OAuth2 in Community Edition
+2. **Environment-Based**: Use different credentials for dev/staging/prod
+3. **Expression-Based**: Use `{{$env.API_KEY}}` for environment variables
+4. **Validation First**: Always test credentials before workflow deployment
+
+### **2. Expression Language Mastery** 📝
+
+#### **Core Expression Variables**:
+- `$json` - Current node's input data
+- `$node['NodeName'].json` - Access data from any previous node
+- `$workflow` - Workflow metadata (id, name)
+- `$execution` - Execution metadata (id, mode)
+- `$env` - Environment variables
+- `$now` - Current timestamp with Luxon methods
+- `$items()` - Access all items in current execution
+
+#### **Advanced Expression Patterns**:
+```javascript
+// Conditional logic in expressions
+{{ $json.status === 'active' ? 'Process' : 'Skip' }}
+
+// Array manipulation
+{{ $json.items.filter(item => item.score > 70).map(item => item.id) }}
+
+// Date formatting with Luxon
+{{ DateTime.now().plus({days: 7}).toISO() }}
+
+// Safe property access
+{{ $json?.data?.user?.email || 'default@example.com' }}
+
+// Multi-node data aggregation
+{{ $node['Node1'].json.value + $node['Node2'].json.value }}
+```
+
+#### **IIFE for Complex Logic**:
+```javascript
+{{(()=>{
+  const data = $json.items;
+  const filtered = data.filter(x => x.active);
+  return filtered.length > 0 ? filtered[0].id : null;
+})()}}
+```
+
+### **3. AI & LangChain Integration** 🤖
+
+#### **Available AI Nodes**:
+1. **AI Agent Node**: Root node for LangChain agents
+2. **OpenAI Chat Model**: GPT-3.5/GPT-4 integration
+3. **Tools Agent**: Implements tool calling interface
+4. **OpenAI Functions Agent**: Detects when functions should be called
+
+#### **Cluster Node Architecture**:
+- Root nodes (AI Agent) connect with sub-nodes (tools, memory)
+- Memory doesn't persist between sessions
+- Chat Trigger enables conversational workflows
+
+#### **OpenAI Integration Pattern**:
+```json
+{
+  "url": "https://api.openai.com/v1/chat/completions",
+  "options": {
+    "headers": {
+      "Authorization": "Bearer {{$env.OPENAI_API_KEY}}"
+    },
+    "body": {
+      "model": "gpt-4",
+      "messages": [
+        {"role": "system", "content": "{{$json.systemPrompt}}"},
+        {"role": "user", "content": "{{$json.userPrompt}}"}
+      ],
+      "temperature": 0.7
+    }
+  }
+}
+```
+
+### **4. Data Transformation Best Practices** 🔄
+
+#### **Efficient Patterns**:
+1. **Early Filtering**: Filter data as early as possible to reduce memory
+2. **Batch Processing**: Use SplitInBatches for large datasets
+3. **Stream Processing**: Process and discard, don't accumulate
+4. **Selective Fields**: Only pass necessary fields forward
+
+#### **Common Transformations**:
+```javascript
+// Flatten nested objects
+items.flatMap(item => item.nested.array)
+
+// Group by property
+items.reduce((acc, item) => {
+  acc[item.category] = acc[item.category] || [];
+  acc[item.category].push(item);
+  return acc;
+}, {})
+
+// Deduplicate
+[...new Set(items.map(item => item.id))]
+```
+
+### **5. Error Handling Strategies** ⚠️
+
+#### **Node-Level Error Handling**:
+- `continueOnFail: true` - Node continues on error
+- Error output branch - Separate path for errors
+- Try/catch in Function nodes
+
+#### **Workflow-Level Patterns**:
+```json
+{
+  "settings": {
+    "executionTimeout": 300,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  }
+}
+```
+
+### **6. Performance Optimization** 🚀
+
+#### **Memory Management**:
+- Limit items: `$items().slice(0, 100)`
+- Clear unused data: `delete $json.largeField`
+- Use references, not copies: `$node['Previous'].json`
+
+#### **Execution Optimization**:
+- Parallel branches for independent operations
+- Conditional execution with IF nodes
+- Cache results in workflow static data
+
+### **7. Workflow Generation Guidelines for Clixen** 📋
+
+#### **Template Structure**:
+1. **Always include both triggers**: Manual + Webhook
+2. **Input validation first**: Validate before processing
+3. **Error branches**: Every critical node needs error handling
+4. **Logging nodes**: Track success and failure
+5. **Metadata enrichment**: Add execution context
+
+#### **Expression Usage in Templates**:
+- Use expressions for dynamic values
+- Avoid hardcoding when expressions work
+- Reference previous nodes explicitly
+- Use environment variables for secrets
+
+#### **AI Integration Patterns**:
+- Validate AI input/output
+- Implement token limits
+- Add fallback for AI failures
+- Track usage and costs
+
+### **8. Critical Gaps & Workarounds** 🔧
+
+#### **Community Edition Limitations**:
+| Feature | Limitation | Workaround |
+|---------|------------|------------|
+| OAuth2 Refresh | Inconsistent | Use API Keys |
+| Execution History | Limited retention | External logging |
+| User Management | Basic only | Workflow prefixing |
+| Advanced Monitoring | Not available | Custom dashboard workflows |
+
+#### **Known Issues**:
+1. **Token Refresh**: Manual re-authentication needed periodically
+2. **Memory Limits**: ~500MB heap for large workflows
+3. **Execution Timeout**: Max 5 minutes default
+4. **Webhook Registration**: Manual testing required
+
+### **9. Template Enhancement Checklist** ✅
+
+For every Clixen-generated workflow:
+- [ ] Multiple trigger options (Manual + Webhook)
+- [ ] Input validation with clear error messages
+- [ ] Retry logic on external API calls
+- [ ] Fallback content for failures
+- [ ] Proper credential references (not hardcoded)
+- [ ] Expression-based dynamic values
+- [ ] Error notification branches
+- [ ] Execution metadata tracking
+- [ ] Performance limits (batch size, timeout)
+- [ ] User isolation naming convention

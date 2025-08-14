@@ -1,0 +1,219 @@
+{
+  "name": "[USR-template] Enhanced Email with Error Handling",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "path": "webhook/{{$timestamp}}/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Validate incoming data\nconst requiredFields = ['recipient_email', 'subject'];\nconst data = $input.first().json;\nconst errors = [];\n\nfor (const field of requiredFields) {\n  if (!data[field]) {\n    errors.push(`Missing required field: ${field}`);\n  }\n}\n\n// Email validation\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (data.recipient_email && !emailRegex.test(data.recipient_email)) {\n  errors.push('Invalid email format');\n}\n\nif (errors.length > 0) {\n  throw new Error(`Validation failed: ${errors.join(', ')}`);\n}\n\nreturn $input.all();"
+      },
+      "id": "validate-data-001",
+      "name": "Validate Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 300],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/top-headlines",
+        "options": {
+          "headers": {
+            "X-API-Key": "b6b1af1b97dc4577998ef26e45cf3cc2",
+            "User-Agent": "Clixen/1.0 (https://clixen.app)"
+          },
+          "qs": {
+            "country": "us",
+            "category": "technology",
+            "pageSize": "5"
+          },
+          "retry": {
+            "enabled": true,
+            "maxAttempts": 3,
+            "waitBetween": 2000
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-news-001",
+      "name": "Fetch News (with Retry)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if news fetch failed\nconst newsData = $input.first().json;\n\nif (newsData.error || !newsData.articles) {\n  // Fallback content if news API fails\n  return [{\n    json: {\n      recipient_email: $node['Validate Data'].json.recipient_email,\n      subject: $node['Validate Data'].json.subject || 'Clixen Notification',\n      email_content: `\n        <html>\n        <body style=\"font-family: Arial, sans-serif;\">\n          <h2>Service Temporarily Unavailable</h2>\n          <p>We couldn't fetch the latest news at this moment, but we're still here!</p>\n          <p>Please try again later or contact support if the issue persists.</p>\n          <hr>\n          <p><small>Powered by Clixen | ${new Date().toISOString()}</small></p>\n        </body>\n        </html>\n      `,\n      status: 'fallback'\n    }\n  }];\n}\n\n// Normal email formatting\nconst articles = newsData.articles || [];\nlet htmlContent = `\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; }\n    .header { background: #4A90E2; color: white; padding: 20px; text-align: center; }\n    .article { border-bottom: 1px solid #eee; padding: 15px; }\n    .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>📰 Technology News Digest</h1>\n  </div>\n`;\n\narticles.slice(0, 5).forEach(article => {\n  htmlContent += `\n  <div class=\"article\">\n    <h3>${article.title || 'No Title'}</h3>\n    <p>${article.description || 'No description available.'}</p>\n    <p><a href=\"${article.url}\" target=\"_blank\">Read More →</a></p>\n  </div>\n  `;\n});\n\nhtmlContent += `\n  <div class=\"footer\">\n    <p>Delivered by Clixen | ${new Date().toLocaleDateString()}</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    recipient_email: $node['Validate Data'].json.recipient_email,\n    subject: $node['Validate Data'].json.subject || `Technology News - ${new Date().toLocaleDateString()}`,\n    email_content: htmlContent,\n    article_count: articles.length,\n    status: 'success'\n  }\n}];"
+      },
+      "id": "format-email-001",
+      "name": "Format Email (with Fallback)",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "{{ $json.recipient_email }}",
+            "subject": "{{ $json.subject }}",
+            "html": "{{ $json.email_content }}"
+          },
+          "retry": {
+            "enabled": true,
+            "maxAttempts": 3,
+            "waitBetween": 5000
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "send-email-001",
+      "name": "Send Email (with Retry)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1040, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log success or failure\nconst emailResult = $input.first().json;\nconst timestamp = new Date().toISOString();\n\nif (emailResult.error) {\n  // Log error for monitoring\n  return [{\n    json: {\n      status: 'failed',\n      error: emailResult.error,\n      timestamp: timestamp,\n      recipient: $node['Format Email (with Fallback)'].json.recipient_email,\n      message: 'Email delivery failed after retries'\n    }\n  }];\n}\n\n// Log success\nreturn [{\n  json: {\n    status: 'success',\n    timestamp: timestamp,\n    recipient: $node['Format Email (with Fallback)'].json.recipient_email,\n    articles_sent: $node['Format Email (with Fallback)'].json.article_count || 0,\n    message: 'Email delivered successfully'\n  }\n}];"
+      },
+      "id": "log-result-001",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer re_eP6sgKMF_ELjbAvaFyFEsSbnj3pzFUJm2"
+          },
+          "body": {
+            "from": "onboarding@resend.dev",
+            "to": "admin@clixen.app",
+            "subject": "[ALERT] Workflow Error - {{ $workflow.name }}",
+            "html": "<h2>Workflow Error Detected</h2><p><strong>Workflow:</strong> {{ $workflow.name }}</p><p><strong>Error:</strong> {{ $json.error.message || 'Unknown error' }}</p><p><strong>Time:</strong> {{ $now.format('YYYY-MM-DD HH:mm:ss') }}</p><p><strong>Node:</strong> {{ $json.error.node || 'Unknown' }}</p><hr><p>Please check the n8n dashboard for details.</p>"
+          }
+        }
+      },
+      "id": "error-notification-001",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 500],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Data": {
+      "main": [
+        [
+          {
+            "node": "Fetch News (with Retry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch News (with Retry)": {
+      "main": [
+        [
+          {
+            "node": "Format Email (with Fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email (with Fallback)": {
+      "main": [
+        [
+          {
+            "node": "Send Email (with Retry)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (with Retry)": {
+      "main": [
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  }
+}
