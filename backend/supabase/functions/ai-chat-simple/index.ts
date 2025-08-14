@@ -840,18 +840,29 @@ serve(async (req) => {
           if (deployment.success) {
             workflowGenerated = true;
             
+            // Get user's auto-created project
+            const { data: userProject } = await supabase
+              .from('projects')
+              .select('id, name')
+              .eq('user_id', user_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+
+            const project_id = userProject?.id || null;
+            console.log(`📋 Using project: ${userProject?.name || 'No project found'} (${project_id})`);
+
             // Store workflow in database
             try {
               await supabase.from('mvp_workflows').insert({
                 user_id,
-                project_id: null, // TODO: Get from session
+                project_id,
                 name: workflowData.name,
                 description: workflowData.meta?.description || 'Generated workflow',
                 n8n_workflow_json: workflowData,
                 n8n_workflow_id: deployment.workflowId,
                 original_prompt: conversationHistory.map(m => m.content).join('\n'),
-                status: 'deployed',
-                webhook_url: deployment.webhookUrl
+                status: 'deployed'
               });
               console.log('✅ Workflow stored in database');
             } catch (dbError) {
