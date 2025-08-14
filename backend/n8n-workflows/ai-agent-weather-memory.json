@@ -1,0 +1,266 @@
+{
+  "name": "[USR-ai-agent] Weather Assistant with Memory",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-weather",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "path": "webhook/ai-weather/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-weather",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Initialize conversation context and memory\nconst input = $input.first().json;\n\n// Default location if not provided\nconst location = input.location || 'Everett, WA';\nconst query = input.query || `What's the weather like in ${location}?`;\n\n// Initialize memory context\nconst memory = {\n  conversationId: input.conversationId || `weather-${Date.now()}`,\n  history: input.history || [],\n  userPreferences: {\n    defaultLocation: location,\n    units: input.units || 'imperial',\n    language: input.language || 'en'\n  }\n};\n\nreturn [{\n  json: {\n    query: query,\n    location: location,\n    memory: memory,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "prepare-context",
+      "name": "Prepare Context",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://wttr.in/{{encodeURIComponent($json.location)}}?format=j1",
+        "options": {
+          "headers": {
+            "User-Agent": "n8n-ai-weather-agent/1.0"
+          }
+        },
+        "responseFormat": "json"
+      },
+      "id": "fetch-weather",
+      "name": "Fetch Weather Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process weather data for AI agent\nconst weatherResponse = $input.first().json;\nconst context = $node['Prepare Context'].json;\n\nif (weatherResponse.error || !weatherResponse.current_condition) {\n  return [{\n    json: {\n      ...context,\n      weatherData: null,\n      error: 'Failed to fetch weather data'\n    }\n  }];\n}\n\nconst current = weatherResponse.current_condition[0];\nconst location = weatherResponse.nearest_area[0];\n\n// Structure weather data for AI processing\nconst weatherData = {\n  location: {\n    city: location.areaName[0].value,\n    region: location.region[0].value,\n    country: location.country[0].value\n  },\n  current: {\n    temperature: context.memory.userPreferences.units === 'imperial' \n      ? `${current.temp_F}°F` \n      : `${current.temp_C}°C`,\n    feelsLike: context.memory.userPreferences.units === 'imperial'\n      ? `${current.FeelsLikeF}°F`\n      : `${current.FeelsLikeC}°C`,\n    description: current.weatherDesc[0].value,\n    humidity: `${current.humidity}%`,\n    windSpeed: context.memory.userPreferences.units === 'imperial'\n      ? `${current.windspeedMiles} mph`\n      : `${current.windspeedKmph} km/h`,\n    windDirection: current.winddir16Point,\n    pressure: `${current.pressure} mb`,\n    visibility: context.memory.userPreferences.units === 'imperial'\n      ? `${current.visibilityMiles} miles`\n      : `${current.visibility} km`,\n    uvIndex: current.uvIndex,\n    precipitation: `${current.precipMM} mm`\n  },\n  forecast: weatherResponse.weather.slice(0, 3).map(day => ({\n    date: day.date,\n    maxTemp: context.memory.userPreferences.units === 'imperial'\n      ? `${day.maxtempF}°F`\n      : `${day.maxtempC}°C`,\n    minTemp: context.memory.userPreferences.units === 'imperial'\n      ? `${day.mintempF}°F`\n      : `${day.mintempC}°C`,\n    description: day.hourly[12].weatherDesc[0].value,\n    chanceOfRain: `${day.hourly[12].chanceofrain}%`\n  }))\n};\n\nreturn [{\n  json: {\n    ...context,\n    weatherData: weatherData\n  }\n}];"
+      },
+      "id": "process-weather",
+      "name": "Process Weather Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a helpful weather assistant with memory of previous conversations. You provide accurate, conversational weather information and remember user preferences. You can:\n1. Provide current weather conditions\n2. Give weather forecasts\n3. Remember user's preferred locations and units\n4. Offer weather-related advice\n5. Track conversation history\n\nAlways be friendly, informative, and personalize responses based on conversation history."
+            }
+          ]
+        },
+        "simplifyOutput": false
+      },
+      "id": "ai-agent-root",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-3.5-turbo",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 500
+        }
+      },
+      "id": "openai-chat-model",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1040, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$json.memory.conversationId}}",
+        "contextWindowLength": 10
+      },
+      "id": "window-buffer-memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryWindowBufferMemory",
+      "typeVersion": 1,
+      "position": [1040, 560]
+    },
+    {
+      "parameters": {
+        "name": "get_weather",
+        "description": "Get current weather information for a location",
+        "functionCode": "// Tool for getting weather data\nconst weatherData = $node['Process Weather Data'].json.weatherData;\n\nif (!weatherData) {\n  return 'Weather data is currently unavailable';\n}\n\nreturn JSON.stringify(weatherData, null, 2);"
+      },
+      "id": "weather-tool",
+      "name": "Weather Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [1040, 640]
+    },
+    {
+      "parameters": {
+        "name": "save_preference",
+        "description": "Save user preference for future conversations",
+        "functionCode": "// Tool for saving user preferences\nconst input = JSON.parse($input);\nconst preference = input.preference;\nconst value = input.value;\n\n// In production, this would save to a database\nconst savedPreference = {\n  preference: preference,\n  value: value,\n  savedAt: new Date().toISOString()\n};\n\nreturn `Preference saved: ${preference} = ${value}`;"
+      },
+      "id": "preference-tool",
+      "name": "Preference Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [1040, 720]
+    },
+    {
+      "parameters": {
+        "text": "={{$json.query}}\n\nContext:\n- Current location: {{$json.weatherData.location.city}}, {{$json.weatherData.location.region}}\n- User preferences: {{JSON.stringify($json.memory.userPreferences)}}\n- Previous conversations: {{$json.memory.history.length}} messages",
+        "options": {}
+      },
+      "id": "tools-agent",
+      "name": "Tools Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAiFunctionsAgent",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format AI response with memory update\nconst aiResponse = $input.first().json;\nconst context = $node['Prepare Context'].json;\nconst weatherData = $node['Process Weather Data'].json.weatherData;\n\n// Update conversation history\nconst updatedHistory = [\n  ...context.memory.history,\n  {\n    role: 'user',\n    content: context.query,\n    timestamp: context.timestamp\n  },\n  {\n    role: 'assistant',\n    content: aiResponse.output || aiResponse.text || 'I couldn\\'t process your request',\n    timestamp: new Date().toISOString()\n  }\n].slice(-20); // Keep last 20 messages\n\n// Format final response\nconst response = {\n  success: true,\n  conversationId: context.memory.conversationId,\n  response: aiResponse.output || aiResponse.text || 'I couldn\\'t process your request',\n  weatherData: weatherData,\n  memory: {\n    ...context.memory,\n    history: updatedHistory,\n    lastInteraction: new Date().toISOString()\n  },\n  metadata: {\n    model: 'gpt-3.5-turbo',\n    tokensUsed: aiResponse.tokensUsed || null,\n    executionTime: `${(Date.now() - new Date(context.timestamp).getTime()) / 1000}s`\n  }\n};\n\nreturn [{ json: response }];"
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1440, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Context": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather Data": {
+      "main": [
+        [
+          {
+            "node": "Process Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Weather Data": {
+      "main": [
+        [
+          {
+            "node": "Tools Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "OpenAI Chat Model",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Window Buffer Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Weather Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Preference Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tools Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 60,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  }
+}

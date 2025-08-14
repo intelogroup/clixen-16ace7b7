@@ -1,0 +1,285 @@
+{
+  "name": "[USR-ai-agent] Advanced Multi-Tool AI Assistant",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-advanced",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "path": "webhook/ai-assistant/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-advanced",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Initialize advanced AI assistant context\nconst input = $input.first().json;\n\n// Determine task type and context\nconst taskType = input.taskType || 'general';\nconst query = input.query || 'How can I help you today?';\nconst sessionId = input.sessionId || `session-${Date.now()}`;\n\n// Task classification\nconst taskCategories = {\n  'data_analysis': ['analyze', 'calculate', 'summarize', 'extract', 'process'],\n  'content_generation': ['write', 'create', 'generate', 'compose', 'draft'],\n  'research': ['search', 'find', 'lookup', 'investigate', 'research'],\n  'automation': ['automate', 'schedule', 'trigger', 'workflow', 'integrate'],\n  'conversation': ['chat', 'talk', 'discuss', 'help', 'assist']\n};\n\n// Auto-detect task type from query\nlet detectedType = 'general';\nfor (const [category, keywords] of Object.entries(taskCategories)) {\n  if (keywords.some(keyword => query.toLowerCase().includes(keyword))) {\n    detectedType = category;\n    break;\n  }\n}\n\n// Build context object\nconst context = {\n  sessionId: sessionId,\n  taskType: taskType === 'general' ? detectedType : taskType,\n  query: query,\n  timestamp: new Date().toISOString(),\n  metadata: {\n    source: input.source || 'api',\n    userId: input.userId || 'anonymous',\n    priority: input.priority || 'normal'\n  },\n  config: {\n    maxTokens: input.maxTokens || 1000,\n    temperature: input.temperature || 0.7,\n    model: input.model || 'gpt-4',\n    enableTools: input.enableTools !== false,\n    enableMemory: input.enableMemory !== false,\n    enableChaining: input.enableChaining !== false\n  },\n  data: input.data || null\n};\n\nreturn [{ json: context }];"
+      },
+      "id": "prepare-advanced-context",
+      "name": "Prepare Advanced Context",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are an advanced AI assistant with multiple capabilities:\n\n1. **Data Analysis**: Process and analyze structured/unstructured data\n2. **Content Generation**: Create various types of content (emails, reports, code)\n3. **Research**: Search and synthesize information from multiple sources\n4. **Automation Planning**: Design workflow automations and integrations\n5. **Conversational AI**: Engage in context-aware conversations with memory\n\nCapabilities:\n- Use tools to fetch real-time data\n- Remember conversation context across sessions\n- Chain multiple operations for complex tasks\n- Generate structured outputs (JSON, tables, lists)\n- Provide reasoning and explanations for decisions\n\nAlways:\n- Be helpful and proactive\n- Ask clarifying questions when needed\n- Provide detailed explanations when appropriate\n- Suggest follow-up actions or improvements"
+            }
+          ]
+        },
+        "simplifyOutput": false,
+        "options": {
+          "systemMessage": "Adapt your response style based on the task type and user preferences."
+        }
+      },
+      "id": "ai-agent-advanced",
+      "name": "Advanced AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "model": "={{$json.config.model}}",
+        "options": {
+          "temperature": "={{$json.config.temperature}}",
+          "maxTokens": "={{$json.config.maxTokens}}",
+          "topP": 0.9,
+          "frequencyPenalty": 0.1,
+          "presencePenalty": 0.1
+        }
+      },
+      "id": "openai-chat-advanced",
+      "name": "OpenAI Chat Model (Dynamic)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [840, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$json.sessionId}}",
+        "contextWindowLength": 20,
+        "options": {
+          "humanPrefix": "User",
+          "aiPrefix": "Assistant",
+          "memoryKey": "chat_history"
+        }
+      },
+      "id": "conversation-memory",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryWindowBufferMemory",
+      "typeVersion": 1,
+      "position": [840, 560]
+    },
+    {
+      "parameters": {
+        "name": "web_search",
+        "description": "Search the web for information on any topic",
+        "functionCode": "// Web search tool simulation\nconst query = JSON.parse($input).query;\n\n// In production, this would call a search API\nconst searchResults = [\n  {\n    title: `Latest information about ${query}`,\n    snippet: `Recent developments and insights related to ${query}...`,\n    url: `https://example.com/search?q=${encodeURIComponent(query)}`,\n    relevance: 0.95\n  },\n  {\n    title: `${query} - Comprehensive Guide`,\n    snippet: `Everything you need to know about ${query}...`,\n    url: `https://example.com/guide/${encodeURIComponent(query)}`,\n    relevance: 0.88\n  }\n];\n\nreturn JSON.stringify({\n  query: query,\n  results: searchResults,\n  timestamp: new Date().toISOString()\n});"
+      },
+      "id": "web-search-tool",
+      "name": "Web Search Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [840, 640]
+    },
+    {
+      "parameters": {
+        "name": "data_processor",
+        "description": "Process and analyze data (JSON, CSV, text)",
+        "functionCode": "// Data processing tool\nconst input = JSON.parse($input);\nconst data = input.data;\nconst operation = input.operation || 'analyze';\n\nlet result;\n\nswitch(operation) {\n  case 'summarize':\n    result = {\n      operation: 'summarize',\n      itemCount: Array.isArray(data) ? data.length : 1,\n      summary: 'Data processed and summarized',\n      stats: {\n        totalItems: Array.isArray(data) ? data.length : 1,\n        dataType: typeof data\n      }\n    };\n    break;\n    \n  case 'transform':\n    result = {\n      operation: 'transform',\n      transformed: Array.isArray(data) ? \n        data.map(item => ({ ...item, processed: true, timestamp: new Date().toISOString() })) :\n        { ...data, processed: true, timestamp: new Date().toISOString() }\n    };\n    break;\n    \n  case 'analyze':\n  default:\n    result = {\n      operation: 'analyze',\n      analysis: {\n        dataStructure: Array.isArray(data) ? 'array' : typeof data,\n        complexity: 'medium',\n        insights: ['Data structure identified', 'Processing completed'],\n        recommendations: ['Consider data validation', 'Implement error handling']\n      }\n    };\n}\n\nreturn JSON.stringify(result);"
+      },
+      "id": "data-processor-tool",
+      "name": "Data Processor Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [840, 720]
+    },
+    {
+      "parameters": {
+        "name": "workflow_designer",
+        "description": "Design and suggest workflow automation patterns",
+        "functionCode": "// Workflow design tool\nconst input = JSON.parse($input);\nconst task = input.task;\nconst requirements = input.requirements || [];\n\n// Generate workflow suggestion\nconst workflowDesign = {\n  task: task,\n  suggestedWorkflow: {\n    name: `Automated ${task}`,\n    triggers: ['Manual', 'Schedule', 'Webhook'],\n    steps: [\n      {\n        step: 1,\n        action: 'Collect Input',\n        node: 'Webhook or Form',\n        description: 'Gather necessary data'\n      },\n      {\n        step: 2,\n        action: 'Validate Data',\n        node: 'Function Node',\n        description: 'Ensure data quality'\n      },\n      {\n        step: 3,\n        action: 'Process',\n        node: 'AI Agent or HTTP Request',\n        description: 'Core processing logic'\n      },\n      {\n        step: 4,\n        action: 'Store Results',\n        node: 'Database Node',\n        description: 'Persist processed data'\n      },\n      {\n        step: 5,\n        action: 'Notify',\n        node: 'Email or Webhook',\n        description: 'Send notifications'\n      }\n    ],\n    estimatedTime: '15-30 minutes to implement',\n    complexity: 'Medium',\n    requirements: requirements\n  },\n  recommendations: [\n    'Add error handling at each step',\n    'Implement logging for debugging',\n    'Consider rate limiting for external APIs',\n    'Add data validation before processing'\n  ]\n};\n\nreturn JSON.stringify(workflowDesign);"
+      },
+      "id": "workflow-designer-tool",
+      "name": "Workflow Designer Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [840, 800]
+    },
+    {
+      "parameters": {
+        "name": "code_generator",
+        "description": "Generate code snippets in various programming languages",
+        "functionCode": "// Code generation tool\nconst input = JSON.parse($input);\nconst language = input.language || 'javascript';\nconst task = input.task;\nconst requirements = input.requirements || [];\n\n// Generate code based on task\nlet code;\nlet explanation;\n\nif (language === 'javascript') {\n  code = `// ${task}\\nfunction processData(input) {\\n  try {\\n    // Validate input\\n    if (!input) throw new Error('Invalid input');\\n    \\n    // Process data\\n    const result = {\\n      processed: true,\\n      data: input,\\n      timestamp: new Date().toISOString()\\n    };\\n    \\n    return result;\\n  } catch (error) {\\n    console.error('Error:', error);\\n    throw error;\\n  }\\n}`;\n  explanation = 'JavaScript function with error handling and validation';\n} else if (language === 'python') {\n  code = `# ${task}\\nimport json\\nfrom datetime import datetime\\n\\ndef process_data(input_data):\\n    \"\"\"Process input data with validation\"\"\"\\n    try:\\n        if not input_data:\\n            raise ValueError('Invalid input')\\n        \\n        # Process data\\n        result = {\\n            'processed': True,\\n            'data': input_data,\\n            'timestamp': datetime.now().isoformat()\\n        }\\n        \\n        return result\\n    except Exception as e:\\n        print(f'Error: {e}')\\n        raise`;\n  explanation = 'Python function with error handling and type hints';\n} else {\n  code = `// Generic pseudocode for ${task}\\nfunction process() {\\n  // Implementation here\\n}`;\n  explanation = 'Generic code template';\n}\n\nreturn JSON.stringify({\n  language: language,\n  task: task,\n  code: code,\n  explanation: explanation,\n  requirements: requirements\n});"
+      },
+      "id": "code-generator-tool",
+      "name": "Code Generator Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1,
+      "position": [840, 880]
+    },
+    {
+      "parameters": {
+        "text": "={{$json.query}}\n\nTask Type: {{$json.taskType}}\nSession: {{$json.sessionId}}\nPriority: {{$json.metadata.priority}}\n\n{{#if $json.data}}Input Data: {{JSON.stringify($json.data)}}{{/if}}",
+        "options": {
+          "returnIntermediateSteps": true
+        }
+      },
+      "id": "openai-functions-agent",
+      "name": "OpenAI Functions Agent",
+      "type": "@n8n/n8n-nodes-langchain.openAiFunctionsAgent",
+      "typeVersion": 1,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Process and format AI agent response\nconst response = $input.first().json;\nconst context = $node['Prepare Advanced Context'].json;\n\n// Extract response details\nconst agentOutput = response.output || response.text || 'No response generated';\nconst intermediateSteps = response.intermediateSteps || [];\n\n// Calculate metrics\nconst executionTime = (Date.now() - new Date(context.timestamp).getTime()) / 1000;\n\n// Build comprehensive response\nconst finalResponse = {\n  success: true,\n  sessionId: context.sessionId,\n  taskType: context.taskType,\n  query: context.query,\n  response: agentOutput,\n  toolsUsed: intermediateSteps.map(step => ({\n    tool: step.action?.tool || 'unknown',\n    input: step.action?.toolInput || null,\n    output: step.observation || null\n  })),\n  metadata: {\n    ...context.metadata,\n    model: context.config.model,\n    executionTime: `${executionTime}s`,\n    timestamp: new Date().toISOString(),\n    tokensEstimate: Math.ceil(agentOutput.length / 4),\n    toolCallCount: intermediateSteps.length\n  },\n  suggestions: [\n    'You can ask follow-up questions',\n    'Try different task types for specialized assistance',\n    'Provide data for analysis or processing'\n  ]\n};\n\n// Add task-specific insights\nswitch(context.taskType) {\n  case 'data_analysis':\n    finalResponse.insights = {\n      type: 'data_analysis',\n      recommendation: 'Consider visualizing the results for better understanding'\n    };\n    break;\n  case 'content_generation':\n    finalResponse.insights = {\n      type: 'content_generation',\n      recommendation: 'Review and customize the generated content for your needs'\n    };\n    break;\n  case 'automation':\n    finalResponse.insights = {\n      type: 'automation',\n      recommendation: 'Test the workflow with sample data before production use'\n    };\n    break;\n}\n\nreturn [{ json: finalResponse }];"
+      },
+      "id": "format-advanced-response",
+      "name": "Format Advanced Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log execution for monitoring and analytics\nconst response = $input.first().json;\n\n// Create execution log\nconst executionLog = {\n  logId: `log-${Date.now()}`,\n  sessionId: response.sessionId,\n  taskType: response.taskType,\n  success: response.success,\n  executionTime: response.metadata.executionTime,\n  toolsUsed: response.toolsUsed.length,\n  timestamp: response.metadata.timestamp,\n  metrics: {\n    responseLength: response.response.length,\n    toolCallCount: response.metadata.toolCallCount,\n    estimatedTokens: response.metadata.tokensEstimate\n  }\n};\n\n// In production, this would save to a database or monitoring system\nconsole.log('Execution logged:', JSON.stringify(executionLog, null, 2));\n\n// Pass through the response\nreturn [{ json: response }];"
+      },
+      "id": "log-execution",
+      "name": "Log Execution",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1440, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Advanced Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Advanced Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Advanced Context": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Functions Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced AI Agent": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "OpenAI Chat Model (Dynamic)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Conversation Memory",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_tool": [
+        [
+          {
+            "node": "Web Search Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Data Processor Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Workflow Designer Tool",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Code Generator Tool",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Functions Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Advanced Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Advanced Response": {
+      "main": [
+        [
+          {
+            "node": "Log Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 120,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
