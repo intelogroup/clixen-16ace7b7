@@ -52,8 +52,9 @@ curl -s https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 # Phase 1: Intent-Based Template Discovery (Firecrawl + n8n.io)
 # Phase 2: Battle-Tested Template Library (Proven patterns)  
 # Phase 3: Multi-Layer Validation System (MCP + Custom validation)
+# Phase 4: MANDATORY Manual Execution Test (Critical Step)
 
-# WORKFLOW: User Intent → Template Discovery → Validation → Generation
+# WORKFLOW: User Intent → Template Discovery → Validation → Generation → Manual Test
 # BENEFITS: 80% faster generation, 95% fewer errors, 50% fewer iterations
 
 # Template Discovery Process:
@@ -69,6 +70,7 @@ curl -s https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 3. API Key & Credential Resolution (Context-aware)
 4. User Isolation Application ([USR-{userId}] prefixing)
 5. Dry-Run Deployment Test (n8n API validation)
+6. ⚠️ **MANDATORY MANUAL EXECUTION** - ALWAYS test workflow after creation
 
 # Template structure (MANDATORY):
 {
@@ -83,6 +85,14 @@ curl -s https://zfbgdixbzezpxllkoyfc.supabase.co/functions/v1/FUNCTION_NAME
 # REMOVE read-only properties before deployment:
 # - Remove "active", "id", "versionId", "tags", "description" 
 # - Keep only: name, nodes, connections, settings
+
+# 🚨 CRITICAL POST-DEPLOYMENT STEP:
+# ALWAYS execute the workflow manually after creation using:
+# - MCP n8n server execute_workflow function
+# - Or n8n API: POST /workflows/{id}/execute
+# - Verify execution results and data flow
+# - Test all trigger paths (manual, webhook, scheduled)
+# - Confirm error handling and data transformation
 ```
 
 ### **📧 EMAIL INTEGRATION - WORKING APPROACH**
@@ -655,6 +665,15 @@ https://supabase.com/dashboard/project/zfbgdixbzezpxllkoyfc
    - Resend: Always test email delivery with real recipient
    - Other APIs: Verify credentials exist and are valid before workflow creation
    - Use wttr.in for weather data (no credentials required)
+
+8. 🚨 MANDATORY_POST_DEPLOYMENT_TESTING:
+   - ALWAYS execute workflow manually after creation/deployment
+   - Use MCP n8n server execute_workflow function
+   - Test all trigger paths (manual, webhook, scheduled)
+   - Verify data flow and transformations work correctly
+   - Confirm error handling operates as expected
+   - Document execution results and any issues found
+   - DO NOT consider workflow complete until manual test passes
 ```
 
 ### **📧 Email Node Generation Rules**
@@ -1428,3 +1447,4 @@ For every Clixen-generated workflow:
 - [ ] Execution metadata tracking
 - [ ] Performance limits (batch size, timeout)
 - [ ] User isolation naming convention
+- [ ] **⚠️ MANDATORY: Manual execution test after deployment**
