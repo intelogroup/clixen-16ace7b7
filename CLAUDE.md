@@ -136,6 +136,14 @@ See `/root/repo/AGENTS_DEPLOYMENT_SUCCESS_GUIDE.md` for complete details and wor
 
 **🎯 CRITICAL**: Always check `/root/repo/backend/n8n-workflows/` for existing templates before creating new workflow JSON files.
 
+### **📖 N8N SCHEDULING & TRIGGERS REFERENCE**
+See `/root/repo/docs/N8N_TRIGGERS_AND_SCHEDULING_REFERENCE.md` for comprehensive guide on:
+- Schedule Trigger configuration and best practices
+- API rate limiting and error handling patterns
+- Manual vs Webhook trigger usage
+- Production scheduling guidelines
+- Community Edition limitations and workarounds
+
 ---
 
 ## 📋 **MVP Specification Overview**
