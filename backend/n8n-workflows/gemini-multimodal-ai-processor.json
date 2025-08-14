@@ -1,0 +1,207 @@
+{
+  "name": "[USR-ai-gemini] Multimodal AI Document & Image Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-gemini",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "path": "webhook/gemini-multimodal/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-gemini",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Multimodal input processor for Gemini AI\nconst input = $input.first().json;\n\n// Determine input type and processing mode\nconst inputType = input.inputType || 'text'; // 'text', 'image', 'pdf', 'mixed'\nconst processingMode = input.processingMode || 'analysis'; // 'analysis', 'extraction', 'summarization', 'translation'\nconst outputFormat = input.outputFormat || 'structured'; // 'structured', 'narrative', 'json', 'markdown'\n\n// Input content\nconst textContent = input.text || input.content || '';\nconst imageUrl = input.imageUrl || input.image || '';\nconst documentUrl = input.documentUrl || input.document || '';\nconst language = input.language || 'en';\n\n// Processing specifications\nconst specifications = {\n  analysis: {\n    prompt: 'Analyze the provided content and extract key insights, themes, and important information.',\n    outputStructure: 'structured analysis with categories'\n  },\n  extraction: {\n    prompt: 'Extract specific data points, entities, dates, numbers, and actionable information.',\n    outputStructure: 'organized data extraction'\n  },\n  summarization: {\n    prompt: 'Create a comprehensive summary highlighting main points and conclusions.',\n    outputStructure: 'concise executive summary'\n  },\n  translation: {\n    prompt: `Translate the content to ${language} while preserving meaning and context.`,\n    outputStructure: 'faithful translation with notes'\n  },\n  ocr: {\n    prompt: 'Extract all text content from the image/document with high accuracy.',\n    outputStructure: 'cleaned text extraction'\n  },\n  comparison: {\n    prompt: 'Compare and contrast different elements, highlighting similarities and differences.',\n    outputStructure: 'comparative analysis'\n  }\n};\n\n// Build processing context\nconst processingContext = {\n  inputType: inputType,\n  processingMode: processingMode,\n  outputFormat: outputFormat,\n  specification: specifications[processingMode] || specifications.analysis,\n  content: {\n    text: textContent,\n    imageUrl: imageUrl,\n    documentUrl: documentUrl\n  },\n  parameters: {\n    language: language,\n    targetAudience: input.targetAudience || 'general',\n    complexity: input.complexity || 'medium',\n    focus: input.focus || 'comprehensive'\n  },\n  timestamp: new Date().toISOString(),\n  requestId: `gemini-${Date.now()}`\n};\n\nreturn [{ json: processingContext }];"
+      },
+      "id": "multimodal-processor",
+      "name": "Multimodal Input Processor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Gemini API request based on input type and processing mode\nconst context = $input.first().json;\n\n// Base system prompt\nlet systemPrompt = `You are an expert multimodal AI assistant specializing in ${context.processingMode}. Provide ${context.specification.outputStructure}.`;\n\n// Build content parts array for Gemini\nlet contentParts = [];\n\n// Add text content if present\nif (context.content.text) {\n  contentParts.push({\n    text: `${systemPrompt}\\n\\nTask: ${context.specification.prompt}\\n\\nContent to process: ${context.content.text}\\n\\nOutput format: ${context.outputFormat}\\nTarget audience: ${context.parameters.targetAudience}\\nComplexity level: ${context.parameters.complexity}\\nFocus area: ${context.parameters.focus}`\n  });\n}\n\n// Add image content if present (Gemini supports image analysis)\nif (context.content.imageUrl) {\n  contentParts.push({\n    text: `Additionally, analyze this image and integrate findings with the text analysis above.`\n  });\n  // Note: In production, you'd add image data here\n  // contentParts.push({ inline_data: { mime_type: \"image/jpeg\", data: \"base64_image_data\" } });\n}\n\n// Gemini generation configuration\nconst generationConfig = {\n  temperature: context.parameters.complexity === 'high' ? 0.8 : (context.parameters.complexity === 'low' ? 0.2 : 0.5),\n  maxOutputTokens: context.outputFormat === 'json' ? 1000 : 1500,\n  topP: 0.95,\n  topK: 40\n};\n\n// Add JSON mode if requested\nif (context.outputFormat === 'json' || context.outputFormat === 'structured') {\n  generationConfig.responseMimeType = 'application/json';\n}\n\nconst geminiRequest = {\n  contents: [{\n    parts: contentParts\n  }],\n  generationConfig: generationConfig,\n  safetySettings: [\n    {\n      category: \"HARM_CATEGORY_HARASSMENT\",\n      threshold: \"BLOCK_MEDIUM_AND_ABOVE\"\n    },\n    {\n      category: \"HARM_CATEGORY_HATE_SPEECH\",\n      threshold: \"BLOCK_MEDIUM_AND_ABOVE\"\n    }\n  ]\n};\n\nreturn [{\n  json: {\n    ...context,\n    geminiRequest: geminiRequest,\n    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'\n  }\n}];"
+      },
+      "id": "gemini-request-builder",
+      "name": "Gemini Request Builder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.apiEndpoint }}",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json",
+            "X-goog-api-key": "AIzaSyAOzZd9O9rOEERppTAdG_ll7mdK6EktgIg"
+          },
+          "body": "={{ JSON.stringify($json.geminiRequest) }}",
+          "timeout": 30000
+        }
+      },
+      "id": "gemini-api-call",
+      "name": "Gemini API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an AI assistant. Provide similar analysis to compare with Gemini results."
+              },
+              {
+                "role": "user",
+                "content": "{{ $('Multimodal Input Processor').first().json.specification.prompt }} Content: {{ $('Multimodal Input Processor').first().json.content.text }}"
+              }
+            ],
+            "temperature": "{{ $('Multimodal Input Processor').first().json.parameters.complexity === 'high' ? 0.8 : ($('Multimodal Input Processor').first().json.parameters.complexity === 'low' ? 0.2 : 0.5) }}",
+            "max_tokens": 1000
+          }
+        }
+      },
+      "id": "openai-comparison",
+      "name": "OpenAI Comparison",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and compare Gemini vs OpenAI results\nconst context = $('Gemini Request Builder').first().json;\nconst geminiResponse = $('Gemini API Call').first().json;\nconst openaiResponse = $('OpenAI Comparison').first().json;\n\n// Process Gemini response\nlet geminiResult = {\n  success: false,\n  content: '',\n  model: 'gemini-2.0-flash',\n  tokensUsed: 0,\n  error: null\n};\n\nif (geminiResponse && geminiResponse.candidates && geminiResponse.candidates[0]) {\n  geminiResult = {\n    success: true,\n    content: geminiResponse.candidates[0].content.parts[0].text,\n    model: geminiResponse.modelVersion || 'gemini-2.0-flash',\n    tokensUsed: geminiResponse.usageMetadata?.totalTokenCount || 0,\n    finishReason: geminiResponse.candidates[0].finishReason,\n    avgLogprobs: geminiResponse.candidates[0].avgLogprobs,\n    error: null\n  };\n} else if (geminiResponse && geminiResponse.error) {\n  geminiResult.error = geminiResponse.error.message || 'Gemini API error';\n}\n\n// Process OpenAI response\nlet openaiResult = {\n  success: false,\n  content: '',\n  model: 'gpt-3.5-turbo',\n  tokensUsed: 0,\n  error: null\n};\n\nif (openaiResponse && openaiResponse.choices && openaiResponse.choices[0]) {\n  openaiResult = {\n    success: true,\n    content: openaiResponse.choices[0].message.content,\n    model: openaiResponse.model || 'gpt-3.5-turbo',\n    tokensUsed: openaiResponse.usage?.total_tokens || 0,\n    finishReason: openaiResponse.choices[0].finish_reason,\n    error: null\n  };\n} else if (openaiResponse && openaiResponse.error) {\n  openaiResult.error = openaiResponse.error.message || 'OpenAI API error';\n}\n\n// Performance comparison\nconst comparison = {\n  geminiSuccess: geminiResult.success,\n  openaiSuccess: openaiResult.success,\n  tokenEfficiency: {\n    gemini: geminiResult.tokensUsed,\n    openai: openaiResult.tokensUsed,\n    winner: geminiResult.tokensUsed <= openaiResult.tokensUsed ? 'Gemini' : 'OpenAI'\n  },\n  contentLength: {\n    gemini: geminiResult.content.length,\n    openai: openaiResult.content.length,\n    winner: geminiResult.content.length >= openaiResult.content.length ? 'Gemini' : 'OpenAI'\n  },\n  qualityIndicators: {\n    geminiLogprobs: geminiResult.avgLogprobs,\n    structuredOutput: geminiResult.content.includes('{') && geminiResult.content.includes('}'),\n    bothSuccessful: geminiResult.success && openaiResult.success\n  }\n};\n\nconst analysisReport = {\n  success: geminiResult.success,\n  processingMode: context.processingMode,\n  inputType: context.inputType,\n  outputFormat: context.outputFormat,\n  results: {\n    gemini: geminiResult,\n    openai: openaiResult\n  },\n  comparison: comparison,\n  metadata: {\n    requestId: context.requestId,\n    processingTime: (Date.now() - new Date(context.timestamp).getTime()) / 1000,\n    timestamp: new Date().toISOString()\n  }\n};\n\nreturn [{ json: analysisReport }];"
+      },
+      "id": "result-processor",
+      "name": "Results Processor & Comparison",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format comprehensive multimodal analysis results\nconst analysis = $input.first().json;\n\n// Create formatted display output\nconst displayOutput = {\n  '🤖 GEMINI MULTIMODAL AI ANALYSIS RESULTS': '=' .repeat(60),\n  '': '',\n  '📋 Processing Details': {\n    'Processing Mode': analysis.processingMode.toUpperCase(),\n    'Input Type': analysis.inputType.toUpperCase(),\n    'Output Format': analysis.outputFormat.toUpperCase(),\n    'Processing Time': `${analysis.metadata.processingTime} seconds`,\n    'Request ID': analysis.metadata.requestId\n  },\n  ' ': '',\n  '🚀 GEMINI 2.0 FLASH RESULTS': {\n    'Status': analysis.results.gemini.success ? '✅ Success' : '❌ Failed',\n    'Model': analysis.results.gemini.model,\n    'Tokens Used': analysis.results.gemini.tokensUsed,\n    'Finish Reason': analysis.results.gemini.finishReason || 'N/A',\n    'Avg Log Probs': analysis.results.gemini.avgLogprobs || 'N/A',\n    'Content Length': analysis.results.gemini.content.length,\n    'Generated Content': analysis.results.gemini.content || 'No content generated'\n  },\n  '  ': '',\n  '🔴 OPENAI GPT-3.5 COMPARISON': {\n    'Status': analysis.results.openai.success ? '✅ Success' : '❌ Failed',\n    'Model': analysis.results.openai.model,\n    'Tokens Used': analysis.results.openai.tokensUsed,\n    'Finish Reason': analysis.results.openai.finishReason || 'N/A',\n    'Content Length': analysis.results.openai.content.length,\n    'Generated Content': analysis.results.openai.content || 'No content generated'\n  },\n  '   ': '',\n  '⚖️ PERFORMANCE COMPARISON': {\n    'Both Models Successful': analysis.comparison.qualityIndicators.bothSuccessful ? '✅ Yes' : '❌ No',\n    'Token Efficiency Winner': `${analysis.comparison.tokenEfficiency.winner} (${analysis.comparison.tokenEfficiency.gemini} vs ${analysis.comparison.tokenEfficiency.openai})`,\n    'Content Length Winner': `${analysis.comparison.contentLength.winner} (${analysis.comparison.contentLength.gemini} vs ${analysis.comparison.contentLength.openai} chars)`,\n    'Structured Output (Gemini)': analysis.comparison.qualityIndicators.structuredOutput ? '✅ Yes' : '❌ No',\n    'Gemini Confidence Score': analysis.comparison.qualityIndicators.geminiLogprobs ? `${(analysis.comparison.qualityIndicators.geminiLogprobs * -1).toFixed(3)}` : 'N/A'\n  },\n  '    ': '',\n  '🎯 GEMINI ADVANTAGES OBSERVED': [\n    analysis.results.gemini.tokensUsed < analysis.results.openai.tokensUsed ? '• More token-efficient processing' : '• Higher token usage than OpenAI',\n    analysis.comparison.qualityIndicators.structuredOutput ? '• Native structured JSON output support' : '• Standard text output format',\n    analysis.results.gemini.avgLogprobs && analysis.results.gemini.avgLogprobs > -0.1 ? '• High confidence in responses' : '• Standard confidence levels',\n    '• Built-in multimodal capabilities (text + images)',\n    '• Fast response times with Flash model',\n    '• Advanced safety filtering built-in'\n  ],\n  '     ': '',\n  '📊 RECOMMENDED USE CASES FOR GEMINI': {\n    'Document Analysis': analysis.processingMode === 'analysis' ? '✅ Excellent performance demonstrated' : '• Structured analysis with JSON output',\n    'Data Extraction': analysis.processingMode === 'extraction' ? '✅ Excellent performance demonstrated' : '• Precise entity and data extraction',\n    'Multimodal Processing': '• Text + image analysis in single request',\n    'PDF Document Processing': '• Native PDF text extraction capabilities',\n    'Structured Output Generation': analysis.comparison.qualityIndicators.structuredOutput ? '✅ Native JSON support confirmed' : '• JSON and structured format generation',\n    'Cost-Effective Processing': analysis.comparison.tokenEfficiency.winner === 'Gemini' ? '✅ More efficient than OpenAI' : '• Competitive token efficiency'\n  }\n};\n\nreturn [{\n  json: {\n    displayOutput: displayOutput,\n    rawAnalysis: analysis,\n    summary: {\n      status: analysis.success ? 'completed' : 'failed',\n      processingMode: analysis.processingMode,\n      geminiSuccess: analysis.results.gemini.success,\n      openaiSuccess: analysis.results.openai.success,\n      tokenEfficiencyWinner: analysis.comparison.tokenEfficiency.winner,\n      contentLengthWinner: analysis.comparison.contentLength.winner,\n      processingTime: analysis.metadata.processingTime,\n      recommendGemini: analysis.comparison.tokenEfficiency.winner === 'Gemini' && analysis.results.gemini.success\n    }\n  }\n}];"
+      },
+      "id": "format-final-display",
+      "name": "Format Final Display",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Multimodal Input Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Multimodal Input Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Multimodal Input Processor": {
+      "main": [
+        [
+          {
+            "node": "Gemini Request Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Request Builder": {
+      "main": [
+        [
+          {
+            "node": "Gemini API Call",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenAI Comparison",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini API Call": {
+      "main": [
+        [
+          {
+            "node": "Results Processor & Comparison",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Comparison": {
+      "main": [
+        [
+          {
+            "node": "Results Processor & Comparison",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Results Processor & Comparison": {
+      "main": [
+        [
+          {
+            "node": "Format Final Display",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 120,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}

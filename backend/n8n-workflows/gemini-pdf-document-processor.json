@@ -1,0 +1,261 @@
+{
+  "name": "[USR-ai-gemini] PDF & Document Intelligence Processor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-pdf",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "path": "webhook/gemini-pdf/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-pdf",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// PDF and Document processing input handler\nconst input = $input.first().json;\n\n// Document processing configuration\nconst documentUrl = input.documentUrl || input.pdfUrl || '';\nconst documentText = input.documentText || input.text || 'Sample contract document: This Software License Agreement (\"Agreement\") is entered into on January 15, 2024, between TechCorp Inc. (\"Licensor\") and BusinessSolutions Ltd. (\"Licensee\"). The license fee is $50,000 annually, renewable every 12 months. The software includes CRM modules, analytics dashboard, and API access. Support is provided 24/7 with 99.9% uptime guarantee. Termination clause allows either party to terminate with 30-day written notice. Confidentiality obligations extend 5 years post-termination.';\nconst processingType = input.processingType || 'comprehensive'; // 'comprehensive', 'extraction', 'summarization', 'compliance'\nconst documentType = input.documentType || 'contract'; // 'contract', 'financial', 'legal', 'technical', 'academic'\nconst language = input.language || 'en';\n\n// Specialized processing prompts for different document types\nconst processingTemplates = {\n  contract: {\n    extraction: 'Extract key contractual elements: parties, dates, financial terms, obligations, termination clauses, and legal provisions.',\n    compliance: 'Analyze for compliance risks, missing clauses, and legal vulnerabilities.',\n    summarization: 'Create executive summary highlighting key terms, obligations, and risks.',\n    comprehensive: 'Provide complete contract analysis including parties, terms, risks, recommendations, and compliance assessment.'\n  },\n  financial: {\n    extraction: 'Extract financial data: revenue, expenses, profits, ratios, trends, and key performance indicators.',\n    compliance: 'Check for financial compliance, audit requirements, and regulatory adherence.',\n    summarization: 'Create financial performance summary with key metrics and trends.',\n    comprehensive: 'Provide complete financial analysis including performance, risks, trends, and recommendations.'\n  },\n  legal: {\n    extraction: 'Extract legal elements: statutes, precedents, arguments, conclusions, and legal reasoning.',\n    compliance: 'Analyze legal compliance, potential violations, and regulatory requirements.',\n    summarization: 'Summarize legal arguments, findings, and conclusions.',\n    comprehensive: 'Provide complete legal analysis including arguments, precedents, risks, and recommendations.'\n  },\n  technical: {\n    extraction: 'Extract technical specifications, requirements, architectures, and implementation details.',\n    compliance: 'Check technical compliance with standards, best practices, and security requirements.',\n    summarization: 'Summarize technical approach, architecture, and key implementation decisions.',\n    comprehensive: 'Provide complete technical analysis including architecture, risks, and implementation recommendations.'\n  },\n  academic: {\n    extraction: 'Extract research methodology, findings, conclusions, and key insights.',\n    compliance: 'Check for research methodology compliance and academic standards.',\n    summarization: 'Summarize research objectives, methodology, findings, and conclusions.',\n    comprehensive: 'Provide complete research analysis including methodology, findings, limitations, and implications.'\n  }\n};\n\n// Build processing context\nconst processingConfig = {\n  documentUrl: documentUrl,\n  documentText: documentText,\n  processingType: processingType,\n  documentType: documentType,\n  language: language,\n  template: processingTemplates[documentType] || processingTemplates.contract,\n  prompt: processingTemplates[documentType][processingType] || processingTemplates[documentType].comprehensive,\n  outputRequirements: {\n    format: 'structured_json',\n    sections: [\n      'document_summary',\n      'key_entities',\n      'important_dates',\n      'financial_terms',\n      'obligations_and_rights',\n      'risks_and_concerns',\n      'recommendations',\n      'compliance_assessment'\n    ]\n  },\n  timestamp: new Date().toISOString(),\n  requestId: `pdf-${Date.now()}`\n};\n\nreturn [{ json: processingConfig }];"
+      },
+      "id": "document-config-processor",
+      "name": "Document Configuration Processor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json",
+            "X-goog-api-key": "AIzaSyAOzZd9O9rOEERppTAdG_ll7mdK6EktgIg"
+          },
+          "body": {
+            "contents": [
+              {
+                "parts": [
+                  {
+                    "text": "You are a specialized document analysis AI with expertise in {{ $json.documentType }} documents. \n\nTask: {{ $json.prompt }}\n\nDocument Type: {{ $json.documentType }}\nProcessing Type: {{ $json.processingType }}\nLanguage: {{ $json.language }}\n\nDocument Content:\n{{ $json.documentText }}\n\nProvide analysis in structured JSON format with these sections:\n- document_summary: Brief overview of the document\n- key_entities: Important people, organizations, locations mentioned\n- important_dates: Critical dates and deadlines\n- financial_terms: Monetary amounts, payments, costs\n- obligations_and_rights: Key obligations for each party\n- risks_and_concerns: Potential risks or issues identified\n- recommendations: Actionable recommendations\n- compliance_assessment: Compliance status and requirements\n\nEnsure all JSON is valid and properly formatted."
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "temperature": 0.3,
+              "maxOutputTokens": 2000,
+              "topP": 0.95,
+              "topK": 40,
+              "responseMimeType": "application/json"
+            },
+            "safetySettings": [
+              {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+              },
+              {
+                "category": "HARM_CATEGORY_HATE_SPEECH", 
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+              }
+            ]
+          }
+        }
+      },
+      "id": "gemini-document-analysis",
+      "name": "Gemini Document Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "options": {
+          "headers": {
+            "Content-Type": "application/json",
+            "X-goog-api-key": "AIzaSyA4PHzQ6E8myF7Fjr-y9Tk2eDEd1p6eKaA"
+          },
+          "body": {
+            "contents": [
+              {
+                "parts": [
+                  {
+                    "text": "You are a legal and business risk assessment expert. Analyze this {{ $json.documentType }} document for potential risks, missing clauses, and improvement recommendations.\n\nDocument Content:\n{{ $json.documentText }}\n\nProvide risk assessment in JSON format:\n{\n  \"risk_level\": \"low/medium/high\",\n  \"critical_risks\": [\"list of critical risks\"],\n  \"missing_clauses\": [\"important missing elements\"],\n  \"compliance_issues\": [\"potential compliance problems\"],\n  \"recommendations\": [\"specific improvement suggestions\"],\n  \"legal_review_required\": true/false,\n  \"priority_actions\": [\"immediate actions needed\"]\n}"
+                  }
+                ]
+              }
+            ],
+            "generationConfig": {
+              "temperature": 0.2,
+              "maxOutputTokens": 1500,
+              "responseMimeType": "application/json"
+            }
+          }
+        }
+      },
+      "id": "gemini-risk-assessment",
+      "name": "Gemini Risk Assessment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are a document analysis expert. Provide structured analysis of the provided {{ $('Document Configuration Processor').first().json.documentType }} document."
+              },
+              {
+                "role": "user",
+                "content": "{{ $('Document Configuration Processor').first().json.prompt }} Document: {{ $('Document Configuration Processor').first().json.documentText }}"
+              }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1500
+          }
+        }
+      },
+      "id": "openai-comparison-analysis",
+      "name": "OpenAI Comparison Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [840, 700],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and integrate all analysis results\nconst config = $('Document Configuration Processor').first().json;\nconst geminiAnalysis = $('Gemini Document Analysis').first().json;\nconst geminiRisk = $('Gemini Risk Assessment').first().json;\nconst openaiAnalysis = $('OpenAI Comparison Analysis').first().json;\n\n// Process Gemini document analysis\nlet geminiDocumentResult = {\n  success: false,\n  content: {},\n  tokensUsed: 0,\n  error: null\n};\n\nif (geminiAnalysis && geminiAnalysis.candidates && geminiAnalysis.candidates[0]) {\n  try {\n    const analysisText = geminiAnalysis.candidates[0].content.parts[0].text;\n    geminiDocumentResult = {\n      success: true,\n      content: JSON.parse(analysisText),\n      tokensUsed: geminiAnalysis.usageMetadata?.totalTokenCount || 0,\n      model: geminiAnalysis.modelVersion || 'gemini-2.0-flash',\n      error: null\n    };\n  } catch (error) {\n    geminiDocumentResult.error = 'Failed to parse Gemini JSON response';\n    geminiDocumentResult.rawContent = geminiAnalysis.candidates[0].content.parts[0].text;\n  }\n}\n\n// Process Gemini risk assessment\nlet geminiRiskResult = {\n  success: false,\n  content: {},\n  tokensUsed: 0,\n  error: null\n};\n\nif (geminiRisk && geminiRisk.candidates && geminiRisk.candidates[0]) {\n  try {\n    const riskText = geminiRisk.candidates[0].content.parts[0].text;\n    geminiRiskResult = {\n      success: true,\n      content: JSON.parse(riskText),\n      tokensUsed: geminiRisk.usageMetadata?.totalTokenCount || 0,\n      error: null\n    };\n  } catch (error) {\n    geminiRiskResult.error = 'Failed to parse Gemini risk JSON';\n    geminiRiskResult.rawContent = geminiRisk.candidates[0].content.parts[0].text;\n  }\n}\n\n// Process OpenAI comparison\nlet openaiResult = {\n  success: false,\n  content: '',\n  tokensUsed: 0,\n  error: null\n};\n\nif (openaiAnalysis && openaiAnalysis.choices && openaiAnalysis.choices[0]) {\n  openaiResult = {\n    success: true,\n    content: openaiAnalysis.choices[0].message.content,\n    tokensUsed: openaiAnalysis.usage?.total_tokens || 0,\n    model: openaiAnalysis.model,\n    error: null\n  };\n}\n\n// Create comprehensive document intelligence report\nconst documentIntelligence = {\n  success: geminiDocumentResult.success,\n  documentInfo: {\n    type: config.documentType,\n    processingType: config.processingType,\n    language: config.language,\n    requestId: config.requestId,\n    processedAt: new Date().toISOString()\n  },\n  geminiAnalysis: {\n    documentAnalysis: geminiDocumentResult.content,\n    riskAssessment: geminiRiskResult.content,\n    tokensUsed: geminiDocumentResult.tokensUsed + geminiRiskResult.tokensUsed,\n    success: geminiDocumentResult.success && geminiRiskResult.success\n  },\n  openaiComparison: {\n    analysis: openaiResult.content,\n    tokensUsed: openaiResult.tokensUsed,\n    success: openaiResult.success\n  },\n  performanceMetrics: {\n    totalTokensGemini: geminiDocumentResult.tokensUsed + geminiRiskResult.tokensUsed,\n    totalTokensOpenAI: openaiResult.tokensUsed,\n    tokenEfficiency: {\n      geminiVsOpenAI: ((geminiDocumentResult.tokensUsed + geminiRiskResult.tokensUsed) / openaiResult.tokensUsed).toFixed(2),\n      winner: (geminiDocumentResult.tokensUsed + geminiRiskResult.tokensUsed) < openaiResult.tokensUsed ? 'Gemini' : 'OpenAI'\n    },\n    processingTime: (Date.now() - new Date(config.timestamp).getTime()) / 1000\n  },\n  qualityAssessment: {\n    structuredOutput: geminiDocumentResult.success && geminiRiskResult.success,\n    comprehensiveAnalysis: !!(geminiDocumentResult.content.document_summary && geminiDocumentResult.content.risks_and_concerns),\n    riskAssessmentProvided: !!(geminiRiskResult.content.risk_level && geminiRiskResult.content.critical_risks),\n    actionableRecommendations: !!(geminiDocumentResult.content.recommendations && geminiRiskResult.content.recommendations)\n  },\n  errors: {\n    geminiDocument: geminiDocumentResult.error,\n    geminiRisk: geminiRiskResult.error,\n    openai: openaiResult.error\n  }\n};\n\nreturn [{ json: documentIntelligence }];"
+      },
+      "id": "intelligence-integration",
+      "name": "Document Intelligence Integration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format comprehensive document intelligence results for display\nconst intelligence = $input.first().json;\n\n// Create executive summary\nconst executiveSummary = {\n  documentType: intelligence.documentInfo.type,\n  processingSuccess: intelligence.success,\n  riskLevel: intelligence.geminiAnalysis.riskAssessment.risk_level || 'unknown',\n  criticalRisks: intelligence.geminiAnalysis.riskAssessment.critical_risks?.length || 0,\n  tokensEfficiency: intelligence.performanceMetrics.tokenEfficiency.winner,\n  processingTime: `${intelligence.performanceMetrics.processingTime}s`,\n  recommendedActions: intelligence.geminiAnalysis.riskAssessment.priority_actions?.length || 0\n};\n\n// Create detailed display output\nconst displayOutput = {\n  '📄 GEMINI PDF & DOCUMENT INTELLIGENCE REPORT': '=' .repeat(60),\n  '': '',\n  '📊 Executive Summary': {\n    'Document Type': intelligence.documentInfo.type.toUpperCase(),\n    'Processing Status': intelligence.success ? '✅ Success' : '❌ Failed',\n    'Risk Level': intelligence.geminiAnalysis.riskAssessment.risk_level?.toUpperCase() || 'Unknown',\n    'Critical Risks Found': intelligence.geminiAnalysis.riskAssessment.critical_risks?.length || 0,\n    'Processing Time': `${intelligence.performanceMetrics.processingTime} seconds`,\n    'Token Efficiency Winner': intelligence.performanceMetrics.tokenEfficiency.winner\n  },\n  ' ': '',\n  '🎯 GEMINI DOCUMENT ANALYSIS': {\n    'Document Summary': intelligence.geminiAnalysis.documentAnalysis.document_summary || 'Not available',\n    'Key Entities': intelligence.geminiAnalysis.documentAnalysis.key_entities || [],\n    'Important Dates': intelligence.geminiAnalysis.documentAnalysis.important_dates || [],\n    'Financial Terms': intelligence.geminiAnalysis.documentAnalysis.financial_terms || [],\n    'Obligations & Rights': intelligence.geminiAnalysis.documentAnalysis.obligations_and_rights || [],\n    'Tokens Used': intelligence.performanceMetrics.totalTokensGemini\n  },\n  '  ': '',\n  '⚠️ GEMINI RISK ASSESSMENT': {\n    'Overall Risk Level': intelligence.geminiAnalysis.riskAssessment.risk_level?.toUpperCase() || 'Unknown',\n    'Critical Risks': intelligence.geminiAnalysis.riskAssessment.critical_risks || [],\n    'Missing Clauses': intelligence.geminiAnalysis.riskAssessment.missing_clauses || [],\n    'Compliance Issues': intelligence.geminiAnalysis.riskAssessment.compliance_issues || [],\n    'Legal Review Required': intelligence.geminiAnalysis.riskAssessment.legal_review_required ? '✅ Yes' : '❌ No',\n    'Priority Actions': intelligence.geminiAnalysis.riskAssessment.priority_actions || []\n  },\n  '   ': '',\n  '📝 RECOMMENDATIONS': intelligence.geminiAnalysis.documentAnalysis.recommendations || [],\n  '    ': '',\n  '🔴 OPENAI COMPARISON': {\n    'Analysis Status': intelligence.openaiComparison.success ? '✅ Success' : '❌ Failed',\n    'Tokens Used': intelligence.performanceMetrics.totalTokensOpenAI,\n    'Content Preview': intelligence.openaiComparison.analysis?.substring(0, 300) + '...' || 'No content'\n  },\n  '     ': '',\n  '⚡ PERFORMANCE METRICS': {\n    'Gemini Total Tokens': intelligence.performanceMetrics.totalTokensGemini,\n    'OpenAI Total Tokens': intelligence.performanceMetrics.totalTokensOpenAI,\n    'Token Efficiency Ratio': intelligence.performanceMetrics.tokenEfficiency.geminiVsOpenAI,\n    'Processing Time': `${intelligence.performanceMetrics.processingTime} seconds`,\n    'Structured Output': intelligence.qualityAssessment.structuredOutput ? '✅ Yes' : '❌ No',\n    'Comprehensive Analysis': intelligence.qualityAssessment.comprehensiveAnalysis ? '✅ Yes' : '❌ No'\n  },\n  '      ': '',\n  '🚀 GEMINI ADVANTAGES DEMONSTRATED': [\n    intelligence.qualityAssessment.structuredOutput ? '• Native JSON structured output' : '• Standard text output',\n    intelligence.geminiAnalysis.success ? '• Comprehensive document analysis' : '• Basic document processing',\n    intelligence.geminiAnalysis.riskAssessment.risk_level ? '• Advanced risk assessment capabilities' : '• Standard analysis only',\n    intelligence.performanceMetrics.tokenEfficiency.winner === 'Gemini' ? '• Superior token efficiency' : '• Standard token usage',\n    '• Specialized PDF and document processing',\n    '• Built-in safety and compliance filtering',\n    '• Multi-step analysis in single workflow'\n  ]\n};\n\nreturn [{\n  json: {\n    displayOutput: displayOutput,\n    executiveSummary: executiveSummary,\n    rawIntelligence: intelligence,\n    summary: {\n      status: intelligence.success ? 'completed' : 'failed',\n      documentType: intelligence.documentInfo.type,\n      riskLevel: intelligence.geminiAnalysis.riskAssessment.risk_level,\n      criticalRisks: intelligence.geminiAnalysis.riskAssessment.critical_risks?.length || 0,\n      recommendGemini: intelligence.success && intelligence.qualityAssessment.structuredOutput,\n      processingTime: intelligence.performanceMetrics.processingTime\n    }\n  }\n}];"
+      },
+      "id": "format-intelligence-report",
+      "name": "Format Intelligence Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 500]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document Configuration Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document Configuration Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Configuration Processor": {
+      "main": [
+        [
+          {
+            "node": "Gemini Document Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gemini Risk Assessment",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenAI Comparison Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Document Analysis": {
+      "main": [
+        [
+          {
+            "node": "Document Intelligence Integration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Risk Assessment": {
+      "main": [
+        [
+          {
+            "node": "Document Intelligence Integration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Comparison Analysis": {
+      "main": [
+        [
+          {
+            "node": "Document Intelligence Integration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Intelligence Integration": {
+      "main": [
+        [
+          {
+            "node": "Format Intelligence Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 180,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}

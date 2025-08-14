@@ -1,0 +1,231 @@
+{
+  "name": "[USR-ai-agent] Smart Document Analyzer",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-doc",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "path": "webhook/doc-analyzer/{{$randomString}}",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-doc",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Document input processor and classifier\nconst input = $input.first().json;\n\nconst documentText = input.document || input.text || \"Sample business proposal document for AI analysis. This contains project requirements, timelines, budgets, and stakeholder information.\";\nconst analysisType = input.analysisType || \"comprehensive\";\nconst language = input.language || \"en\";\n\n// Document statistics\nconst wordCount = documentText.split(/\\s+/).length;\nconst sentenceCount = documentText.split(/[.!?]+/).length;\nconst paragraphCount = documentText.split(/\\n\\s*\\n/).length;\nconst readingTime = Math.ceil(wordCount / 200); // Average reading speed\n\n// Document classification based on keywords\nconst businessKeywords = ['proposal', 'budget', 'revenue', 'strategy', 'market', 'business'];\nconst technicalKeywords = ['system', 'architecture', 'database', 'api', 'framework', 'algorithm'];\nconst legalKeywords = ['contract', 'agreement', 'clause', 'liability', 'terms', 'compliance'];\nconst academicKeywords = ['research', 'study', 'analysis', 'methodology', 'conclusion', 'hypothesis'];\n\nconst lowerText = documentText.toLowerCase();\nlet documentType = 'general';\n\nif (businessKeywords.some(keyword => lowerText.includes(keyword))) {\n  documentType = 'business';\n} else if (technicalKeywords.some(keyword => lowerText.includes(keyword))) {\n  documentType = 'technical';\n} else if (legalKeywords.some(keyword => lowerText.includes(keyword))) {\n  documentType = 'legal';\n} else if (academicKeywords.some(keyword => lowerText.includes(keyword))) {\n  documentType = 'academic';\n}\n\nreturn [{\n  json: {\n    originalDocument: documentText,\n    statistics: {\n      wordCount: wordCount,\n      sentenceCount: sentenceCount,\n      paragraphCount: paragraphCount,\n      readingTimeMinutes: readingTime\n    },\n    metadata: {\n      documentType: documentType,\n      analysisType: analysisType,\n      language: language,\n      timestamp: new Date().toISOString(),\n      documentLength: documentText.length\n    }\n  }\n}];"
+      },
+      "id": "document-processor",
+      "name": "Document Processor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-4",
+            "messages": [
+              {
+                "role": "system",
+                "content": "You are an expert document analyst. Provide comprehensive analysis including:\n1. Document summary (2-3 sentences)\n2. Key topics and themes\n3. Sentiment analysis\n4. Action items or recommendations\n5. Risk assessment if applicable\n6. Quality score (1-10)\n\nAdapt your analysis style based on document type: {{ $json.metadata.documentType }}"
+              },
+              {
+                "role": "user",
+                "content": "Document Type: {{ $json.metadata.documentType }}\nAnalysis Type: {{ $json.metadata.analysisType }}\nDocument Length: {{ $json.statistics.wordCount }} words\n\nDocument Content:\n{{ $json.originalDocument }}\n\nPlease provide a detailed analysis."
+              }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1500
+          }
+        }
+      },
+      "id": "ai-document-analysis",
+      "name": "AI Document Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/embeddings",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "input": "{{ $json.originalDocument }}",
+            "model": "text-embedding-ada-002"
+          }
+        }
+      },
+      "id": "generate-embeddings",
+      "name": "Generate Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "options": {
+          "headers": {
+            "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "model": "gpt-3.5-turbo",
+            "messages": [
+              {
+                "role": "system",
+                "content": "Extract key entities from the document. Return a JSON object with:\n- people: array of person names\n- organizations: array of company/organization names\n- locations: array of places\n- dates: array of important dates\n- numbers: array of significant numbers/amounts\n- technologies: array of technical terms or tools mentioned"
+              },
+              {
+                "role": "user",
+                "content": "{{ $json.originalDocument }}"
+              }
+            ],
+            "temperature": 0.1,
+            "max_tokens": 800
+          }
+        }
+      },
+      "id": "entity-extraction",
+      "name": "Entity Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [640, 600],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all analysis results into comprehensive report\nconst docData = $('Document Processor').first().json;\nconst aiAnalysis = $('AI Document Analysis').first().json;\nconst embeddings = $('Generate Embeddings').first().json;\nconst entities = $('Entity Extraction').first().json;\n\n// Process AI analysis response\nlet analysisContent = 'Analysis unavailable';\nif (aiAnalysis && aiAnalysis.choices && aiAnalysis.choices[0]) {\n  analysisContent = aiAnalysis.choices[0].message.content;\n}\n\n// Process entity extraction\nlet extractedEntities = {};\ntry {\n  if (entities && entities.choices && entities.choices[0]) {\n    const entityText = entities.choices[0].message.content;\n    // Try to parse JSON from AI response\n    const jsonMatch = entityText.match(/\\{[\\s\\S]*\\}/);\n    if (jsonMatch) {\n      extractedEntities = JSON.parse(jsonMatch[0]);\n    } else {\n      extractedEntities = { raw: entityText };\n    }\n  }\n} catch (error) {\n  extractedEntities = { error: 'Failed to parse entities', raw: entities?.choices?.[0]?.message?.content };\n}\n\n// Process embeddings\nlet embeddingVector = [];\nlet embeddingDimensions = 0;\nif (embeddings && embeddings.data && embeddings.data[0]) {\n  embeddingVector = embeddings.data[0].embedding;\n  embeddingDimensions = embeddingVector.length;\n}\n\n// Calculate confidence scores\nconst hasValidAnalysis = analysisContent !== 'Analysis unavailable';\nconst hasValidEntities = Object.keys(extractedEntities).length > 0;\nconst hasValidEmbeddings = embeddingDimensions > 0;\n\nconst confidenceScore = (\n  (hasValidAnalysis ? 0.5 : 0) +\n  (hasValidEntities ? 0.3 : 0) +\n  (hasValidEmbeddings ? 0.2 : 0)\n) * 100;\n\n// Generate recommendations based on document type\nlet recommendations = [];\nswitch(docData.metadata.documentType) {\n  case 'business':\n    recommendations = [\n      'Review financial projections and assumptions',\n      'Validate market research data',\n      'Consider risk mitigation strategies',\n      'Ensure stakeholder alignment'\n    ];\n    break;\n  case 'technical':\n    recommendations = [\n      'Verify technical specifications',\n      'Review security considerations', \n      'Validate scalability requirements',\n      'Consider maintenance and support needs'\n    ];\n    break;\n  case 'legal':\n    recommendations = [\n      'Review compliance requirements',\n      'Validate contractual obligations',\n      'Consider legal risks and liabilities',\n      'Ensure proper documentation'\n    ];\n    break;\n  default:\n    recommendations = [\n      'Review document for completeness',\n      'Verify accuracy of information',\n      'Consider additional context needed',\n      'Plan follow-up actions'\n    ];\n}\n\n// Create comprehensive analysis report\nconst analysisReport = {\n  success: true,\n  documentInfo: {\n    type: docData.metadata.documentType,\n    statistics: docData.statistics,\n    analysisType: docData.metadata.analysisType,\n    processedAt: new Date().toISOString()\n  },\n  aiAnalysis: {\n    content: analysisContent,\n    provider: 'openai',\n    model: 'gpt-4',\n    tokensUsed: aiAnalysis?.usage?.total_tokens || 0\n  },\n  entityExtraction: {\n    entities: extractedEntities,\n    extractionSuccess: hasValidEntities\n  },\n  semanticAnalysis: {\n    embeddingDimensions: embeddingDimensions,\n    embeddingGenerated: hasValidEmbeddings,\n    // Store first 10 dimensions for display (full vector too large)\n    embeddingSample: embeddingVector.slice(0, 10)\n  },\n  qualityMetrics: {\n    confidenceScore: Math.round(confidenceScore),\n    analysisComplete: hasValidAnalysis,\n    entitiesExtracted: hasValidEntities,\n    embeddingsGenerated: hasValidEmbeddings\n  },\n  recommendations: recommendations,\n  metadata: {\n    processingTime: (Date.now() - new Date(docData.metadata.timestamp).getTime()) / 1000,\n    totalApiCalls: 3,\n    estimatedCost: (aiAnalysis?.usage?.total_tokens || 0) * 0.00002\n  }\n};\n\nreturn [{ json: analysisReport }];"
+      },
+      "id": "analysis-aggregator",
+      "name": "Analysis Aggregator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format results for easy reading and display\nconst analysis = $input.first().json;\n\n// Create formatted display output\nconst displayOutput = {\n  '🎯 DOCUMENT ANALYSIS REPORT': '=' .repeat(50),\n  '': '',\n  '📄 Document Information': {\n    'Document Type': analysis.documentInfo.type.toUpperCase(),\n    'Word Count': analysis.documentInfo.statistics.wordCount,\n    'Reading Time': `${analysis.documentInfo.statistics.readingTimeMinutes} minutes`,\n    'Analysis Type': analysis.documentInfo.analysisType,\n    'Processed At': analysis.documentInfo.processedAt\n  },\n  ' ': '',\n  '🤖 AI Analysis Results': {\n    'Provider': analysis.aiAnalysis.provider.toUpperCase(),\n    'Model': analysis.aiAnalysis.model,\n    'Tokens Used': analysis.aiAnalysis.tokensUsed,\n    'Analysis Content': analysis.aiAnalysis.content\n  },\n  '  ': '',\n  '🏷️ Extracted Entities': analysis.entityExtraction.entities,\n  '   ': '',\n  '📊 Quality Metrics': {\n    'Overall Confidence': `${analysis.qualityMetrics.confidenceScore}%`,\n    'Analysis Complete': analysis.qualityMetrics.analysisComplete ? '✅ Yes' : '❌ No',\n    'Entities Extracted': analysis.qualityMetrics.entitiesExtracted ? '✅ Yes' : '❌ No', \n    'Embeddings Generated': analysis.qualityMetrics.embeddingsGenerated ? '✅ Yes' : '❌ No'\n  },\n  '    ': '',\n  '💡 Recommendations': analysis.recommendations,\n  '     ': '',\n  '⚡ Performance Metrics': {\n    'Processing Time': `${analysis.metadata.processingTime} seconds`,\n    'API Calls Made': analysis.metadata.totalApiCalls,\n    'Estimated Cost': `$${analysis.metadata.estimatedCost.toFixed(4)}`\n  },\n  '      ': '',\n  '🔢 Semantic Vector Info': {\n    'Embedding Dimensions': analysis.semanticAnalysis.embeddingDimensions,\n    'Vector Sample (first 10)': analysis.semanticAnalysis.embeddingSample,\n    'Ready for Vector Search': analysis.semanticAnalysis.embeddingGenerated ? '✅ Yes' : '❌ No'\n  }\n};\n\n// Also return the raw analysis for programmatic use\nreturn [{\n  json: {\n    displayOutput: displayOutput,\n    rawAnalysis: analysis,\n    summary: {\n      status: 'completed',\n      documentType: analysis.documentInfo.type,\n      confidenceScore: analysis.qualityMetrics.confidenceScore,\n      processingTime: analysis.metadata.processingTime,\n      recommendation: analysis.recommendations[0]\n    }\n  }\n}];"
+      },
+      "id": "format-display-output",
+      "name": "Format Display Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 400]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Document Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Processor": {
+      "main": [
+        [
+          {
+            "node": "AI Document Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Document Analysis": {
+      "main": [
+        [
+          {
+            "node": "Analysis Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Entity Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entity Extraction": {
+      "main": [
+        [
+          {
+            "node": "Analysis Aggregator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analysis Aggregator": {
+      "main": [
+        [
+          {
+            "node": "Format Display Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 180,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  }
+}
