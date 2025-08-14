@@ -23,15 +23,20 @@
 
 ### **🏗️ User Isolation System Deployed**
 - **10 Clixen Projects**: CLIXEN-PROJ-01 through CLIXEN-PROJ-10 created
+- **50 User Folders**: FOLDER-P01-U1 through FOLDER-P10-U5 pre-created (5 per project)
 - **Database-Level Assignment**: Direct project_entity and project_relation management
-- **Automated Assignment**: SSH-based workflow → project assignment functional
-- **Security**: Triple-layer isolation (Project + User prefix + Supabase RLS)
+- **Folder Assignment Tracking**: Custom folder_assignments table for user → folder mapping
+- **Automated Assignment**: SSH-based workflow → project → folder assignment functional
+- **Security**: Quad-layer isolation (Project + Folder + User prefix + Supabase RLS)
 
 ### **📊 Verified Production Metrics**
 - **Project Creation**: ✅ 10 projects successfully deployed
+- **Folder Creation**: ✅ 50 user folders pre-created (5 per project)
 - **Workflow Assignment**: ✅ 100% success rate via SSH automation
+- **Folder Assignment**: ✅ Automated user → folder → workflow assignment
 - **Execution Performance**: ✅ 1.1-1.5s average execution time
 - **User Isolation**: ✅ Complete database-level separation verified
+- **Organization**: ✅ 4-layer isolation (Project + Folder + User prefix + RLS)
 - **Scalability**: ✅ Ready for 50+ beta users immediately
 
 ### **🎯 SSH Automation Commands (PRODUCTION READY)**
@@ -41,8 +46,15 @@ UPDATE workflow_entity SET projectId = 'CLIXEN-PROJ-{N}' WHERE id = '{workflowId
 INSERT INTO project_relation (id, projectId, workflowId, role) 
 VALUES ('{workflowId}', 'CLIXEN-PROJ-{N}', '{workflowId}', 'project:personalOwner');
 
+# Folder assignment for new user:
+INSERT INTO folder_assignments (user_id, folder_tag_name, project_number, user_slot, assigned_at, status) 
+VALUES ('{userId}', 'FOLDER-P{XX}-U{X}', {projectNum}, {slotNum}, datetime('now'), 'active');
+
+# Workflow folder tagging:
+UPDATE workflow_entity SET tags = json_array('{folderId}') WHERE id = '{workflowId}';
+
 # User isolation verification:
-SELECT w.name, w.projectId, p.name as projectName 
+SELECT w.name, w.projectId, p.name as projectName, w.tags as folder
 FROM workflow_entity w 
 JOIN project_entity p ON w.projectId = p.id 
 WHERE w.name LIKE '[USR-{userId}]%';
