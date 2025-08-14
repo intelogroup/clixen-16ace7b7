@@ -49,10 +49,55 @@ serve(async (req) => {
 
     console.log(`🚀 Auto-creating project for user: ${email} (${user_id})`)
 
+    // Check if user has a workspace (should exist from auth trigger)
+    let { data: workspace, error: workspaceError } = await supabase
+      .from('user_workspaces')
+      .select('*')
+      .eq('user_id', user_id)
+      .single()
+
+    if (workspaceError && workspaceError.code !== 'PGRST116') {
+      console.error('Error fetching workspace:', workspaceError)
+      throw workspaceError
+    }
+
+    // Create workspace if it doesn't exist (fallback)
+    if (!workspace) {
+      const username = email.split('@')[0].toLowerCase()
+      const workspaceName = `${username} Workspace`
+      const workspaceId = `${username}-workspace-${user_id.substring(0, 8)}`
+      const n8nPrefix = `[USR-${user_id.substring(0, 8)}]`
+
+      const { data: newWorkspace, error: createWorkspaceError } = await supabase
+        .from('user_workspaces')
+        .insert({
+          user_id,
+          workspace_name: workspaceName,
+          workspace_id: workspaceId,
+          n8n_prefix: n8nPrefix,
+          metadata: {
+            created_from_email: email,
+            auto_provisioned: true,
+            creation_method: 'fallback',
+            created_at: new Date().toISOString()
+          }
+        })
+        .select()
+        .single()
+
+      if (createWorkspaceError) {
+        console.error('Error creating workspace:', createWorkspaceError)
+        throw createWorkspaceError
+      }
+
+      workspace = newWorkspace
+      console.log(`📦 Created workspace: ${workspace.workspace_name} for user: ${email}`)
+    }
+
     // Check if user already has a project
     const { data: existingProjects, error: checkError } = await supabase
       .from('projects')
-      .select('id, name')
+      .select('id, name, workspace_id')
       .eq('user_id', user_id)
       .limit(1)
 
@@ -84,18 +129,22 @@ serve(async (req) => {
 
     console.log(`📝 Generated project name: ${projectName}`)
 
-    // Create the project in Supabase
+    // Create the project in Supabase with workspace reference
     const { data: newProject, error: createError } = await supabase
       .from('projects')
       .insert({
         user_id,
         name: projectName,
         description: projectDescription,
+        workspace_id: workspace.id,
+        workspace_prefix: workspace.n8n_prefix,
         metadata: {
           auto_created: true,
           trigger_type,
           created_for_email: email,
           username: username,
+          workspace_id: workspace.id,
+          workspace_name: workspace.workspace_name,
           creation_timestamp: new Date().toISOString()
         }
       })
@@ -109,6 +158,39 @@ serve(async (req) => {
 
     console.log(`✅ Successfully created project: ${newProject.name} for user: ${email}`)
 
+    // Update workspace project count and log activity
+    const { error: workspaceUpdateError } = await supabase
+      .from('user_workspaces')
+      .update({ 
+        project_count: workspace.project_count + 1,
+        last_active: new Date().toISOString()
+      })
+      .eq('id', workspace.id)
+
+    if (workspaceUpdateError) {
+      console.warn('Warning: Could not update workspace project count:', workspaceUpdateError)
+    }
+
+    // Log workspace activity
+    const { error: activityError } = await supabase
+      .from('workspace_activity')
+      .insert({
+        workspace_id: workspace.id,
+        user_id: user_id,
+        activity_type: 'project_created',
+        resource_type: 'project',
+        resource_id: newProject.id,
+        metadata: {
+          project_name: projectName,
+          trigger_type: trigger_type,
+          auto_created: true
+        }
+      })
+
+    if (activityError) {
+      console.warn('Warning: Could not log workspace activity:', activityError)
+    }
+
     // Optional: Create a default "Getting Started" conversation
     const { error: conversationError } = await supabase
       .from('conversations')
@@ -119,7 +201,17 @@ serve(async (req) => {
         messages: JSON.stringify([
           {
             role: 'system',
-            content: `Welcome to your personal Clixen workspace! This is your project: "${projectName}". You can start creating workflows by describing what you want to automate.`,
+            content: `Welcome to your personal Clixen workspace: "${workspace.workspace_name}"! 
+
+Your first project "${projectName}" has been created and is ready to use. 
+
+🎯 Enhanced Isolation Features:
+• Your workspace ID: ${workspace.workspace_id}
+• All your workflows will be prefixed with: ${workspace.n8n_prefix}
+• Complete privacy: Only you can see your workflows
+• Project-based organization: Each workflow belongs to a specific project
+
+You can start creating workflows by describing what you want to automate. Each workflow will be automatically organized within your secure workspace!`,
             timestamp: new Date().toISOString()
           }
         ])

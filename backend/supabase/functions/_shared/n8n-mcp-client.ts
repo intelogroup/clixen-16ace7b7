@@ -350,18 +350,24 @@ export class N8nMCPClient {
   /**
    * List user workflows via MCP
    */
-  async listUserWorkflows(userId: string): Promise<{ success: boolean; workflows?: any[]; error?: string }> {
+  /**
+   * List workflows for a specific user with optional project filtering
+   */
+  async listUserWorkflows(userId: string, projectId?: string): Promise<{ success: boolean; workflows?: any[]; error?: string }> {
     if (!this.enableMCP || !this.mcpReady) {
       console.log('⚠️ [MCP] MCP not available, using REST API for listing workflows');
-      return this.listWorkflowsViaREST();
+      return this.listWorkflowsViaREST(userId, projectId);
     }
 
     try {
-      console.log(`📋 [MCP] Listing workflows for user ${userId.substring(0, 8)}***`);
+      const logMsg = projectId 
+        ? `📋 [MCP] Listing workflows for user ${userId.substring(0, 8)}*** project ${projectId.substring(0, 8)}***`
+        : `📋 [MCP] Listing workflows for user ${userId.substring(0, 8)}***`;
+      console.log(logMsg);
       
       const response = await this.callMCPTool({
         name: 'list_user_workflows',
-        arguments: { userId }
+        arguments: { userId, projectId }
       });
 
       const result = JSON.parse(response.content[0].text);
@@ -390,7 +396,7 @@ export class N8nMCPClient {
   /**
    * List workflows via REST API (fallback)
    */
-  private async listWorkflowsViaREST(): Promise<{ success: boolean; workflows?: any[]; error?: string }> {
+  private async listWorkflowsViaREST(userId?: string, projectId?: string): Promise<{ success: boolean; workflows?: any[]; error?: string }> {
     const N8N_API_URL = Deno.env.get('N8N_API_URL') || 'http://18.221.12.50:5678/api/v1';
     const N8N_API_KEY = Deno.env.get('N8N_API_KEY');
     
@@ -414,9 +420,24 @@ export class N8nMCPClient {
       }
 
       const data = await response.json();
+      let workflows = data.data || [];
+      
+      // Apply user and project filtering if specified
+      if (userId || projectId) {
+        const { WorkflowIsolationManager } = await import('./workflow-isolation.ts');
+        
+        if (userId && projectId) {
+          workflows = WorkflowIsolationManager.filterWorkflowsByUserAndProject(workflows, userId, projectId);
+          console.log(`🔍 [REST] Filtered to ${workflows.length} workflows for user ${userId.substring(0,8)}*** project ${projectId.substring(0,8)}***`);
+        } else if (userId) {
+          workflows = WorkflowIsolationManager.filterWorkflowsByUser(workflows, userId);
+          console.log(`🔍 [REST] Filtered to ${workflows.length} workflows for user ${userId.substring(0,8)}***`);
+        }
+      }
+      
       return {
         success: true,
-        workflows: data.data || []
+        workflows: workflows
       };
     } catch (error) {
       return {

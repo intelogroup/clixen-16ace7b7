@@ -489,9 +489,12 @@ IMPORTANT:
       workflow.name = `${spec.trigger.description} → ${spec.actions[0]?.description || 'Process'}`.substring(0, 80);
     }
     
-    // Apply user-specific naming convention
-    if (userId) {
-      workflow.name = WorkflowIsolationManager.generateWorkflowName(userId, workflow.name);
+    // Apply enhanced user-specific naming convention with project isolation
+    if (userId && projectId) {
+      workflow.name = WorkflowIsolationManager.generateWorkflowName(userId, projectId, workflow.name);
+    } else if (userId) {
+      // Fallback to legacy format if projectId is missing
+      workflow.name = WorkflowIsolationManager.generateLegacyWorkflowName(userId, workflow.name);
     }
     
     // Add metadata with user context
