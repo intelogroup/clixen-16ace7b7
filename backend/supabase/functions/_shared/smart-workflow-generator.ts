@@ -1,11 +1,14 @@
 // =====================================================
 // Smart Workflow Generator with 99% Reliability
 // Implements template-first, verify-always approach
+// Now enhanced with Agentic AI capabilities
 // =====================================================
 
 import { templateDiscovery, TemplateMatch, FeasibilityCheckResult } from './template-discovery.ts';
 import { workflowValidator, MVP_COMPATIBLE_NODES, BLOCKED_NODES } from './workflow-validator.ts';
 import { WorkflowIsolationManager } from './workflow-isolation.ts';
+import { AgenticWorkflowGenerator, AgenticWorkflowSpec } from './agentic-workflow-generator.ts';
+import { AgenticTemplateIntelligence } from './agentic-template-intelligence.ts';
 
 export interface WorkflowSpec {
   trigger: {
@@ -44,11 +47,20 @@ export interface UserContext {
 /**
  * Smart Workflow Generator
  * Implements the junior dev's reliability strategy
+ * Enhanced with Agentic AI capabilities
  */
 export class SmartWorkflowGenerator {
+  private agenticGenerator: AgenticWorkflowGenerator;
+  private agenticIntelligence: AgenticTemplateIntelligence;
+
+  constructor() {
+    this.agenticGenerator = new AgenticWorkflowGenerator();
+    this.agenticIntelligence = new AgenticTemplateIntelligence();
+  }
   
   /**
    * Main generation method with 99% reliability approach
+   * Now includes intelligent agentic pattern detection
    */
   async generateReliableWorkflow(
     userIntent: string, 
@@ -58,6 +70,30 @@ export class SmartWorkflowGenerator {
     console.log(`[SmartGenerator] Starting reliable generation for: "${userIntent}"`);
 
     try {
+      // NEW: Step 0 - Analyze intent for agentic patterns
+      const intentAnalysis = this.agenticIntelligence.analyzeIntent(userIntent);
+      console.log(`[SmartGenerator] Intent analysis: ${intentAnalysis.category} (confidence: ${intentAnalysis.confidence})`);
+      
+      // Check if agentic pattern is appropriate
+      if (intentAnalysis.confidence > 0.7 && this.shouldUseAgenticPattern(intentAnalysis)) {
+        console.log(`[SmartGenerator] 🤖 Using agentic pattern: ${intentAnalysis.suggestedPattern}`);
+        
+        // Generate agentic workflow
+        const agenticWorkflow = await this.generateAgenticWorkflow(
+          userIntent,
+          spec,
+          intentAnalysis,
+          userContext
+        );
+        
+        if (agenticWorkflow.success) {
+          return agenticWorkflow;
+        }
+        
+        console.log('[SmartGenerator] Agentic generation failed, falling back to template approach');
+      }
+
+      // Original template-first approach
       // Step 1: Find best matching template (template-first approach)
       const templateMatch = await templateDiscovery.findBestTemplate(userIntent);
       console.log(`[SmartGenerator] Selected template: ${templateMatch.template.name} (confidence: ${templateMatch.confidence})`);
@@ -120,6 +156,98 @@ export class SmartWorkflowGenerator {
       
       // Ultimate fallback
       return this.fallbackToSimpleTemplate(userIntent, userContext);
+    }
+  }
+
+  /**
+   * Determine if agentic pattern should be used
+   */
+  private shouldUseAgenticPattern(analysis: any): boolean {
+    // Use agentic patterns for complex, AI-driven workflows
+    const agenticCategories = ['research', 'analysis', 'multi-step', 'ai-driven', 'content-generation'];
+    const agenticKeywords = ['ai', 'llm', 'gpt', 'agent', 'research', 'analyze', 'summarize', 'generate content'];
+    
+    const categoryMatch = agenticCategories.includes(analysis.category);
+    const keywordMatch = agenticKeywords.some(kw => 
+      analysis.keywords?.some(k => k.toLowerCase().includes(kw))
+    );
+    
+    return categoryMatch || keywordMatch;
+  }
+
+  /**
+   * Generate workflow using agentic patterns
+   */
+  private async generateAgenticWorkflow(
+    userIntent: string,
+    spec: WorkflowSpec,
+    intentAnalysis: any,
+    userContext?: UserContext
+  ): Promise<GenerationResult> {
+    try {
+      // Create agentic specification
+      const agenticSpec: AgenticWorkflowSpec = {
+        pattern: intentAnalysis.suggestedPattern || 'single',
+        name: spec.trigger.description || 'AI Workflow',
+        description: userIntent,
+        agents: intentAnalysis.agents || [{
+          name: 'Primary AI Agent',
+          systemPrompt: `You are an AI assistant helping with: ${userIntent}`,
+          model: 'gpt-4',
+          temperature: 0.7,
+          tools: intentAnalysis.tools || []
+        }],
+        tools: intentAnalysis.tools || [],
+        trigger: {
+          type: spec.trigger.type === 'webhook' ? 'webhook' : 'manual',
+          webhookPath: spec.trigger.type === 'webhook' ? 
+            `/agentic-${Date.now()}` : undefined
+        },
+        memory: {
+          type: intentAnalysis.requiresMemory ? 'window' : 'none',
+          windowSize: 10
+        },
+        outputFormat: 'structured'
+      };
+
+      // Generate agentic workflow
+      const workflow = this.agenticGenerator.generateAgenticWorkflow(agenticSpec);
+      
+      // Apply user isolation
+      const isolatedWorkflow = this.applyUserIsolation(workflow, userContext);
+      
+      // Validate the agentic workflow
+      const validation = await workflowValidator.validateWorkflow(isolatedWorkflow);
+      
+      if (validation.valid) {
+        console.log('[SmartGenerator] ✅ Agentic workflow generated successfully');
+        return {
+          success: true,
+          workflow: isolatedWorkflow,
+          confidence: 0.9,
+          validationScore: validation.score,
+          templateUsed: `agentic-${agenticSpec.pattern}`,
+          feasibilityPassed: true,
+          warnings: ['Using experimental agentic pattern - ensure n8n LangChain nodes are available']
+        };
+      } else {
+        console.log('[SmartGenerator] ❌ Agentic workflow validation failed');
+        return {
+          success: false,
+          confidence: 0.5,
+          validationScore: validation.score,
+          errors: validation.errors.map(e => e.message),
+          warnings: validation.warnings?.map(w => w.message)
+        };
+      }
+    } catch (error) {
+      console.error('[SmartGenerator] Agentic generation error:', error);
+      return {
+        success: false,
+        confidence: 0,
+        validationScore: 0,
+        errors: [`Agentic generation failed: ${error.message}`]
+      };
     }
   }
 
