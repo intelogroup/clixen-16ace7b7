@@ -1,0 +1,45 @@
+{
+  "name": "[Folder-k5uNTk47smPQgUjX] Weather Monitor Clean",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual_trigger_clean",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://wttr.in/Boston?format=j1",
+        "options": {
+          "headers": {
+            "User-Agent": "Clixen/1.0"
+          }
+        }
+      },
+      "id": "weather_fetch_clean",
+      "name": "Get Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 200]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

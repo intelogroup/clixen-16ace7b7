@@ -1,0 +1,74 @@
+{
+  "name": "[Folder-k5uNTk47smPQgUjX] Weather Dashboard v3",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual_trigger_v3",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://wttr.in/Boston?format=j1",
+        "options": {
+          "headers": {
+            "User-Agent": "Clixen/1.0"
+          }
+        },
+        "sendBody": false
+      },
+      "id": "weather_fetch_v3",
+      "name": "Get Boston Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const weather = $input.item.json;\nconst current = weather.current_condition[0];\n\nreturn {\n  location: 'Boston, MA',\n  project_id: 'pKR7MvMCY1aGsqs5',\n  folder_id: 'k5uNTk47smPQgUjX',\n  folder_name: 'Weather Monitoring',\n  timestamp: new Date().toISOString(),\n  temperature: {\n    celsius: current.temp_C,\n    fahrenheit: current.temp_F\n  },\n  condition: current.weatherDesc[0].value,\n  humidity: current.humidity + '%',\n  wind: {\n    speed_mph: current.windspeedMiles,\n    direction: current.winddir16Point\n  },\n  visibility: current.visibility + ' km',\n  uv_index: current.uvIndex,\n  workflow_metadata: {\n    workflow_name: '[Folder-k5uNTk47smPQgUjX] Weather Dashboard v3',\n    execution_mode: 'manual',\n    assigned_folder: 'k5uNTk47smPQgUjX',\n    assigned_project: 'pKR7MvMCY1aGsqs5'\n  }\n};"
+      },
+      "id": "format_output_v3",
+      "name": "Format Weather Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 200]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Boston Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Boston Weather": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "folder": "k5uNTk47smPQgUjX",
+    "project": "pKR7MvMCY1aGsqs5"
+  },
+  "meta": {
+    "instanceId": "n8nio-n8n-7xzf6n.sliplane.app"
+  }
+}
