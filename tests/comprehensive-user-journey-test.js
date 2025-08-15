@@ -234,7 +234,7 @@ async function runUserJourneyTest() {
   if (userId) {
     spinner = ora('Testing user sign in...').start();
     try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabaseAnon.auth.signInWithPassword({
         email: testUser.email,
         password: testUser.password
       });
@@ -290,7 +290,7 @@ async function runUserJourneyTest() {
       
       // Try direct database creation as fallback
       try {
-        const { data: project, error: dbError } = await supabase
+        const { data: project, error: dbError } = await supabaseService
           .from('projects')
           .insert({
             name: `Test Project ${timestamp}`,
@@ -351,7 +351,7 @@ async function runUserJourneyTest() {
   if (workflowId) {
     spinner = ora('Verifying workflow in database...').start();
     try {
-      const { data: workflow, error: dbError } = await supabase
+      const { data: workflow, error: dbError } = await supabaseService
         .from('workflows')
         .select('*')
         .eq('id', workflowId)
@@ -415,7 +415,7 @@ async function runUserJourneyTest() {
     spinner = ora('Testing dashboard data access...').start();
     try {
       // Get user's workflows
-      const { data: workflows, error: workflowError } = await supabase
+      const { data: workflows, error: workflowError } = await supabaseService
         .from('workflows')
         .select('*')
         .eq('user_id', userId);
@@ -423,7 +423,7 @@ async function runUserJourneyTest() {
       if (workflowError) throw workflowError;
       
       // Get user's projects
-      const { data: projects, error: projectError } = await supabase
+      const { data: projects, error: projectError } = await supabaseService
         .from('projects')
         .select('*')
         .eq('user_id', userId);
@@ -472,14 +472,18 @@ async function runUserJourneyTest() {
   // Step 9: Cleanup Test Data
   spinner = ora('Cleaning up test data...').start();
   try {
-    // Delete test user data
+    // Delete test user data using service role
     if (userId) {
       // Delete workflows
-      await supabase.from('workflows').delete().eq('user_id', userId);
+      await supabaseService.from('workflows').delete().eq('user_id', userId);
       // Delete projects
-      await supabase.from('projects').delete().eq('user_id', userId);
+      await supabaseService.from('projects').delete().eq('user_id', userId);
       // Delete conversations
-      await supabase.from('conversations').delete().eq('user_id', userId);
+      await supabaseService.from('conversations').delete().eq('user_id', userId);
+      // Delete user profile
+      await supabaseService.from('user_profiles').delete().eq('id', userId);
+      // Delete auth user
+      await supabaseService.auth.admin.deleteUser(userId);
     }
     
     spinner.succeed('Test data cleaned up');

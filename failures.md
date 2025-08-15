@@ -1,5 +1,32 @@
 # Development Failures & Lessons Learned
 
+## 🚨 **CRITICAL: Auth Signup Database Trigger Failure** ❌ (August 15, 2025)
+
+**What Failed**: User signup returns 500 "Database error saving new user" preventing all new user registrations
+**Root Cause**: Complex database trigger with RLS conflicts and error-prone logic
+**Impact**: 100% signup failure rate - complete blocker for new user onboarding
+
+**Investigation Findings**:
+- Original trigger had complex logic with multiple potential failure points
+- RLS policies were blocking the trigger function from inserting into user_profiles
+- No ON CONFLICT handling for duplicate attempts
+- Trigger would fail entire auth process if profile creation failed
+- SET LOCAL row_security = off was missing
+
+**Solution Applied**:
+1. **Simplified trigger function** with minimal logic
+2. **Added ON CONFLICT DO NOTHING** to handle duplicates gracefully
+3. **Exception handling** that logs errors but doesn't fail auth
+4. **SECURITY DEFINER** with proper permissions
+5. **Service role policies** to allow trigger execution
+
+**Current Status**: Trigger fixed in database but Supabase auth service may need restart to recognize changes
+
+**Lesson**: Keep database triggers as simple as possible - complex logic belongs in application layer
+**Prevention**: Always test auth flows with real API calls, not just database operations
+
+---
+
 ## Major Failures Identified
 
 ### 🚨 **CRITICAL: Workflow Creation Infinite Hanging** ❌ (August 10, 2025)
