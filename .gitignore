@@ -2,6 +2,9 @@
 OPENAI_KEY.txt
 *.key
 *.secret
+*.pem
+sliplane_ssh_key
+clixen-ssh-key
 
 # Environment files with real keys
 .env
@@ -10,6 +13,15 @@ OPENAI_KEY.txt
 frontend/.env
 frontend/.env.local
 frontend/.env.production
+backend/.env
+backend/.env.local
+backend/.env.production
+
+# Sensitive test data
+test-results/
+*.log
+*.sqlite
+*.db
 
 # Dependencies
 node_modules/
