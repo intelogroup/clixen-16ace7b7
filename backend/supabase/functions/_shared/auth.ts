@@ -3,7 +3,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 export interface AuthUser {
   id: string;
   email: string;
-  tier?: 'free' | 'pro' | 'enterprise';
   metadata?: Record<string, any>;
 }
 
@@ -60,35 +59,10 @@ export const authenticate = async (req: Request): Promise<AuthResult> => {
       return { user: null, error: 'No user found for token' };
     }
 
-    // Get user profile for tier information (optional)
-    // Using service role client for this query since it's server-side
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (supabaseServiceRoleKey) {
-      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
-      const { data: profile } = await supabaseAdmin
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      const authUser: AuthUser = {
-        id: user.id,
-        email: user.email || '',
-        tier: profile?.tier || 'free',
-        metadata: {
-          ...user.user_metadata,
-          profile: profile || {}
-        }
-      };
-
-      return { user: authUser };
-    }
-
-    // Return basic user info if no service role key
+    // Return user info from Supabase auth
     const authUser: AuthUser = {
       id: user.id,
       email: user.email || '',
-      tier: 'free',
       metadata: user.user_metadata || {}
     };
 
@@ -103,13 +77,10 @@ export const authenticate = async (req: Request): Promise<AuthResult> => {
   }
 };
 
-// Check if user has required tier
+// Placeholder for future tier system
 export const requireTier = (user: AuthUser, requiredTier: 'pro' | 'enterprise'): boolean => {
-  const tierLevels = { free: 0, pro: 1, enterprise: 2 };
-  const userLevel = tierLevels[user.tier || 'free'];
-  const requiredLevel = tierLevels[requiredTier];
-  
-  return userLevel >= requiredLevel;
+  // For MVP, all users have access
+  return true;
 };
 
 // Verify resource ownership

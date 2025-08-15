@@ -10,8 +10,9 @@ import { useForm, CommonValidations } from '../hooks/useForm';
 export default function CleanAuth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, error, clearError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,23 +37,38 @@ export default function CleanAuth() {
   });
 
   const handleSubmit = form.handleSubmit(async (values) => {
+    setIsSubmitting(true);
+    clearError();
+    
     try {
       if (isSignUp) {
-        await signUp(values.email, values.password);
-        toast.success('Account created! Please check your email to verify.');
+        const result = await signUp(values.email, values.password);
+        if (result.success) {
+          toast.success(result.message || 'Account created! Please check your email to verify.');
+          // Switch to sign in mode after successful signup
+          setIsSignUp(false);
+          form.reset();
+        } else {
+          toast.error(result.message || 'Failed to create account');
+        }
       } else {
-        await signIn(values.email, values.password);
-        toast.success('Welcome back!');
-        
-        // Redirect to intended destination or default to dashboard
-        const redirectTo = (location.state as any)?.from || '/dashboard';
-        console.log('✅ Sign in successful, redirecting to:', redirectTo);
-        navigate(redirectTo, { replace: true });
+        const result = await signIn(values.email, values.password);
+        if (result.success) {
+          toast.success('Welcome back!');
+          
+          // Redirect to intended destination or default to dashboard
+          const redirectTo = (location.state as any)?.from || '/dashboard';
+          console.log('✅ Sign in successful, redirecting to:', redirectTo);
+          navigate(redirectTo, { replace: true });
+        } else {
+          toast.error(result.message || 'Failed to sign in');
+        }
       }
     } catch (error: any) {
       console.error('🔒 Authentication error:', error);
-      toast.error(error.message || 'Authentication failed');
-      throw error; // Re-throw to keep form in submitting state if needed
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   });
 
@@ -93,7 +109,7 @@ export default function CleanAuth() {
       <LoadingButton
         onClick={handleSubmit}
         loadingText={isSignUp ? 'Creating Account...' : 'Signing In...'}
-        disabled={!form.isValid}
+        disabled={!form.isValid || isSubmitting}
         className="w-full"
       >
         {isSignUp ? 'Create Account' : 'Sign In'}
@@ -102,7 +118,11 @@ export default function CleanAuth() {
       <div className="mt-6 text-center">
         <button
           type="button"
-          onClick={() => setIsSignUp(!isSignUp)}
+          onClick={() => {
+            setIsSignUp(!isSignUp);
+            clearError();
+            form.reset();
+          }}
           className="text-sm text-blue-600 hover:text-blue-700"
         >
           {isSignUp 
@@ -111,12 +131,20 @@ export default function CleanAuth() {
           }
         </button>
       </div>
-      {/* Test credentials */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-md">
-        <p className="text-xs text-gray-600 mb-2">Test credentials:</p>
-        <p className="text-xs text-gray-500">Email: jayveedz19@gmail.com</p>
-        <p className="text-xs text-gray-500">Password: Goldyear2023#</p>
-      </div>
+      {/* Help text */}
+      {!isSignUp && (
+        <div className="mt-8 p-4 bg-blue-50 rounded-md">
+          <p className="text-xs text-blue-800 mb-1">New to Clixen?</p>
+          <p className="text-xs text-blue-600">Click "Sign up" above to create a new account.</p>
+        </div>
+      )}
+      {isSignUp && (
+        <div className="mt-8 p-4 bg-green-50 rounded-md">
+          <p className="text-xs text-green-800 mb-1">Password Requirements:</p>
+          <p className="text-xs text-green-600">• At least 6 characters long</p>
+          <p className="text-xs text-green-600">• Mix of letters and numbers recommended</p>
+        </div>
+      )}
     </AuthForm>
   );
 }
