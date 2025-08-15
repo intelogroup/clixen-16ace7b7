@@ -709,28 +709,31 @@ serve(async (req) => {
       );
     }
 
-    // Validate authentication token
+    // Validate authentication token using correct Supabase pattern
     const authHeader = req.headers.get('authorization');
     let authenticatedUser = null;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError) {
-          console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth validation failed:`, authError.message);
+        // Import authenticate function from shared auth module
+        const { authenticate } = await import('../_shared/auth.ts');
+        const { user, error: authError } = await authenticate(req);
+        
+        if (authError || !user) {
+          console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth validation failed:`, authError);
           return new Response(
-            JSON.stringify({ error: 'Invalid authentication token' }),
+            JSON.stringify({ error: authError || 'Invalid authentication token' }),
             {
               status: 401,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             }
           );
         }
-        authenticatedUser = user;
+        
+        authenticatedUser = { id: user.id, email: user.email };
         console.log(`✅ [AI-Chat-Simple] [${requestId}] User authenticated:`, {
-          userId: user?.id?.substring(0, 8) + '***',
-          email: user?.email
+          userId: user.id?.substring(0, 8) + '***',
+          email: user.email
         });
       } catch (error) {
         console.log(`❌ [AI-Chat-Simple] [${requestId}] Auth token validation error:`, error.message);

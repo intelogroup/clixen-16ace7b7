@@ -1,4 +1,4 @@
-import { supabase } from './supabase.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 export interface AuthUser {
   id: string;
@@ -12,7 +12,7 @@ export interface AuthResult {
   error?: string;
 }
 
-// Enhanced authentication middleware
+// Enhanced authentication middleware - Fixed according to Supabase docs
 export const authenticate = async (req: Request): Promise<AuthResult> => {
   const authHeader = req.headers.get('authorization');
   
@@ -25,45 +25,74 @@ export const authenticate = async (req: Request): Promise<AuthResult> => {
   }
 
   try {
-    const token = authHeader.replace('Bearer ', '');
+    // Get Supabase URL and anon key from environment
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
-    if (!token || token.length === 0) {
-      return { user: null, error: 'Empty bearer token' };
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables');
+      return { user: null, error: 'Server configuration error' };
     }
 
-    // Verify token with Supabase
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    // Create Supabase client with auth header (CRITICAL FIX - per official docs)
+    const supabaseAuth = createClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    // Call getUser() without token parameter - it reads from headers
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
     
     if (authError) {
       console.error('Auth error:', authError);
       return { 
         user: null, 
-        error: authError.message.includes('expired') ? 'Token expired' : 'Invalid token'
+        error: authError.message || 'Invalid or expired token'
       };
     }
 
-    if (!authData.user) {
+    if (!user) {
       return { user: null, error: 'No user found for token' };
     }
 
-    // Get user profile for tier information
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('tier, preferences')
-      .eq('id', authData.user.id)
-      .single();
+    // Get user profile for tier information (optional)
+    // Using service role client for this query since it's server-side
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (supabaseServiceRoleKey) {
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+      const { data: profile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      const authUser: AuthUser = {
+        id: user.id,
+        email: user.email || '',
+        tier: profile?.tier || 'free',
+        metadata: {
+          ...user.user_metadata,
+          profile: profile || {}
+        }
+      };
 
-    const user: AuthUser = {
-      id: authData.user.id,
-      email: authData.user.email || '',
-      tier: profile?.tier || 'free',
-      metadata: {
-        ...authData.user.user_metadata,
-        preferences: profile?.preferences || {}
-      }
+      return { user: authUser };
+    }
+
+    // Return basic user info if no service role key
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email || '',
+      tier: 'free',
+      metadata: user.user_metadata || {}
     };
 
-    return { user };
+    return { user: authUser };
 
   } catch (error) {
     console.error('Authentication failed:', error);
