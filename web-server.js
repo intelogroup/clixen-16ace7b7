@@ -37,7 +37,7 @@ const audioService = require('./backend/server/services/audio');
 // 🔐 MIDDLEWARE & ROUTES - Modularized
 // ========================================
 const { verifyFirebaseToken } = require('./backend/server/middleware/auth');
-const { authRoutes, calendarRoutes, chatRoutes, audioRoutes } = require('./backend/api/routes');
+const { authRoutes, calendarRoutes, chatRoutes, audioRoutes, configRoutes } = require('./backend/api/routes');
 
 // ========================================
 // 🔌 WEBSOCKET - Modularized
@@ -545,6 +545,7 @@ app.set('geminiModel', model);
 // ========================================
 // Public routes (no authentication required)
 app.use(authRoutes);
+app.use('/api/config', configRoutes); // Configuration endpoint (public - for client-side Firebase config)
 
 // Protected routes (authentication required)
 app.use(verifyFirebaseToken, calendarRoutes);

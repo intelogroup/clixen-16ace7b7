@@ -1,8 +1,15 @@
 const { google } = require('googleapis');
+require('dotenv').config();
 // const GoogleCalendarTester = require('./calendar-test'); // Commented out - file doesn't exist
 
-// Your Google API Key
-const API_KEY = 'AIzaSyCMU_vrDq83hSp_cvcxo2LLawC1G7ejRuw';
+// Get API Key from environment variable
+const API_KEY = process.env.GOOGLE_API_KEY;
+
+if (!API_KEY) {
+    console.error('❌ Error: GOOGLE_API_KEY not found in environment variables.');
+    console.error('   Please set GOOGLE_API_KEY in your .env file');
+    process.exit(1);
+}
 
 async function main() {
     console.log('🎯 Google Calendar API Test Environment');

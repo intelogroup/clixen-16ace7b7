@@ -8,10 +8,12 @@ const authRoutes = require('./auth');
 const calendarRoutes = require('./calendar');
 const chatRoutes = require('./chat');
 const audioRoutes = require('./audio');
+const configRoutes = require('./config');
 
 module.exports = {
     authRoutes,
     calendarRoutes,
     chatRoutes,
-    audioRoutes
+    audioRoutes,
+    configRoutes
 };

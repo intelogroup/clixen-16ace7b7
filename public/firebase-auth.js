@@ -1,19 +1,41 @@
 // Firebase Client-Side Configuration
 // Add this script to your HTML or include as a module
 
-// Firebase configuration from Firebase Console
-const firebaseConfig = {
-  apiKey: "AIzaSyBuz9r6BVWqT45KmN6pOk8hGMJqrDW8cj0",
-  authDomain: "clixen-cc7b5.firebaseapp.com",
-  projectId: "clixen-cc7b5",
-  storageBucket: "clixen-cc7b5.firebasestorage.app",
-  messagingSenderId: "680091807004",
-  appId: "1:680091807004:web:clixen"
-};
+// Firebase configuration - loaded from server endpoint
+// IMPORTANT: Never hardcode API keys in client-side code
+let firebaseConfig = null;
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+// Fetch config from server endpoint that reads from environment variables
+async function loadFirebaseConfig() {
+  try {
+    const response = await fetch('/api/config/firebase');
+    firebaseConfig = await response.json();
+    return firebaseConfig;
+  } catch (error) {
+    console.error('Failed to load Firebase config:', error);
+    // Fallback to environment-injected config if available
+    if (window.FIREBASE_CONFIG) {
+      firebaseConfig = window.FIREBASE_CONFIG;
+      return firebaseConfig;
+    }
+    throw new Error('Firebase configuration not available');
+  }
+}
+
+// Initialize Firebase - must be called after loading config
+let auth = null;
+
+async function initializeFirebase() {
+  await loadFirebaseConfig();
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  return auth;
+}
+
+// Initialize immediately
+initializeFirebase().catch(err => {
+  console.error('Firebase initialization failed:', err);
+});
 
 // Handle redirect result (for when popup is blocked)
 auth.getRedirectResult().then((result) => {

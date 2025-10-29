@@ -105,15 +105,27 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
         import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-        // Initialize Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyBE8XuGfH7vYSLSGfWMxT4zvbZmZMB8HH4",
-            authDomain: "clixen-cc7b5.firebaseapp.com",
-            projectId: "clixen-cc7b5"
-        };
+        // Initialize Firebase - load config from server
+        let app = null;
+        let auth = null;
+        
+        async function loadFirebaseConfig() {
+            try {
+                const response = await fetch('/api/config/firebase');
+                const firebaseConfig = await response.json();
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                return auth;
+            } catch (error) {
+                console.error('Failed to load Firebase config:', error);
+                throw error;
+            }
+        }
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // Initialize on page load
+        loadFirebaseConfig().catch(err => {
+            document.getElementById('status').textContent = 'Error loading Firebase config';
+        });
         
         let currentUser = null;
 
