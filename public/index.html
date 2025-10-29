@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Voice Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ Gemini Voice Assistant</h1>
+            <p class="subtitle">Speak to AI, hear it respond</p>
+            
+            <!-- Auth Section -->
+            <div class="auth-status">
+                <div id="auth-section" style="display: block;">
+                    <button id="sign-in-btn" class="btn-primary btn-sm">Sign In</button>
+                    <button id="sign-up-btn" class="btn-secondary btn-sm">Sign Up</button>
+                </div>
+                <div id="user-section" style="display: none;">
+                    <span id="user-info">Not signed in</span>
+                    <button id="calendar-connect-btn" class="btn-primary btn-sm" style="display: none; margin-left: 10px;">Connect Calendar</button>
+                    <span id="calendar-status" style="margin-left: 10px; display: none;">📅 Calendar Connected</span>
+                    <button id="sign-out-btn" class="btn-secondary btn-sm">Sign Out</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sign In/Up Modal -->
+        <div id="auth-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modal-title">Sign In</h2>
+                <form id="auth-form">
+                    <input type="email" id="email" placeholder="Email" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button type="submit" class="btn-primary">Submit</button>
+                </form>
+                <button id="google-sign-in" class="btn-google">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                    Sign in with Google
+                </button>
+                <p class="auth-toggle">
+                    <span id="toggle-text">Don't have an account?</span>
+                    <a href="#" id="toggle-mode">Sign Up</a>
+                </p>
+            </div>
+        </div>
+
+        <main>
+            <!-- Status Display -->
+            <div class="status-panel">
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Ready</span>
+                </div>
+                
+                <!-- Voice Selector -->
+                <div class="voice-selector">
+                    <label for="voiceSelect">🎙️ Voice:</label>
+                    <select id="voiceSelect" class="voice-dropdown">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Audio Recording Section -->
+            <div class="audio-section">
+                <h2>🎤 Your Voice</h2>
+                <div class="mic-container">
+                    <button id="micButton" class="mic-button" title="Click to record">
+                        <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
+                    <div class="recording-timer" id="recordingTimer">00:00</div>
+                </div>
+                <div class="audio-controls">
+                    <button id="stopRecording" class="btn-secondary" disabled>Stop Recording</button>
+                </div>
+                
+                <!-- Hidden user audio (no visible player, auto-sends on stop) -->
+                <div id="userAudioPlayback" style="display: none;">
+                    <audio id="userAudio" style="display: none;"></audio>
+                    <button id="sendAudio" class="btn-primary" style="display: none;">Send to Gemini</button>
+                </div>
+            </div>
+
+            <!-- Transcription Display -->
+            <div class="transcription-section" id="transcriptionSection" style="display: none;">
+                <h2>📝 Transcription</h2>
+                <div class="transcription-box" id="transcriptionText"></div>
+            </div>
+
+            <!-- Gemini Response Section -->
+            <div class="response-section" id="responseSection" style="display: none;">
+                <h2>🤖 Gemini Response</h2>
+                <div class="response-box" id="responseText"></div>
+                
+                <!-- Audio Waveform Visualization -->
+                <div class="audio-waveform-container" id="audioWaveformContainer" style="display: none;">
+                    <div class="audio-waveform" id="audioWaveform">
+                        <canvas id="waveformCanvas"></canvas>
+                        <div class="waveform-status" id="waveformStatus">
+                            <span class="status-icon">🎵</span>
+                            <span class="status-text">Ready</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden audio element for playback -->
+                <audio id="geminiAudio" style="display: none;"></audio>
+            </div>
+
+            <!-- Conversation History -->
+            <div class="history-section">
+                <div class="history-header">
+                    <h2>💬 Conversation History</h2>
+                    <button id="clearHistory" class="btn-secondary btn-sm">Clear</button>
+                </div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Powered by Gemini AI | Built with ❤️ | <span id="connection-mode">HTTP Mode</span></p>
+        </footer>
+    </div>
+
+    <script src="firebase-auth.js"></script>
+    <script src="websocket-client.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

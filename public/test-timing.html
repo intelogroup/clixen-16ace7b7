@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clixen - Timing Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .test-btn {
+            background: #4285f4;
+            color: white;
+        }
+        .test-btn:hover {
+            background: #357ae8;
+        }
+        .test-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .timing-box {
+            background: #e8f5e9;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #4caf50;
+        }
+        .timing-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        .breakdown {
+            margin-top: 10px;
+            color: #555;
+            font-size: 13px;
+        }
+        .auth-status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+        }
+        .auth-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .auth-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ Clixen Timing Test</h1>
+        <p class="subtitle">Measure API roundtrip latency</p>
+        
+        <div id="auth-status" class="auth-status"></div>
+        
+        <button id="testChat" class="test-btn">Test Text Chat</button>
+        <button id="testAudio" class="test-btn">Test Audio Processing</button>
+        
+        <div id="results" class="results" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBE8XuGfH7vYSLSGfWMxT4zvbZmZMB8HH4",
+            authDomain: "clixen-cc7b5.firebaseapp.com",
+            projectId: "clixen-cc7b5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        let currentUser = null;
+
+        // Check auth status
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const authStatus = document.getElementById('auth-status');
+            
+            if (user) {
+                authStatus.className = 'auth-status auth-success';
+                authStatus.textContent = `✅ Authenticated as: ${user.email}`;
+                document.getElementById('testChat').disabled = false;
+                document.getElementById('testAudio').disabled = false;
+            } else {
+                authStatus.className = 'auth-status auth-error';
+                authStatus.innerHTML = '❌ Not authenticated. <a href="/">Go to main app to sign in</a>';
+                document.getElementById('testChat').disabled = true;
+                document.getElementById('testAudio').disabled = true;
+            }
+        });
+
+        async function makeAuthenticatedRequest(url, options = {}) {
+            if (!currentUser) throw new Error('Not authenticated');
+            
+            const token = await currentUser.getIdToken();
+            const headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            };
+            
+            return fetch(url, { ...options, headers });
+        }
+
+        function displayResults(text) {
+            const results = document.getElementById('results');
+            results.style.display = 'block';
+            results.textContent = text;
+        }
+
+        function appendResults(text) {
+            const results = document.getElementById('results');
+            results.textContent += text;
+        }
+
+        // Test Text Chat
+        document.getElementById('testChat').addEventListener('click', async () => {
+            const btn = document.getElementById('testChat');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            displayResults('🧪 Testing Text Chat API...\n\n');
+            
+            try {
+                const startTime = performance.now();
+                
+                const response = await makeAuthenticatedRequest('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: 'What time is it?'
+                    })
+                });
+                
+                const endTime = performance.now();
+                const roundtrip = Math.round(endTime - startTime);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    appendResults(`✅ SUCCESS\n\n`);
+                    appendResults(`⏱️  TOTAL ROUNDTRIP: ${roundtrip}ms\n\n`);
+                    appendResults(`📝 Response: "${data.response}"\n\n`);
+                    appendResults(`Breakdown:\n`);
+                    appendResults(`  • Network + Processing: ${roundtrip}ms\n`);
+                    appendResults(`  • This includes:\n`);
+                    appendResults(`    - Request transmission\n`);
+                    appendResults(`    - Gemini AI processing\n`);
+                    appendResults(`    - Function calling (if any)\n`);
+                    appendResults(`    - Text-to-speech generation\n`);
+                    appendResults(`    - Response transmission\n`);
+                } else {
+                    appendResults(`❌ FAILED: ${response.status} ${response.statusText}\n`);
+                    const error = await response.text();
+                    appendResults(`Error: ${error}\n`);
+                }
+                
+            } catch (error) {
+                appendResults(`❌ ERROR: ${error.message}\n`);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Test Text Chat';
+        });
+
+        // Test Audio Processing
+        document.getElementById('testAudio').addEventListener('click', async () => {
+            const btn = document.getElementById('testAudio');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            displayResults('🧪 Testing Audio Processing API...\n\n');
+            appendResults('⚠️  Note: This creates a minimal silent audio file for testing\n\n');
+            
+            try {
+                // Create a minimal WAV file (44 bytes header + small data)
+                const wavData = new Uint8Array([
+                    0x52, 0x49, 0x46, 0x46, // "RIFF"
+                    0x24, 0x00, 0x00, 0x00, // ChunkSize
+                    0x57, 0x41, 0x56, 0x45, // "WAVE"
+                    0x66, 0x6d, 0x74, 0x20, // "fmt "
+                    0x10, 0x00, 0x00, 0x00, // Subchunk1Size
+                    0x01, 0x00,             // AudioFormat (PCM)
+                    0x01, 0x00,             // NumChannels (mono)
+                    0x44, 0xac, 0x00, 0x00, // SampleRate (44100)
+                    0x88, 0x58, 0x01, 0x00, // ByteRate
+                    0x02, 0x00,             // BlockAlign
+                    0x10, 0x00,             // BitsPerSample (16)
+                    0x64, 0x61, 0x74, 0x61, // "data"
+                    0x00, 0x00, 0x00, 0x00  // Subchunk2Size
+                ]);
+                
+                const blob = new Blob([wavData], { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', blob, 'test.wav');
+                
+                const startTime = performance.now();
+                
+                const response = await makeAuthenticatedRequest('/api/process-audio', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const endTime = performance.now();
+                const roundtrip = Math.round(endTime - startTime);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    appendResults(`✅ SUCCESS\n\n`);
+                    appendResults(`⏱️  TOTAL ROUNDTRIP: ${roundtrip}ms\n\n`);
+                    appendResults(`📝 Transcription: "${data.transcription}"\n`);
+                    appendResults(`🤖 Response: "${data.response}"\n\n`);
+                    appendResults(`Breakdown:\n`);
+                    appendResults(`  • Total end-to-end: ${roundtrip}ms\n`);
+                    appendResults(`  • This includes:\n`);
+                    appendResults(`    - Audio upload\n`);
+                    appendResults(`    - Gemini transcription\n`);
+                    appendResults(`    - AI response generation\n`);
+                    appendResults(`    - Function calling (if any)\n`);
+                    appendResults(`    - Text-to-speech generation\n`);
+                    appendResults(`    - Response transmission\n`);
+                } else {
+                    appendResults(`❌ FAILED: ${response.status} ${response.statusText}\n`);
+                    const error = await response.text();
+                    appendResults(`Error: ${error}\n`);
+                }
+                
+            } catch (error) {
+                appendResults(`❌ ERROR: ${error.message}\n`);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Test Audio Processing';
+        });
+    </script>
+</body>
+</html>

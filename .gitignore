@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.env
+.env.*
+credentials/
+tokens/
+.DS_Store
+dist/
+build/
+.cache/
