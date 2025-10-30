@@ -1,4 +1,4 @@
-const { initializeFirebase, getFirestore } = require('./firebase-config');
+const { getFirestore } = require('../../../config/firebase-config');
 
 /**
  * User Management Service

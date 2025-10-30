@@ -29,6 +29,91 @@ async function initializeFirebase() {
   await loadFirebaseConfig();
   firebase.initializeApp(firebaseConfig);
   auth = firebase.auth();
+  
+  // Handle redirect result (for when popup is blocked)
+  auth.getRedirectResult().then(async (result) => {
+    if (result.user) {
+      console.log('User signed in via redirect:', result.user.email);
+      
+      // Sync calendar tokens if we have credentials
+      if (result.credential && result.credential.accessToken) {
+        console.log('📅 Syncing calendar tokens with backend...');
+        await syncCalendarTokens(result.credential.accessToken, result.user.email);
+      }
+    }
+  }).catch((error) => {
+    console.error('Redirect result error:', error);
+  });
+  
+  // Auth state observer
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      console.log('🔐 User signed in:', user.email);
+      console.log('   📧 Email verified:', user.emailVerified);
+      console.log('   🆔 UID:', user.uid);
+      console.log('   ⏰ Last sign-in:', new Date(user.metadata.lastSignInTime).toLocaleString());
+      console.log('   🎨 Display name:', user.displayName || 'Not set');
+      console.log('   🖼️ Photo URL:', user.photoURL ? 'Yes' : 'No');
+      
+      // Get ID token to send to backend
+      const idToken = await user.getIdToken();
+      localStorage.setItem('idToken', idToken);
+      console.log('   🔑 ID token generated and cached');
+      
+      // Update UI
+      document.getElementById('user-info').textContent = `Signed in as: ${user.email}`;
+      document.getElementById('auth-section').style.display = 'none';
+      document.getElementById('user-section').style.display = 'block';
+      
+      // Show main app content
+      const mainContent = document.querySelector('main');
+      if (mainContent) mainContent.style.display = 'block';
+      
+      // Remove auth required message
+      const authMsg = document.getElementById('auth-required-msg');
+      if (authMsg) authMsg.remove();
+      
+      // Trigger app initialization
+      console.log('   ✅ Triggering app initialization...');
+      window.dispatchEvent(new CustomEvent('user-authenticated', { detail: { user } }));
+    } else {
+      console.log('🚪 User signed out');
+      localStorage.removeItem('idToken');
+      console.log('   🗑️ ID token removed from cache');
+      
+      // Update UI
+      document.getElementById('auth-section').style.display = 'block';
+      document.getElementById('user-section').style.display = 'none';
+      
+      // Hide main app content
+      const mainContent = document.querySelector('main');
+      if (mainContent) mainContent.style.display = 'none';
+      
+      // Show auth required message
+      const container = document.querySelector('.container');
+      if (container && !document.getElementById('auth-required-msg')) {
+        const authMsg = document.createElement('div');
+        authMsg.id = 'auth-required-msg';
+        authMsg.style.cssText = 'text-align: center; padding: 40px; margin: 20px;';
+        authMsg.innerHTML = `
+          <h2>🔒 Authentication Required</h2>
+          <p style="margin: 20px 0; color: #666;">Please sign in to use the voice assistant</p>
+          <button onclick="document.getElementById('sign-in-btn').click()" 
+                  style="padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
+            Sign In Now
+          </button>
+        `;
+        const main = document.querySelector('main');
+        if (main) {
+          container.insertBefore(authMsg, main);
+        }
+      }
+      
+      // Trigger app cleanup
+      window.dispatchEvent(new CustomEvent('user-signed-out'));
+    }
+  });
+  
   return auth;
 }
 
@@ -37,88 +122,19 @@ initializeFirebase().catch(err => {
   console.error('Firebase initialization failed:', err);
 });
 
-// Handle redirect result (for when popup is blocked)
-auth.getRedirectResult().then((result) => {
-  if (result.user) {
-    console.log('User signed in via redirect:', result.user.email);
+// Helper to ensure auth is initialized
+function ensureAuth() {
+  if (!auth) {
+    throw new Error('Firebase not initialized yet. Please wait.');
   }
-}).catch((error) => {
-  console.error('Redirect result error:', error);
-});
-
-// Auth state observer
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    console.log('🔐 User signed in:', user.email);
-    console.log('   📧 Email verified:', user.emailVerified);
-    console.log('   🆔 UID:', user.uid);
-    console.log('   ⏰ Last sign-in:', new Date(user.metadata.lastSignInTime).toLocaleString());
-    console.log('   🎨 Display name:', user.displayName || 'Not set');
-    console.log('   🖼️ Photo URL:', user.photoURL ? 'Yes' : 'No');
-    
-    // Get ID token to send to backend
-    const idToken = await user.getIdToken();
-    localStorage.setItem('idToken', idToken);
-    console.log('   🔑 ID token generated and cached');
-    
-    // Update UI
-    document.getElementById('user-info').textContent = `Signed in as: ${user.email}`;
-    document.getElementById('auth-section').style.display = 'none';
-    document.getElementById('user-section').style.display = 'block';
-    
-    // Show main app content
-    const mainContent = document.querySelector('main');
-    if (mainContent) mainContent.style.display = 'block';
-    
-    // Remove auth required message
-    const authMsg = document.getElementById('auth-required-msg');
-    if (authMsg) authMsg.remove();
-    
-    // Trigger app initialization
-    console.log('   ✅ Triggering app initialization...');
-    window.dispatchEvent(new CustomEvent('user-authenticated', { detail: { user } }));
-  } else {
-    console.log('🚪 User signed out');
-    localStorage.removeItem('idToken');
-    console.log('   🗑️ ID token removed from cache');
-    
-    // Update UI
-    document.getElementById('auth-section').style.display = 'block';
-    document.getElementById('user-section').style.display = 'none';
-    
-    // Hide main app content
-    const mainContent = document.querySelector('main');
-    if (mainContent) mainContent.style.display = 'none';
-    
-    // Show auth required message
-    const container = document.querySelector('.container');
-    if (container && !document.getElementById('auth-required-msg')) {
-      const authMsg = document.createElement('div');
-      authMsg.id = 'auth-required-msg';
-      authMsg.style.cssText = 'text-align: center; padding: 40px; margin: 20px;';
-      authMsg.innerHTML = `
-        <h2>🔒 Authentication Required</h2>
-        <p style="margin: 20px 0; color: #666;">Please sign in to use the voice assistant</p>
-        <button onclick="document.getElementById('sign-in-btn').click()" 
-                style="padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;">
-          Sign In Now
-        </button>
-      `;
-      const main = document.querySelector('main');
-      if (main) {
-        container.insertBefore(authMsg, main);
-      }
-    }
-    
-    // Trigger app cleanup
-    window.dispatchEvent(new CustomEvent('user-signed-out'));
-  }
-});
+  return auth;
+}
 
 // Sign up with email/password
 async function signUp(email, password) {
   try {
-    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const currentAuth = ensureAuth();
+    const userCredential = await currentAuth.createUserWithEmailAndPassword(email, password);
     console.log('User created:', userCredential.user);
     
     // Send verification email
@@ -136,9 +152,10 @@ async function signUp(email, password) {
 // Sign in with email/password
 async function signIn(email, password) {
   try {
+    const currentAuth = ensureAuth();
     console.log('🔑 Attempting email/password sign-in for:', email);
     const startTime = Date.now();
-    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    const userCredential = await currentAuth.signInWithEmailAndPassword(email, password);
     const duration = Date.now() - startTime;
     console.log(`✅ Sign-in successful in ${duration}ms:`, userCredential.user.email);
     return userCredential.user;
@@ -152,23 +169,35 @@ async function signIn(email, password) {
 // Sign in with Google
 async function signInWithGoogle() {
   try {
+    const currentAuth = ensureAuth();
     console.log('🔐 Attempting Google sign-in...');
     const provider = new firebase.auth.GoogleAuthProvider();
+    
+    // CRITICAL: Request calendar scopes during Firebase sign-in
+    provider.addScope('https://www.googleapis.com/auth/calendar.events');
+    provider.addScope('https://www.googleapis.com/auth/calendar');
     
     // Try popup first, fallback to redirect if popup is blocked
     try {
       const startTime = Date.now();
-      const result = await auth.signInWithPopup(provider);
+      const result = await currentAuth.signInWithPopup(provider);
       const duration = Date.now() - startTime;
       console.log(`✅ Google sign-in successful in ${duration}ms:`, result.user.email);
       console.log('   🎭 Provider:', result.additionalUserInfo.providerId);
       console.log('   🆕 New user:', result.additionalUserInfo.isNewUser);
+      
+      // IMPORTANT: After Firebase sign-in, sync tokens with backend for calendar access
+      if (result.credential && result.credential.accessToken) {
+        console.log('📅 Syncing calendar tokens with backend...');
+        await syncCalendarTokens(result.credential.accessToken, result.user.email);
+      }
+      
       return result.user;
     } catch (popupError) {
       // If popup was blocked, try redirect method
       if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
         console.log('⚠️ Popup blocked, trying redirect method...');
-        await auth.signInWithRedirect(provider);
+        await currentAuth.signInWithRedirect(provider);
         // User will be redirected and come back - handle in getRedirectResult
       } else {
         throw popupError;
@@ -181,12 +210,35 @@ async function signInWithGoogle() {
   }
 }
 
+// Sync calendar tokens with backend
+async function syncCalendarTokens(accessToken, userEmail) {
+  try {
+    const response = await fetch('/api/auth/sync-calendar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('idToken')}`
+      },
+      body: JSON.stringify({ accessToken, userEmail })
+    });
+    
+    if (response.ok) {
+      console.log('✅ Calendar tokens synced successfully');
+    } else {
+      console.warn('⚠️ Calendar sync failed:', await response.text());
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not sync calendar tokens:', error.message);
+  }
+}
+
 // Sign out
 async function signOut() {
   try {
+    const currentAuth = ensureAuth();
     console.log('🚪 Signing out user...');
     const startTime = Date.now();
-    await auth.signOut();
+    await currentAuth.signOut();
     const duration = Date.now() - startTime;
     console.log(`✅ Sign-out successful in ${duration}ms`);
   } catch (error) {
@@ -198,7 +250,8 @@ async function signOut() {
 // Reset password
 async function resetPassword(email) {
   try {
-    await auth.sendPasswordResetEmail(email);
+    const currentAuth = ensureAuth();
+    await currentAuth.sendPasswordResetEmail(email);
     alert('Password reset email sent!');
   } catch (error) {
     console.error('Password reset error:', error);
@@ -219,7 +272,7 @@ async function makeAuthenticatedRequest(url, options = {}) {
   }
 
   // SECURITY: Check if token is expired before making request
-  const user = auth.currentUser;
+  const user = auth ? auth.currentUser : null;
   if (user) {
     try {
       // Get token result with expiration check
@@ -262,7 +315,7 @@ async function makeAuthenticatedRequest(url, options = {}) {
   if (response.status === 401 || response.status === 403) {
     console.error('❌ Authentication failed (401/403)');
     // Token expired or invalid, try to refresh
-    const user = auth.currentUser;
+    const user = auth ? auth.currentUser : null;
     if (user) {
       try {
         console.log('🔄 Attempting to refresh expired token...');
@@ -335,7 +388,7 @@ window.firebaseAuth = {
   signOut,
   resetPassword,
   makeAuthenticatedRequest,
-  getCurrentUser: () => auth.currentUser
+  getCurrentUser: () => auth ? auth.currentUser : null
 };
 
 // DOM Event Listeners for Auth Modal

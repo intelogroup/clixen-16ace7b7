@@ -218,6 +218,13 @@ class WebSocketClient {
                     }
                 },
                 audio_chunk: (data) => {
+                    // Handle instant acknowledgment audio
+                    if (data.isAck) {
+                        console.log(`⚡ Quick ACK audio received`);
+                        this.handleAckAudio(data.audioData);
+                        return;
+                    }
+                    
                     if (data.chunk === 0) {
                         console.log(`⚡ First Gemini audio chunk received - cancelling any pending ack`);
                         this.cancelAckAudio();  // Cancel ack when Gemini audio starts

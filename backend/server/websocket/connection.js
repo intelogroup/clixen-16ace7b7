@@ -52,13 +52,16 @@ function handleConnection(ws, req, dependencies) {
             // Handle authentication first
             if (message.type === 'auth') {
                 try {
-                    const decodedToken = await admin.auth().verifyIdToken(message.token);
+                    // Verify token with revocation check enabled
+                    const decodedToken = await admin.auth().verifyIdToken(message.token, true);
                     userEmail = decodedToken.email;
                     authenticated = true;
                     
                     // Store connection
                     activeConnections.set(ws, {
                         user: userEmail,
+                        uid: decodedToken.uid,
+                        emailVerified: decodedToken.email_verified,
                         lastActivity: Date.now()
                     });
                     
@@ -66,13 +69,27 @@ function handleConnection(ws, req, dependencies) {
                     ws.send(JSON.stringify({
                         type: 'auth_success',
                         message: 'WebSocket authenticated successfully',
+                        user: {
+                            email: userEmail,
+                            emailVerified: decodedToken.email_verified
+                        },
                         timestamp: Date.now()
                     }));
                 } catch (authError) {
                     console.error(`❌ [WS-${connectionId}] Authentication failed:`, authError.message);
+                    
+                    // Provide specific error messages
+                    let errorMessage = 'Authentication failed';
+                    if (authError.code === 'auth/id-token-revoked') {
+                        errorMessage = 'Token has been revoked. Please sign in again.';
+                    } else if (authError.code === 'auth/id-token-expired') {
+                        errorMessage = 'Token has expired. Please refresh your token.';
+                    }
+                    
                     ws.send(JSON.stringify({
                         type: 'auth_error',
-                        error: 'Authentication failed',
+                        error: errorMessage,
+                        code: authError.code,
                         timestamp: Date.now()
                     }));
                     ws.close();

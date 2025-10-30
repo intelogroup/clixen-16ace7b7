@@ -3,7 +3,7 @@
  * Manages user preferences and settings with caching layer
  */
 
-const { getFirestore } = require('../../../../firebase-config');
+const { getFirestore } = require('../../../config/firebase-config');
 
 // In-memory cache for user settings (reduces Firestore reads)
 const settingsCache = new Map(); // userEmail -> { settings, lastFetch }

@@ -13,8 +13,8 @@ const SCOPES = [
 ];
 
 // The file token.json stores the user's access and refresh tokens
-const TOKEN_PATH = path.join(__dirname, 'backend', 'credentials', 'token.json');
-const CREDENTIALS_PATH = path.join(__dirname, 'backend', 'credentials', 'credentials.json');
+const TOKEN_PATH = path.join(__dirname, '..', 'credentials', 'token.json');
+const CREDENTIALS_PATH = path.join(__dirname, '..', 'credentials', 'credentials.json');
 
 class OAuthManager {
     constructor() {

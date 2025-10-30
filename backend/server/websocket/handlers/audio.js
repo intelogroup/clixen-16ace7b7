@@ -1,3 +1,4 @@
+
 /**
  * WebSocket Audio Handlers
  * 
@@ -16,6 +17,47 @@ const { conversationHistory } = require('../../services/firestore');
 
 // Store active streaming sessions globally
 const activeStreamingSessions = new Map(); // `${userEmail}:${requestId}` -> session data
+
+/**
+ * Generate a random quick acknowledgment message
+ * Never includes user name for more natural, fast responses
+ */
+function getRandomAckMessage() {
+    const messages = [
+        "On it!",
+        "Got it!",
+        "Sure thing!",
+        "One moment!",
+        "Hang on!",
+        "Just a sec!",
+        "Let me check!",
+        "Give me one sec!",
+        "Working on it!",
+        "Right away!",
+        "Coming right up!",
+        "Let me get that for you!",
+        "I'll look that up!",
+        "Checking now!",
+        "One sec!",
+        "Hold on!",
+        "Looking into it!",
+        "Let me see!",
+        "On it, give me a moment!",
+        "Copy that!",
+        "Understood!",
+        "No problem!",
+        "Alright!",
+        "Sure!",
+        "I'm on it!",
+        "Let me grab that!",
+        "Pulling that up now!",
+        "Give me just a moment!",
+        "Checking that now!",
+        "Working on that!"
+    ];
+    
+    return messages[Math.floor(Math.random() * messages.length)];
+}
 
 /**
  * Handle complete audio stream (batch mode)
@@ -47,23 +89,40 @@ async function handleAudioStream(ws, message, userEmail, connectionId, dependenc
         }));
         console.log(`   ⚡ Acknowledgment sent in ${ackTime - requestStartTime}ms`);
         
-        // INSTANT ACK: Send immediate generic acknowledgment
-        const userName = userEmail.split('@')[0].split('.')[0]; // Extract first name (e.g., "Jean" from "jean.peter@...")
-        const ackMessages = [
-            `I'm on it ${userName}, hang on!`,
-            `Got it ${userName}, let me get that for you!`,
-            `Copy ${userName}, give me one moment!`,
-            `On it ${userName}!`,
-            `Sure thing ${userName}, one sec!`
-        ];
-        const instantAck = ackMessages[Math.floor(Math.random() * ackMessages.length)];
+        // INSTANT ACK: Generate and send TTS audio immediately
+        const instantAck = getRandomAckMessage();
         
-        ws.send(JSON.stringify({
-            type: 'instant_ack',
-            text: instantAck,
-            timestamp: Date.now()
-        }));
-        console.log(`   🎙️ Instant ACK sent: "${instantAck}"`);
+        console.log(`   🎙️ Generating TTS for instant ACK: "${instantAck}"`);
+        
+        // Generate TTS for acknowledgment (fast, using standard voice for speed)
+        const ackTTSStart = Date.now();
+        try {
+            const ackAudioBuffer = await textToSpeechGoogle(instantAck, {
+                voiceName: 'en-US-Standard-F', // Faster than Neural2
+                speakingRate: 1.15 // Slightly faster for quick acks
+            });
+            
+            const ackTTSDuration = Date.now() - ackTTSStart;
+            console.log(`   ⚡ ACK TTS generated in ${ackTTSDuration}ms`);
+            
+            // Send as audio chunk immediately
+            ws.send(JSON.stringify({
+                type: 'audio_chunk',
+                audioData: ackAudioBuffer.toString('base64'),
+                isFirst: true,
+                isAck: true,
+                timestamp: Date.now()
+            }));
+            console.log(`   🔊 Instant ACK audio sent (${ackAudioBuffer.length} bytes)`);
+        } catch (error) {
+            console.error(`   ❌ Failed to generate ACK TTS: ${error.message}`);
+            // Fallback: send text-only
+            ws.send(JSON.stringify({
+                type: 'instant_ack',
+                text: instantAck,
+                timestamp: Date.now()
+            }));
+        }
         
         // Decode base64 audio
         const decodeStartTime = Date.now();
@@ -118,7 +177,7 @@ async function handleAudioStream(ws, message, userEmail, connectionId, dependenc
                         data: base64Audio
                     }
                 },
-                { text: '🎤 CURRENT USER MESSAGE: Listen to this new audio message. If it references previous conversation (like "yes", "those dates", "what I said"), use the history for context. If it\'s a completely new topic, treat it as a fresh request. You have access to calendar functions.' }
+                { text: '🎤 CURRENT USER MESSAGE: Listen to this new audio message and respond according to your system instructions. CRITICAL REMINDERS: (1) NEVER trust dates from conversation history - ALWAYS call getCurrentTime() first for ANY time/date/calendar question. (2) If user corrects you or says "you\'re wrong", STOP and re-analyze the facts with LOGIC and COMMON SENSE. (3) People can only be in ONE place at a time. (4) If message references previous conversation (like "yes", "those dates", "what I said"), use history for context. If it\'s a new topic, treat it fresh.' }
             ],
             model,
             formattedHistory
@@ -440,23 +499,40 @@ async function handleEndAudioStream(ws, message, userEmail, connectionId, depend
             timestamp: Date.now()
         }));
         
-        // INSTANT ACK: Send immediate generic acknowledgment
-        const userName = userEmail.split('@')[0].split('.')[0]; // Extract first name
-        const ackMessages = [
-            `I'm on it ${userName}, hang on!`,
-            `Got it ${userName}, let me get that for you!`,
-            `Copy ${userName}, give me one moment!`,
-            `On it ${userName}!`,
-            `Sure thing ${userName}, one sec!`
-        ];
-        const instantAck = ackMessages[Math.floor(Math.random() * ackMessages.length)];
+        // INSTANT ACK: Generate and send TTS audio immediately
+        const instantAck = getRandomAckMessage();
         
-        ws.send(JSON.stringify({
-            type: 'instant_ack',
-            text: instantAck,
-            timestamp: Date.now()
-        }));
-        console.log(`   🎙️ Instant ACK sent: "${instantAck}"`);
+        console.log(`   🎙️ Generating TTS for instant ACK: "${instantAck}"`);
+        
+        // Generate TTS for acknowledgment (fast, using standard voice for speed)
+        const ackTTSStart = Date.now();
+        try {
+            const ackAudioBuffer = await textToSpeechGoogle(instantAck, {
+                voiceName: 'en-US-Standard-F', // Faster than Neural2
+                speakingRate: 1.15 // Slightly faster for quick acks
+            });
+            
+            const ackTTSDuration = Date.now() - ackTTSStart;
+            console.log(`   ⚡ ACK TTS generated in ${ackTTSDuration}ms`);
+            
+            // Send as audio chunk immediately
+            ws.send(JSON.stringify({
+                type: 'audio_chunk',
+                audioData: ackAudioBuffer.toString('base64'),
+                isFirst: true,
+                isAck: true,
+                timestamp: Date.now()
+            }));
+            console.log(`   🔊 Instant ACK audio sent (${ackAudioBuffer.length} bytes)`);
+        } catch (error) {
+            console.error(`   ❌ Failed to generate ACK TTS: ${error.message}`);
+            // Fallback: send text-only
+            ws.send(JSON.stringify({
+                type: 'instant_ack',
+                text: instantAck,
+                timestamp: Date.now()
+            }));
+        }
         
         // Process with Gemini (same as handleAudioStream)
         const base64Audio = completeAudioBuffer.toString('base64');
@@ -495,7 +571,7 @@ async function handleEndAudioStream(ws, message, userEmail, connectionId, depend
                         data: base64Audio
                     }
                 },
-                { text: '🎤 CURRENT USER MESSAGE: Listen to this new audio message. If it references previous conversation (like "yes", "those dates", "what I said"), use the history for context. If it\'s a completely new topic, treat it as a fresh request. You have access to calendar functions.' }
+                { text: '🎤 CURRENT USER MESSAGE: Listen to this new audio message and respond according to your system instructions. CRITICAL REMINDERS: (1) NEVER trust dates from conversation history - ALWAYS call getCurrentTime() first for ANY time/date/calendar question. (2) If user corrects you or says "you\'re wrong", STOP and re-analyze the facts with LOGIC and COMMON SENSE. (3) People can only be in ONE place at a time. (4) If message references previous conversation (like "yes", "those dates", "what I said"), use history for context. If it\'s a new topic, treat it fresh.' }
             ],
             model,
             formattedHistory

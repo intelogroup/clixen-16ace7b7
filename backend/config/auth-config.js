@@ -1,6 +1,5 @@
-const express = require('express');
 const { auth } = require('express-openid-connect');
-const { createOrUpdateUser, getUserById } = require('./user-service');
+const { createOrUpdateUser, getUserById } = require('../server/services/auth/user-service');
 require('dotenv').config();
 
 /**

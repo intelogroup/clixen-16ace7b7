@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm audit:*)",
+      "Bash(git log:*)",
+      "Bash(git check-ignore:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

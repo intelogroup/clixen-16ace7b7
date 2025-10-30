@@ -12,6 +12,7 @@ const cors = require('cors');
 const textToSpeech = require('@google-cloud/text-to-speech');
 const compression = require('compression');
 const WebSocket = require('ws');
+const { VOICE_ASSISTANT_PROMPT } = require('./backend/server/prompts/voice-assistant');
 
 // ========================================
 // 📦 CACHE LAYER - Performance Optimization
@@ -232,7 +233,7 @@ if (firebaseProjectId) {
 const model = genAI.getGenerativeModel({ 
     model: 'gemini-2.0-flash-exp',
     tools: [{ functionDeclarations: calendarFunctions }],
-    systemInstruction: `<clixen_assistant>
+    systemInstruction: VOICE_ASSISTANT_PROMPT
   <identity>
     <name>Clixen</name>
     <role>Professional AI Voice Assistant for Calendar Management</role>

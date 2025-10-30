@@ -1,4 +1,4 @@
-const { initializeFirebase, getAuth, getFirestore } = require('./firebase-config');
+const { getAuth, getFirestore } = require('../../../config/firebase-config');
 
 /**
  * Firebase Authentication Service
@@ -170,13 +170,24 @@ async function deleteUser(uid) {
 /**
  * Verify ID token from client
  * @param {string} idToken - Firebase ID token
+ * @param {boolean} checkRevoked - Whether to check if token has been revoked (default: true)
  * @returns {Promise<Object>} Decoded token
  */
-async function verifyIdToken(idToken) {
+async function verifyIdToken(idToken, checkRevoked = true) {
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
+    // Verify token and check revocation status
+    // This makes an additional call to Firebase to check if the token has been revoked
+    // Critical for security when users change passwords or accounts are disabled
+    const decodedToken = await auth.verifyIdToken(idToken, checkRevoked);
     return decodedToken;
   } catch (error) {
+    // Handle specific revocation error
+    if (error.code === 'auth/id-token-revoked') {
+      console.warn('Token has been revoked for user:', error.message);
+      const revokedError = new Error('Token has been revoked');
+      revokedError.code = 'auth/id-token-revoked';
+      throw revokedError;
+    }
     console.error('Error verifying token:', error);
     throw error;
   }

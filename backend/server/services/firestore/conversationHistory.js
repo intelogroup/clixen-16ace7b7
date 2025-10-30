@@ -3,7 +3,7 @@
  * Persists conversation history to Firestore with in-memory caching
  */
 
-const { getFirestore } = require('../../../../firebase-config');
+const { getFirestore } = require('../../../config/firebase-config');
 
 // In-memory cache for conversation history (reduces Firestore reads)
 const conversationCache = new Map(); // userEmail -> { messages, lastSync }

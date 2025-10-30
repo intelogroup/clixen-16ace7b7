@@ -1,5 +1,4 @@
 const admin = require('firebase-admin');
-const path = require('path');
 
 // Initialize Firebase Admin SDK
 let firebaseApp;
@@ -10,7 +9,7 @@ function initializeFirebase() {
   }
 
   try {
-    const serviceAccount = require('./backend/credentials/firebase-service-account.json');
+    const serviceAccount = require('../credentials/firebase-service-account.json');
     
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
